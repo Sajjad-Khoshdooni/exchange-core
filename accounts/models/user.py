@@ -173,7 +173,7 @@ class User(AbstractUser):
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
     suspension_reason = models.CharField(max_length=128, blank=True, null=True)
 
-    company = models.ForeignKey(Company, on_delete=models.PROTECT, null=True, blank=True)
+    company = models.OneToOneField(Company, on_delete=models.PROTECT, null=True, blank=True)
 
     def __str__(self):
         name = get_masked_phone(self.username)

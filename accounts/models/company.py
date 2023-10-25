@@ -1,23 +1,30 @@
 from enum import Enum
+import json
 
 from django.db import models
 
+from accounts.verifiers.finotech import ServerError
+from accounts.verifiers.zibal import ZibalRequester
 from accounts.validators import company_national_id_validator
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CompanyState(Enum):
     INITIALIZED = 'initial'
     PENDING = 'pending'
     DOCS_REJECTED = 'docs_rejected'
-    WRONG_NATIONAL_ID = 'wrong_national_id'
+    INFORMATION_NO_FETCHED = 'company_information_not_fetched'
     VERIFIED = 'verified'
 
 
 class Company(models.Model):
     name = models.CharField(null=True, blank=True)
     address = models.TextField(null=True, blank=True)
-    postal_code = models.PositiveIntegerField(null=True, blank=True)
-    registration_number = models.PositiveIntegerField(null=True, blank=True, unique=True)
+    postal_code = models.CharField(null=True, blank=True)
+    registration_id = models.CharField(null=True, blank=True, unique=True)
     company_registration_date = models.DateField(null=True, blank=True)
     national_id = models.CharField(validators=[company_national_id_validator], unique=True)
     company_documents = models.OneToOneField(
@@ -28,7 +35,27 @@ class Company(models.Model):
         blank=True,
         null=True
     )
+    fetched_data = models.JSONField(null=True, blank=True)
     state = models.CharField(choices=[(tag.name, tag.value) for tag in CompanyState], default=CompanyState.INITIALIZED)
+
+    def verify_and_fetch_company_data(self, retry: int = 2):
+        requester = ZibalRequester(user=self.user)
+        try:
+            data = requester.company_information(self.national_id).data
+            if data.code == "SUCCESSFUL":
+                self.name = data.title
+                self.address = data.address
+                self.postal_code = data.postal_code
+                self.registration_id = data.registration_id
+                self.fetched_data = json.dumps(data, default=lambda o: o.__dict__)
+                self.save(update_fields=['name, address', 'postal_code', 'registration_id', 'fetched_data'])
+        except (TimeoutError, ServerError):
+            if retry == 0:
+                logger.error('company information retrieval timeout')
+                return
+            else:
+                logger.info('Retrying company information fetching..')
+                return self.verify_and_fetch_company_data(retry - 1)
 
     class Meta:
         verbose_name = 'شرکت'
