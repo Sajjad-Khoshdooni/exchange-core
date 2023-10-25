@@ -37,4 +37,3 @@ class FileSerializer(serializers.ModelSerializer):
 class FileCreateView(CreateAPIView):
     parser_classes = (FormParser, MultiPartParser, FileUploadParser)
     serializer_class = FileSerializer
-    permission_classes = []
