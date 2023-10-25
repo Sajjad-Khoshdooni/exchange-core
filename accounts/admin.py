@@ -26,7 +26,7 @@ from market.models import Trade, ReferralTrx, Order
 from stake.models import StakeRequest
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
-from .models import User, Account, Notification, FinotechRequest
+from .models import User, Account, Notification, FinotechRequest, Company
 from .models.change_requests import BaseChangeRequest
 from .models.login_activity import LoginActivity
 from .models.sms_notification import SmsNotification
@@ -909,3 +909,33 @@ class UserFeaturePermAdmin(admin.ModelAdmin):
     list_display = ('user', 'feature', 'limit')
     search_fields = ('user__phone', )
     list_filter = ('feature', )
+
+
+@admin.register(Company)
+class CompanyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'national_id', 'is_verified',)
+    readonly_fields = ('is_verified',)
+    actions = ('accept_requests', 'reject_requests', 'fetch_company_info',)
+    list_filter = ('docs_state', 'information_state',)
+
+    @admin.action(description='تایید اطلاعات', permissions=['view'])
+    def reject_requests(self, request, queryset):
+        qs = queryset.filter(status=PENDING)
+
+        for req in qs:
+            req.reject()
+
+    # todo: filter
+    @admin.action(description='رد اطلاعات', permissions=['view'])
+    def accept_requests(self, request, queryset):
+        qs = queryset.filter(status=PENDING)
+
+        for req in qs:
+            req.accept()
+
+    @admin.action(description='رد اطلاعات', permissions=['view'])
+    def fetch_company_info(self, request, queryset):
+        qs = queryset
+
+        for req in qs:
+            req.verify_and_fetch_company_data()

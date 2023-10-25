@@ -65,6 +65,12 @@ class Company(models.Model):
                 logger.info('Retrying company information fetching..')
                 return self.verify_and_fetch_company_data(retry - 1)
 
+    def accept(self):
+        pass
+
+    def reject(self):
+        pass
+
     class Meta:
         verbose_name = 'شرکت'
         verbose_name_plural = 'شرکت‌ها'
