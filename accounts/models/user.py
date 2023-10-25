@@ -191,7 +191,7 @@ class User(AbstractUser):
         ).exists()
 
     @property
-    def user_type(self):
+    def registration_type(self):
         if self.company is None:
             return UserType.PERSONAL
         else:
