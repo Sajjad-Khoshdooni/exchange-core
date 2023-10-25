@@ -12,11 +12,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class CompanyState(Enum):
+class State(Enum):
     INITIALIZED = 'initial'
     PENDING = 'pending'
-    DOCS_REJECTED = 'docs_rejected'
     INFORMATION_NO_FETCHED = 'company_information_not_fetched'
+    REJECTED = 'rejected'
     VERIFIED = 'verified'
 
 
@@ -36,7 +36,9 @@ class Company(models.Model):
         null=True
     )
     fetched_data = models.JSONField(null=True, blank=True)
-    state = models.CharField(choices=[(tag.name, tag.value) for tag in CompanyState], default=CompanyState.INITIALIZED)
+    is_active = models.BooleanField(null=True, blank=True)
+    docs_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED)
+    information_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED)
 
     def verify_and_fetch_company_data(self, retry: int = 2):
         requester = ZibalRequester(user=self.user)
@@ -47,8 +49,9 @@ class Company(models.Model):
                 self.address = data.address
                 self.postal_code = data.postal_code
                 self.registration_id = data.registration_id
+                self.is_active = data.status == 'فعال'
                 self.fetched_data = json.dumps(data, default=lambda o: o.__dict__)
-                self.save(update_fields=['name, address', 'postal_code', 'registration_id', 'fetched_data'])
+                self.save(update_fields=['name, address', 'postal_code', 'registration_id', 'fetched_data', 'is_active'])
         except (TimeoutError, ServerError):
             if retry == 0:
                 logger.error('company information retrieval timeout')
