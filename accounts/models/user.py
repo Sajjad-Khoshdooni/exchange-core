@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Union
 from uuid import uuid4
 from datetime import timedelta
+from enum import Enum
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
@@ -31,10 +32,29 @@ class CustomUserManager(UserManager):
         return super(CustomUserManager, self).create_superuser(extra_fields['phone'], email, password, **extra_fields)
 
 
+class UserType(Enum):
+    CORPORATION = 'corporation'
+    PERSONAL = 'personal'
+
+
+class LevelGrants(models.Model):
+    level = models.PositiveSmallIntegerField(unique=True)
+
+    max_daily_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
+
+    max_daily_fiat_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
+    max_daily_fiat_deposit = models.PositiveBigIntegerField(null=True, blank=True, default=None)
+
+    @classmethod
+    def get_level_grants(cls, level: int) -> 'LevelGrants':
+        return LevelGrants.objects.filter(level=level).last() or LevelGrants()
+
+
 class User(AbstractUser):
     LEVEL1 = 1
     LEVEL2 = 2
     LEVEL3 = 3
+    LEVEL4 = 4
 
     INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
@@ -87,8 +107,7 @@ class User(AbstractUser):
     level = models.PositiveSmallIntegerField(
         default=LEVEL1,
         choices=(
-            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3')
-
+            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3'), (LEVEL4, 'level 4'),
         ),
         verbose_name='سطح',
     )
@@ -161,6 +180,7 @@ class User(AbstractUser):
     promotion = models.CharField(max_length=256, blank=True, choices=[(p, p) for p in PROMOTIONS])
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
+    custom_fiat_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
     is_price_notif_on = models.BooleanField(default=False)
 
@@ -181,6 +201,13 @@ class User(AbstractUser):
         return Consultation.objects.filter(
             user=self
         ).exists()
+
+    @property
+    def registration_type(self):
+        if self.company is None:
+            return UserType.PERSONAL
+        else:
+            return UserType.CORPORATION
 
     def is_2fa_active(self):
         return TOTPDevice.objects.filter(user=self, confirmed=True).exists()

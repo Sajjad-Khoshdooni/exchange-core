@@ -12,7 +12,7 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.models import User, TrafficSource, Referral
+from accounts.models import User, Company, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
@@ -58,6 +58,7 @@ class SignupSerializer(serializers.Serializer):
     referral_code = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     promotion = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     source = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
+    company_national_id = serializers.CharField(allow_null=True, allow_blank=True, write_only=True, required=False)
 
     @staticmethod
     def validate_referral_code(code):
@@ -69,25 +70,30 @@ class SignupSerializer(serializers.Serializer):
         token = validated_data.pop('token')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_VERIFY_PHONE)
         password = validated_data.pop('password')
+        company_national_id = validated_data.get('company_national_id', None)
 
         if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
 
-        if User.objects.filter(phone=otp_code.phone).exists():
+        if (User.objects.filter(phone=otp_code.phone).exists() or
+                Company.objects.filter(national_id=company_national_id).exists()):
             raise ValidationError({'phone': 'شما قبلا در سیستم ثبت‌نام کرده‌اید. لطفا از قسمت ورود، وارد شوید.'})
-
         validate_password(password=password)
 
         phone = otp_code.phone
         promotion = validated_data.get('promotion') or ''
 
-        user = User.objects.create_user(
-            username=phone,
-            phone=phone,
-            promotion=promotion
-        )
-
         with transaction.atomic():
+
+            user = User.objects.create_user(
+                username=phone,
+                phone=phone,
+                promotion=promotion
+            )
+
+            if company_national_id:
+                Company.objects.create(national_id=company_national_id, user=user)
+
             if not config('ENABLE_MARGIN_SHOW_TO_ALL', cast=bool, default=True):
                 user.show_margin = False
 

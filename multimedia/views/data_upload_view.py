@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.generics import CreateAPIView
 from rest_framework.parsers import FormParser, MultiPartParser, FileUploadParser
 
-from multimedia.models import Image
+from multimedia.models import Image, File
 
 
 class ImageSerializer(serializers.ModelSerializer):
@@ -23,3 +23,17 @@ class ImageCreateView(CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         return super(ImageCreateView, self).post(request, *args, **kwargs)
+
+
+class FileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = File
+        fields = ('uuid', 'file',)
+        extra_kwargs = {
+            'uuid': {'read_only': True}
+        }
+
+
+class FileCreateView(CreateAPIView):
+    parser_classes = (FormParser, MultiPartParser, FileUploadParser)
+    serializer_class = FileSerializer
