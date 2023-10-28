@@ -432,7 +432,7 @@ class WalletAdmin(admin.ModelAdmin):
     @admin.action(description='Sync Lock', permissions=['change'])
     def sync_wallet_lock(self, request, queryset):
         for wallet in queryset:
-            wallet.locked = BalanceLock.objects.filter(amount__gt=0).aggregate(sum=Sum('amount'))['sum'] or 0
+            wallet.locked = BalanceLock.objects.filter(wallet=wallet, amount__gt=0).aggregate(sum=Sum('amount'))['sum'] or 0
             wallet.save(update_fields=['locked'])
 
 
