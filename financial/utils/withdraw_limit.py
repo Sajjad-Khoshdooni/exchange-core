@@ -8,20 +8,6 @@ from ledger.models import Transfer, Asset
 from ledger.utils.fields import CANCELED
 from ledger.utils.price import get_last_price
 
-# MILLION = 10 ** 6
-
-# FIAT_WITHDRAW_LIMIT = {
-#     User.LEVEL1: 0,
-#     User.LEVEL2: 200 * MILLION,
-#     User.LEVEL3: 200 * MILLION
-# }
-
-# CRYPTO_WITHDRAW_LIMIT = {
-#     User.LEVEL1: 50 * MILLION,
-#     User.LEVEL2: 200 * MILLION,
-#     User.LEVEL3: 200 * MILLION
-# }
-
 
 def get_start_of_day() -> datetime:
     start_of_day = timezone.now().astimezone().date()
