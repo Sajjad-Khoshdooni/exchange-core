@@ -916,10 +916,10 @@ class UserFeaturePermAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'national_id', 'is_verified',)
-    readonly_fields = ('is_verified',)
+    list_display = ('name', 'national_id', 'verified',)
+    readonly_fields = ('verified',)
     actions = ('accept_requests', 'reject_requests', 'fetch_company_info',)
-    list_filter = ('docs_state', 'information_state',)
+    list_filter = ('verified',)
 
     @admin.action(description='تایید اطلاعات', permissions=['view'])
     def reject_requests(self, request, queryset):

@@ -30,7 +30,7 @@ class Company(models.Model):
     user = models.OneToOneField(User, on_delete=models.PROTECT)
 
     provider_data = models.JSONField(null=True, blank=True)
-    is_verified = models.BooleanField(null=True, blank=True, default=False)
+    verified = models.BooleanField(null=True, blank=True, default=False)
 
     def verify_and_fetch_company_data(self, retry: int = 2):
         from accounts.verifiers.finotech import ServerError
