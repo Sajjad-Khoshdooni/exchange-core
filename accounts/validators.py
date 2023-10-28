@@ -74,5 +74,18 @@ def is_phone(phone: str) -> bool:
 
 
 def company_national_id_validator(value):
-    if not re.match(r'^\d{10}$', value):
+    if not re.match(r'^\d{11}$', value):
         raise ValidationError('شناسه ملی شرکت به درستی وارد نشده‌است.')
+
+    array = list(map(int, value))
+
+    _sum = 0
+    const = array[9] + 2
+    coefficients = [29, 27, 23, 19, 17]
+    for i in range(9):
+        _sum += (const + array[i]) * coefficients[i % 5]
+
+    control = (_sum % 11) % 10
+
+    if control != array[9]:
+        raise ValidationError('شناسه ملی نیست.')
