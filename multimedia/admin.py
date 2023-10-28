@@ -5,7 +5,7 @@ from django.db.models import F
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
-from multimedia.models import Image, Banner, CoinPriceContent, Article, Section
+from multimedia.models import Image, Banner, CoinPriceContent, Article, Section, File
 from multimedia.utils.custom_tags import post_render_html, get_text_of_html
 
 
@@ -19,6 +19,11 @@ class ImageAdmin(admin.ModelAdmin):
         return mark_safe("<img src='%s' width='200' height='200' />" % image.get_absolute_image_url())
 
     get_selfie_image.short_description = 'عکس'
+
+
+@admin.register(File)
+class FileAdmin(admin.ModelAdmin):
+    list_display = ('uuid', 'file',)
 
 
 @admin.register(Banner)
