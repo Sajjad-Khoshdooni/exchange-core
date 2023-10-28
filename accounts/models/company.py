@@ -1,21 +1,13 @@
-from enum import Enum
 import json
 
 from django.db import models, transaction
 
 from accounts.validators import company_national_id_validator
+from ledger.utils.fields import get_status_field
 
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-class State(Enum):
-    INITIALIZED = 'initial'
-    PENDING = 'pending'
-    INFORMATION_NO_FETCHED = 'company_information_not_fetched'
-    REJECTED = 'rejected'
-    VERIFIED = 'verified'
 
 
 class Company(models.Model):
@@ -35,10 +27,9 @@ class Company(models.Model):
         null=True
     )
     fetched_data = models.JSONField(null=True, blank=True)
-    docs_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED,
-                                  max_length=128)
-    information_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED,
-                                         max_length=128)
+
+    docs_state = get_status_field()
+    information_state = get_status_field()
 
     is_verified = models.BooleanField(null=True, blank=True, default=False)
 
