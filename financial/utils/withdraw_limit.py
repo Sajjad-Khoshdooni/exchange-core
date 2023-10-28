@@ -55,8 +55,9 @@ def get_crypto_withdraw_irt_value(user: User):
 
 
 def user_reached_fiat_withdraw_limit(user: User, irt_value) -> bool:
-    return (get_fiat_withdraw_irt_value(user) + irt_value >
-            LevelGrants.get_level_grants(user.level).max_daily_fiat_withdraw)
+    today_user_fiat_withdraw = get_fiat_withdraw_irt_value(user)
+    max_daily_fiat_withdraw = LevelGrants.get_level_grants(user.level).max_daily_fiat_withdraw
+    return today_user_fiat_withdraw + irt_value > max_daily_fiat_withdraw
 
 
 def user_reached_crypto_withdraw_limit(user: User, irt_value) -> bool:
