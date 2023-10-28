@@ -50,6 +50,7 @@ class User(AbstractUser):
     LEVEL1 = 1
     LEVEL2 = 2
     LEVEL3 = 3
+    LEVEL4 = 4
 
     INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
@@ -102,8 +103,7 @@ class User(AbstractUser):
     level = models.PositiveSmallIntegerField(
         default=LEVEL1,
         choices=(
-            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3')
-
+            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3'), (LEVEL4, 'level 4'),
         ),
         verbose_name='سطح',
     )
