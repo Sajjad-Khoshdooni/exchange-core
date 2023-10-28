@@ -39,7 +39,7 @@ class UserType(Enum):
 
 
 class LevelGrants(models.Model):
-    level = models.PositiveSmallIntegerField(null=True, blank=True)
+    level = models.PositiveSmallIntegerField(unique=True)
 
     max_daily_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
 
