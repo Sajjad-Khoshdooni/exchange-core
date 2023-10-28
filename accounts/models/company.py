@@ -75,31 +75,32 @@ class Company(models.Model):
             self.save(update_fields=['is_verified'])
             EmailNotification.objects.create(
                 recipient=self.user,
-                title='',
-                content='',
-                content_html=''
+                title='تایید درخواست',
+                content='درخواست ثبت نام حساب حقوقی با موفقیت تایید شد.',
+                content_html='درخواست ثبت نام حساب حقوقی با موفقیت تایید شد.'
             )
             Notification.objects.create(
                 recipient=self.user,
-                title='',
-                message=''
+                title='تایید درخواست',
+                message='درخواست ثبت نام حساب حقوقی با موفقیت تایید شد.'
             )
 
     def reject(self):
+        from accounts.models import EmailNotification, Notification
+
         with transaction.atomic():
-            from accounts.models import EmailNotification, Notification
             self.is_verified = False
             self.save(update_fields=['is_verified'])
             EmailNotification.objects.create(
                 recipient=self.user,
-                title='',
-                content='',
-                content_html=''
+                title='رد درخواست',
+                content='درخواست ثبت نام حساب حقوقی رد شد. لطفا برای دریافت اطلاعات بیشتر با پشتیبان تماس بگیرید.',
+                content_html='درخواست ثبت نام حساب حقوقی رد شد. لطفا برای دریافت اطلاعات بیشتر با پشتیبان تماس بگیرید.'
             )
             Notification.objects.create(
                 recipient=self.user,
-                title='',
-                message=''
+                title='رد درخواست',
+                message='درخواست ثبت نام حساب حقوقی رد شد. لطفا برای دریافت اطلاعات بیشتر با پشتیبان تماس بگیرید.'
             )
 
     class Meta:
