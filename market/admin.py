@@ -39,7 +39,7 @@ class UserTradeFilter(SimpleListFilter):
 
 @admin.register(PairSymbol)
 class PairSymbolAdmin(admin.ModelAdmin):
-    list_display = ('name', 'enable', 'taker_fee', 'maker_fee', 'tick_size', 'step_size', 'strategy_enable')
+    list_display = ('name', 'enable', 'custom_taker_fee', 'custom_maker_fee', 'tick_size', 'step_size', 'strategy_enable')
     list_editable = ('enable', 'strategy_enable')
     list_filter = ('enable', BaseAssetFilter,)
     readonly_fields = ('last_trade_time', 'last_trade_price')
@@ -83,8 +83,7 @@ class UserFilter(SimpleListFilter):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount',
-                    'get_masked_wallet')
+    list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
     readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss', 'login_activity')
 
@@ -93,12 +92,6 @@ class OrderAdmin(admin.ModelAdmin):
         return created.strftime('%S.%f')[:-3]
 
     created_at_millis.short_description = 'Created Second'
-
-    @admin.display(description='wallet')
-    def get_masked_wallet(self, order_obj: Order):
-        return mark_safe(
-            f'<span dir="ltr">{order_obj.wallet}</span>'
-        )
 
 
 @admin.register(CancelRequest)
