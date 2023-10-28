@@ -39,7 +39,7 @@ class UserType(Enum):
 
 
 class LevelGrants(models.Model):
-    Number = models.PositiveSmallIntegerField(null=True, blank=True)
+    number = models.PositiveSmallIntegerField(null=True, blank=True)
     min_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True)
     max_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True)
     min_irt_withdraw = models.PositiveBigIntegerField(null=True, blank=True)
