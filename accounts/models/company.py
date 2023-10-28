@@ -3,7 +3,7 @@ import json
 from django.db import models, transaction
 
 from accounts.validators import company_national_id_validator
-from ledger.utils.fields import get_status_field
+from accounts.models import User
 
 import logging
 
@@ -26,11 +26,10 @@ class Company(models.Model):
         blank=True,
         null=True
     )
-    fetched_data = models.JSONField(null=True, blank=True)
 
-    docs_state = get_status_field()
-    information_state = get_status_field()
+    user = models.OneToOneField(User, on_delete=models.PROTECT)
 
+    provider_data = models.JSONField(null=True, blank=True)
     is_verified = models.BooleanField(null=True, blank=True, default=False)
 
     def verify_and_fetch_company_data(self, retry: int = 2):

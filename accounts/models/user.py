@@ -19,7 +19,6 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
-from accounts.models.company import Company
 from accounts.utils.admin import url_to_edit_object
 from analytics.utils.dto import UserEvent
 from accounts.utils.telegram import send_support_message
@@ -187,8 +186,6 @@ class User(AbstractUser):
 
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
     suspension_reason = models.CharField(max_length=128, blank=True, null=True)
-
-    company = models.OneToOneField(Company, on_delete=models.PROTECT, null=True, blank=True)
 
     def __str__(self):
         name = get_masked_phone(self.username)
