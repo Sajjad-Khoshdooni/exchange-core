@@ -396,6 +396,7 @@ class WalletAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ('account', 'asset', 'market', 'balance', 'locked', 'variant')
     search_fields = ('account__user__phone', 'asset__symbol')
+    actions = ('sync_wallet_lock', )
 
     def get_queryset(self, request):
         qs = super(WalletAdmin, self).get_queryset(request)
@@ -427,6 +428,12 @@ class WalletAdmin(admin.ModelAdmin):
         return mark_safe(
             f'<span dir="ltr">{wallet.account}</span>'
         )
+
+    @admin.action(description='Sync Lock', permissions=['change'])
+    def sync_wallet_lock(self, request, queryset):
+        for wallet in queryset:
+            wallet.locked = BalanceLock.objects.filter(amount__gt=0).aggregate(sum=Sum('amount'))['sum'] or 0
+            wallet.save(update_fields=['locked'])
 
 
 class TransferUserFilter(SimpleListFilter):
