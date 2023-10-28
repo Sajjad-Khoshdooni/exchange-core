@@ -16,8 +16,7 @@ from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
-from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
-    get_crypto_withdraw_irt_value
+from financial.utils.withdraw_limit import get_fiat_withdraw_irt_value, get_crypto_withdraw_irt_value
 from ledger.models import OTCTrade, DepositAddress, Prize, Transfer, Wallet
 from ledger.utils.external_price import BUY
 from ledger.utils.fields import PENDING
@@ -26,7 +25,7 @@ from market.models import Trade, ReferralTrx, Order
 from stake.models import StakeRequest
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
-from .models import User, Account, Notification, FinotechRequest, Company
+from .models import User, Account, Notification, FinotechRequest, Company, LevelGrants
 from .models.change_requests import BaseChangeRequest
 from .models.login_activity import LoginActivity
 from .models.sms_notification import SmsNotification
@@ -614,12 +613,16 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_last_login_jalali.short_description = 'آخرین ورود'
 
     def get_remaining_fiat_withdraw_limit(self, user: User):
-        return humanize_number(FIAT_WITHDRAW_LIMIT[user.level] - get_fiat_withdraw_irt_value(user))
+        return humanize_number(
+            LevelGrants.get_level_grants(user.level).max_daily_fiat_withdraw - get_fiat_withdraw_irt_value(user)
+        )
 
     get_remaining_fiat_withdraw_limit.short_description = 'باقی مانده سقف مجاز برداشت ریالی روزانه'
 
     def get_remaining_crypto_withdraw_limit(self, user: User):
-        return humanize_number(CRYPTO_WITHDRAW_LIMIT[user.level] - get_crypto_withdraw_irt_value(user))
+        return humanize_number(
+            LevelGrants.get_level_grants(user.level).max_daily_crypto_withdraw - get_crypto_withdraw_irt_value(user)
+        )
 
     get_remaining_crypto_withdraw_limit.short_description = 'باقی مانده سقف مجاز برداشت رمزارز   روزانه'
 
