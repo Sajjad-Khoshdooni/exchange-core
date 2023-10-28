@@ -176,6 +176,9 @@ class User(AbstractUser):
     promotion = models.CharField(max_length=256, blank=True, choices=[(p, p) for p in PROMOTIONS])
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
+    custom_crypto_deposit_ceil = models.PositiveBigIntegerField(null=True, blank=True)
+    custom_irt_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
+    custom_irt_deposit_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
     is_price_notif_on = models.BooleanField(default=False)
 
