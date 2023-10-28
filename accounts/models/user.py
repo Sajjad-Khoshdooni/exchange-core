@@ -38,6 +38,14 @@ class UserType(Enum):
     PERSONAL = 'personal'
 
 
+class LevelGrants(models.Model):
+    Number = models.PositiveSmallIntegerField(null=True, blank=True)
+    min_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True)
+    max_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True)
+    min_irt_withdraw = models.PositiveBigIntegerField(null=True, blank=True)
+    max_irt_withdraw = models.PositiveBigIntegerField(null=True, blank=True)
+
+
 class User(AbstractUser):
     LEVEL1 = 1
     LEVEL2 = 2
