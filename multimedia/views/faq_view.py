@@ -93,4 +93,4 @@ class PinnedArticlesView(ListAPIView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Article.objects.filter(parent__parent_id=self.kwargs['pk'], is_pinned=True)
+        return Article.objects.filter(parent__parent__slug=self.kwargs['slug'], is_pinned=True)

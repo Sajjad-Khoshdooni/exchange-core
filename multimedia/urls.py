@@ -9,5 +9,5 @@ urlpatterns = [
     path('faq/sections/', SectionsView.as_view()),
     path('faq/articles/<str:slug>/', ArticleView.as_view()),
     path('faq/articles/', ArticleSearchView.as_view()),
-    path('faq/sections/<int:pk>/recom/', PinnedArticlesView.as_view()),
+    path('faq/sections/<slug:slug>/recom/', PinnedArticlesView.as_view()),
 ]
