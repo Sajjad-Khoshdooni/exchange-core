@@ -87,5 +87,5 @@ def company_national_id_validator(value):
 
     control = (_sum % 11) % 10
 
-    if control != array[9]:
-        raise ValidationError('شناسه ملی نیست.')
+    if control != array[10]:
+        raise ValidationError('شناسه‌ملی  معتبر نیست.')
