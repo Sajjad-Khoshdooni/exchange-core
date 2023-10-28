@@ -42,14 +42,13 @@ class LevelGrants(models.Model):
     level = models.PositiveSmallIntegerField(null=True, blank=True)
 
     max_daily_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
-    max_daily_crypto_deposit = models.PositiveBigIntegerField(null=True, blank=True, default=None)
 
     max_daily_fiat_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
     max_daily_fiat_deposit = models.PositiveBigIntegerField(null=True, blank=True, default=None)
 
     @classmethod
-    def get_level_grants(cls) -> 'LevelGrants':
-        return LevelGrants.objects.last() or LevelGrants()
+    def get_level_grants(cls, level: int) -> 'LevelGrants':
+        return LevelGrants.objects.filter(level=level).last() or LevelGrants()
 
 
 class User(AbstractUser):

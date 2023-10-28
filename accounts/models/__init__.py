@@ -1,6 +1,6 @@
 from .notification import Notification, BulkNotification
 from .account import Account
-from .user import User
+from .user import User, LevelGrants
 from .email_notification import EmailNotification
 from .finotech import FinotechRequest
 from .phone_verification import VerificationCode

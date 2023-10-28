@@ -3,24 +3,24 @@ from datetime import datetime
 from django.db.models import Sum
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import User, LevelGrants
 from ledger.models import Transfer, Asset
 from ledger.utils.fields import CANCELED
 from ledger.utils.price import get_last_price
 
-MILLION = 10 ** 6
+# MILLION = 10 ** 6
 
-FIAT_WITHDRAW_LIMIT = {
-    User.LEVEL1: 0,
-    User.LEVEL2: 200 * MILLION,
-    User.LEVEL3: 200 * MILLION
-}
+# FIAT_WITHDRAW_LIMIT = {
+#     User.LEVEL1: 0,
+#     User.LEVEL2: 200 * MILLION,
+#     User.LEVEL3: 200 * MILLION
+# }
 
-CRYPTO_WITHDRAW_LIMIT = {
-    User.LEVEL1: 50 * MILLION,
-    User.LEVEL2: 200 * MILLION,
-    User.LEVEL3: 200 * MILLION
-}
+# CRYPTO_WITHDRAW_LIMIT = {
+#     User.LEVEL1: 50 * MILLION,
+#     User.LEVEL2: 200 * MILLION,
+#     User.LEVEL3: 200 * MILLION
+# }
 
 
 def get_start_of_day() -> datetime:
@@ -69,11 +69,12 @@ def get_crypto_withdraw_irt_value(user: User):
 
 
 def user_reached_fiat_withdraw_limit(user: User, irt_value) -> bool:
-    return get_fiat_withdraw_irt_value(user) + irt_value > FIAT_WITHDRAW_LIMIT[user.level]
+    return (get_fiat_withdraw_irt_value(user) + irt_value >
+            LevelGrants.get_level_grants(user.level).max_daily_fiat_withdraw)
 
 
 def user_reached_crypto_withdraw_limit(user: User, irt_value) -> bool:
-    ceil = user.custom_crypto_withdraw_ceil or CRYPTO_WITHDRAW_LIMIT[user.level]
+    ceil = user.custom_crypto_withdraw_ceil or LevelGrants.get_level_grants(user.level).max_daily_crypto_withdraw
     return get_crypto_withdraw_irt_value(user) + irt_value > ceil
 
 
