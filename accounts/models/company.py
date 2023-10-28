@@ -4,7 +4,6 @@ import json
 from django.db import models, transaction
 
 from accounts.validators import company_national_id_validator
-from accounts.models import EmailNotification, Notification
 
 import logging
 
@@ -69,6 +68,8 @@ class Company(models.Model):
                 return self.verify_and_fetch_company_data(retry - 1)
 
     def accept(self):
+        from accounts.models import EmailNotification, Notification
+
         with transaction.atomic():
             self.is_verified = True
             self.save(update_fields=['is_verified'])
@@ -86,6 +87,7 @@ class Company(models.Model):
 
     def reject(self):
         with transaction.atomic():
+            from accounts.models import EmailNotification, Notification
             self.is_verified = False
             self.save(update_fields=['is_verified'])
             EmailNotification.objects.create(
