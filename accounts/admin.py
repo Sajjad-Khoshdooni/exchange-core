@@ -937,3 +937,8 @@ class CompanyAdmin(admin.ModelAdmin):
     def fetch_company_info(self, request, queryset):
         for req in queryset:
             req.verify_and_fetch_company_data()
+
+
+@admin.register(LevelGrants)
+class LevelGrantsAdmin(admin.ModelAdmin):
+    list_display = ('level',)
