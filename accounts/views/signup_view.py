@@ -83,15 +83,17 @@ class SignupSerializer(serializers.Serializer):
         phone = otp_code.phone
         promotion = validated_data.get('promotion') or ''
 
-        company = Company.objects.create(national_id=company_national_id) if company_national_id else None
-        user = User.objects.create_user(
-            username=phone,
-            phone=phone,
-            promotion=promotion,
-            company=company
-        )
-
         with transaction.atomic():
+
+            user = User.objects.create_user(
+                username=phone,
+                phone=phone,
+                promotion=promotion
+            )
+
+            if company_national_id:
+                Company.objects.create(national_id=company_national_id, user=user)
+
             if not config('ENABLE_MARGIN_SHOW_TO_ALL', cast=bool, default=True):
                 user.show_margin = False
 
