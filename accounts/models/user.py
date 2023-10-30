@@ -42,6 +42,7 @@ class LevelGrants(models.Model):
     LEVEL2 = 2
     LEVEL3 = 3
     LEVEL4 = 4
+
     level = models.PositiveSmallIntegerField(
         unique=True,
         default=LEVEL1,
