@@ -19,6 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
     show_strategy_bot = serializers.SerializerMethodField()
     is_2fa_active = serializers.SerializerMethodField()
     is_consultation_available = serializers.SerializerMethodField()
+    is_company = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -30,6 +31,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_is_consultation_available(self, user: User):
         return not user.is_consulted and SystemConfig.get_system_config().is_consultation_available
+
+    def get_is_company(self, user: User):
+        return user.company is not None
 
     def get_is_2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
