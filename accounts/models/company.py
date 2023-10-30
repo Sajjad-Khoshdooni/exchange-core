@@ -4,6 +4,7 @@ from django.db import models, transaction
 
 from accounts.validators import company_national_id_validator
 from accounts.models import User
+from ledger.utils.fields import get_status_field, DONE, CANCELED
 
 import logging
 
@@ -30,7 +31,7 @@ class Company(models.Model):
     user = models.OneToOneField(User, on_delete=models.PROTECT)
 
     provider_data = models.JSONField(null=True, blank=True)
-    verified = models.BooleanField(null=True, blank=True, default=False)
+    status = get_status_field()
 
     def verify_and_fetch_company_data(self, retry: int = 2):
         from accounts.verifiers.finotech import ServerError
@@ -61,9 +62,9 @@ class Company(models.Model):
         from accounts.models import EmailNotification, Notification
 
         with transaction.atomic():
-            self.is_verified = True
+            self.status = DONE
             self.user.level = 4
-            self.save(update_fields=['is_verified'])
+            self.save(update_fields=['status'])
             self.user.save(update_fields=['level'])
             EmailNotification.objects.create(
                 recipient=self.user,
@@ -81,8 +82,8 @@ class Company(models.Model):
         from accounts.models import EmailNotification, Notification
 
         with transaction.atomic():
-            self.is_verified = False
-            self.save(update_fields=['is_verified'])
+            self.status = CANCELED
+            self.save(update_fields=['status'])
             EmailNotification.objects.create(
                 recipient=self.user,
                 title='رد درخواست',

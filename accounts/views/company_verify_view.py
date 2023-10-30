@@ -10,9 +10,9 @@ class DocumentsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Company
-        fields = ('company_documents', 'verified',)
+        fields = ('company_documents', 'status',)
         extra_kwargs = {
-            'verified': {'read_only': True}
+            'status': {'read_only': True}
         }
 
 
