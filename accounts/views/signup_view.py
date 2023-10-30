@@ -70,14 +70,15 @@ class SignupSerializer(serializers.Serializer):
         token = validated_data.pop('token')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_VERIFY_PHONE)
         password = validated_data.pop('password')
-        company_national_id = validated_data.get('company_national_id', None)
+        company_national_id = validated_data.get('company_national_id') or None
 
         if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
 
         if (User.objects.filter(phone=otp_code.phone).exists() or
-                Company.objects.filter(national_id=company_national_id).exists()):
+                (company_national_id and Company.objects.filter(national_id=company_national_id).exists())):
             raise ValidationError({'phone': 'شما قبلا در سیستم ثبت‌نام کرده‌اید. لطفا از قسمت ورود، وارد شوید.'})
+
         validate_password(password=password)
 
         phone = otp_code.phone
