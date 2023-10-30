@@ -30,7 +30,7 @@ class UserSerializer(serializers.ModelSerializer):
             return user.chat_uuid
 
     def get_is_consultation_available(self, user: User):
-        return not user.is_consulted and SystemConfig.get_system_config().is_consultation_available
+        return not user.is_in_process and SystemConfig.get_system_config().is_consultation_available
 
     def get_is_company(self, user: User):
         return Company.objects.filter(user=user).exists()
