@@ -41,7 +41,7 @@ def post_render_html(html: str) -> str:
             inner_html = parse_table(content)
 
         if inner_html is not None:
-            node.replaceWith(BeautifulSoup(REPLACE_WITH.format(*rgx.groups()), 'html.parser'))
+            node.replaceWith(BeautifulSoup(inner_html, 'html.parser'))
 
     return str(tree)
 
