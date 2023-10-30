@@ -211,11 +211,11 @@ class User(AbstractUser):
     @property
     def is_in_process(self):
         from accounts.models import Consultation
-        from ledger.utils.fields import PROCESS
+        from ledger.utils.fields import PENDING
         
         return Consultation.objects.filter(
             user=self,
-            status=PROCESS
+            status=PENDING
         ).exists()
 
     @property
