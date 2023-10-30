@@ -209,10 +209,13 @@ class User(AbstractUser):
         return name
 
     @property
-    def is_consulted(self):
+    def is_in_process(self):
         from accounts.models import Consultation
+        from ledger.utils.fields import PROCESS
+        
         return Consultation.objects.filter(
-            user=self
+            user=self,
+            status=PROCESS
         ).exists()
 
     @property
