@@ -919,6 +919,7 @@ class CompanyAdmin(admin.ModelAdmin):
     list_display = ('name', 'national_id', 'verified',)
     readonly_fields = ('verified',)
     actions = ('accept_requests', 'reject_requests', 'fetch_company_info',)
+    raw_id_fields = ('user',)
     list_filter = ('verified',)
 
     @admin.action(description='تایید اطلاعات', permissions=['view'])
