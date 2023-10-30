@@ -62,7 +62,9 @@ class Company(models.Model):
 
         with transaction.atomic():
             self.is_verified = True
+            self.user.level = 4
             self.save(update_fields=['is_verified'])
+            self.user.save(update_fields=['level'])
             EmailNotification.objects.create(
                 recipient=self.user,
                 title='تایید درخواست',
