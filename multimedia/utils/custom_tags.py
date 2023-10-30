@@ -9,14 +9,38 @@ REPLACE_WITH = '<video style="width: 100%" controls poster="{1}"><source src="{0
 EMPTY_STYLE_REGEX = re.compile(r' style=\"\s*\"')
 
 
+def parse_table(content: str):
+    rows = list(filter(lambda x: x, content.split('\n')))[1:]
+    header = ''.join(map(lambda h: f'<th>{h}</th>', rows[0].split('|')))
+    body = ''
+
+    for row in rows[1:]:
+        b = ''.join(map(
+            lambda item: f'<td>{item}</td>',
+            row.split('|')
+        ))
+        body += f'<tr>{b}</tr>'
+
+    return f'<table><thead><tr>{header}</tr></thead><tbody>{body}</tbody></table>'
+
+
 def post_render_html(html: str) -> str:
     html = html.replace('color: rgb(0, 0, 0);', '').replace('background-color: transparent;', '')
     html = EMPTY_STYLE_REGEX.sub("", html)
     tree = BeautifulSoup(html, 'html.parser')
     for node in tree.findAll('pre'):
-        rgx = VIDEO_REGEX.match(node.text.strip())
+        content = node.text.strip()
+        rgx = VIDEO_REGEX.match(content)
+
+        inner_html = None
 
         if rgx:
+            inner_html = REPLACE_WITH.format(*rgx.groups())
+
+        elif content.startswith('TABLE'):
+            inner_html = parse_table(content)
+
+        if inner_html is not None:
             node.replaceWith(BeautifulSoup(REPLACE_WITH.format(*rgx.groups()), 'html.parser'))
 
     return str(tree)
