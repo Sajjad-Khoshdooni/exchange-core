@@ -917,7 +917,7 @@ class UserFeaturePermAdmin(admin.ModelAdmin):
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
     list_display = ('national_id', 'name', 'status',)
-    readonly_fields = ('status',)
+    readonly_fields = ('status', 'company_documents',)
     actions = ('accept_requests', 'reject_requests', 'fetch_company_info',)
     raw_id_fields = ('user',)
     list_filter = ('status',)
