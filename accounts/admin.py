@@ -916,9 +916,10 @@ class UserFeaturePermAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'national_id', 'verified',)
+    list_display = ('national_id', 'name', 'verified',)
     readonly_fields = ('verified',)
     actions = ('accept_requests', 'reject_requests', 'fetch_company_info',)
+    raw_id_fields = ('user',)
     list_filter = ('verified',)
 
     @admin.action(description='تایید اطلاعات', permissions=['view'])
