@@ -922,15 +922,15 @@ class CompanyAdmin(admin.ModelAdmin):
     raw_id_fields = ('user',)
     list_filter = ('verified',)
 
-    @admin.action(description='تایید اطلاعات', permissions=['view'])
+    @admin.action(description='رد اطلاعات', permissions=['view'])
     def reject_requests(self, request, queryset):
         for req in queryset:
-            req.accept()
+            req.reject()
 
-    @admin.action(description='رد اطلاعات', permissions=['view'])
+    @admin.action(description='تایید اطلاعات', permissions=['view'])
     def accept_requests(self, request, queryset):
         for req in queryset:
-            req.reject()
+            req.accept()
 
     @admin.action(description='استعلام اطلاعات', permissions=['view'])
     def fetch_company_info(self, request, queryset):
