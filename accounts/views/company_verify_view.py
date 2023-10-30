@@ -15,6 +15,7 @@ class DocumentsSerializer(serializers.ModelSerializer):
 
 class RegisterDocuments(UpdateAPIView):
     queryset = Company.objects.all()
+    serializer_class = DocumentsSerializer
 
     def get_object(self):
         user = self.request.user
