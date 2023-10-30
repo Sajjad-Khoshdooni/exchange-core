@@ -41,7 +41,7 @@ class Section(BaseItem):
     class Meta:
         verbose_name = 'بخش'
         verbose_name_plural = 'بخش‌‌ها'
-        ordering = ('order', 'id')
+        ordering = ('-parent', 'order', 'id')
 
 
 class Article(BaseItem):
@@ -67,4 +67,4 @@ class Article(BaseItem):
     class Meta:
         verbose_name = 'مقاله'
         verbose_name_plural = 'مقاله‌ها'
-        ordering = ('order', 'id')
+        ordering = ('parent', 'order', 'id')

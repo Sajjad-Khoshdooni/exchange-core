@@ -47,7 +47,6 @@ class CoinPriceContentAdmin(SimpleHistoryAdmin):
 class ArticleAdmin(admin.ModelAdmin):
     list_display = ('title', 'title_en', 'parent', 'order', 'is_pinned')
     list_editable = ('order', 'is_pinned')
-    ordering = ('parent', 'order')
     list_filter = ('parent', 'is_pinned')
     formfield_overrides = {
         models.TextField: {'widget': forms.Textarea(attrs={'rows': 1})},
@@ -69,7 +68,6 @@ class ArticleAdmin(admin.ModelAdmin):
 class SectionAdmin(admin.ModelAdmin):
     list_display = ('title', 'slug', 'order', 'parent')
     list_editable = ('order', )
-    ordering = ('-parent', 'order')
     list_filter = ('parent', )
 
     formfield_overrides = {
