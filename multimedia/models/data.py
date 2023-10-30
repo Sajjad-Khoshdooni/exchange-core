@@ -18,7 +18,7 @@ class Image(models.Model):
 
 class File(models.Model):
     uuid = models.UUIDField(default=uuid4, unique=True)
-    file = models.FileField(max_length=1024*1024*100)
+    file = models.FileField()
     
     def get_absolute_file_url(self):
         return self.file.url
