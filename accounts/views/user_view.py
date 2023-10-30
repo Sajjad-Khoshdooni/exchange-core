@@ -8,7 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.core.exceptions import ValidationError
 
-from accounts.models import VerificationCode
+from accounts.models import VerificationCode, Company
 from accounts.models import User, CustomToken, SystemConfig
 from accounts.utils.hijack import get_hijacker_id
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
@@ -33,7 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
         return not user.is_consulted and SystemConfig.get_system_config().is_consultation_available
 
     def get_is_company(self, user: User):
-        return user.company is not None
+        return Company.objects.filter(user=user).exists()
 
     def get_is_2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
