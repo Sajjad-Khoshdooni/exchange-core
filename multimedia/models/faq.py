@@ -41,7 +41,7 @@ class Section(BaseItem):
     class Meta:
         verbose_name = 'بخش'
         verbose_name_plural = 'بخش‌‌ها'
-        ordering = ('-parent', 'order', 'id')
+        ordering = ('order', 'id')
 
 
 class Article(BaseItem):

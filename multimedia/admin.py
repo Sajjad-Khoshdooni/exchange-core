@@ -69,6 +69,7 @@ class SectionAdmin(admin.ModelAdmin):
     list_display = ('title', 'slug', 'order', 'parent')
     list_editable = ('order', )
     list_filter = ('parent', )
+    ordering = ('-parent', 'order', 'id')
 
     formfield_overrides = {
         models.TextField: {'widget': forms.Textarea(attrs={'rows': 1})},
