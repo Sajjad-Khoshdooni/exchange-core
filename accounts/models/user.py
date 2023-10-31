@@ -38,7 +38,20 @@ class UserType(Enum):
 
 
 class LevelGrants(models.Model):
-    level = models.PositiveSmallIntegerField(unique=True)
+    LEVEL1 = 1
+    LEVEL2 = 2
+    LEVEL3 = 3
+    LEVEL4 = 4
+
+    level = models.PositiveSmallIntegerField(
+        unique=True,
+        default=LEVEL1,
+        choices=(
+            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3'),
+            (LEVEL4, 'level 4'),
+        ),
+        verbose_name='سطح',
+    )
 
     max_daily_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
 
@@ -196,10 +209,13 @@ class User(AbstractUser):
         return name
 
     @property
-    def is_consulted(self):
+    def is_in_process(self):
         from accounts.models import Consultation
+        from ledger.utils.fields import PENDING
+        
         return Consultation.objects.filter(
-            user=self
+            user=self,
+            status=PENDING
         ).exists()
 
     @property

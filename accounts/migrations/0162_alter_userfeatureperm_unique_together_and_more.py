@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0159_levelgrants_historicaluser_custom_fiat_withdraw_ceil_and_more'),
+        ('accounts', '0161_remove_company_verified_company_status'),
     ]
 
     operations = [

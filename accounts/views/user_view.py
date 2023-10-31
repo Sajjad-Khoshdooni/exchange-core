@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User, CustomToken, SystemConfig
-from accounts.models import VerificationCode
+from accounts.models import VerificationCode, Company
 from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.hijack import get_hijacker_id
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
@@ -26,6 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
     show_strategy_bot = serializers.SerializerMethodField()
     is_2fa_active = serializers.SerializerMethodField()
     is_consultation_available = serializers.SerializerMethodField()
+    is_company = serializers.SerializerMethodField()
     features = UserFeatureSerializer(source='userfeatureperm_set', many=True)
 
     def get_chat_uuid(self, user: User):
@@ -37,7 +38,10 @@ class UserSerializer(serializers.ModelSerializer):
             return user.chat_uuid
 
     def get_is_consultation_available(self, user: User):
-        return not user.is_consulted and SystemConfig.get_system_config().is_consultation_available
+        return not user.is_in_process and SystemConfig.get_system_config().is_consultation_available
+
+    def get_is_company(self, user: User):
+        return Company.objects.filter(user=user).exists()
 
     def get_is_2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
@@ -54,7 +58,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
             'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'chat_uuid', 'is_2fa_active',
-            'can_withdraw', 'is_suspended', 'suspended_until', 'is_consultation_available', 'features'
+            'can_withdraw', 'is_suspended', 'suspended_until', 'is_consultation_available', 'is_company', 'features'
         )
         ref_name = "User"
 

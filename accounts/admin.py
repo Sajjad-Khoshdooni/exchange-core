@@ -309,7 +309,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred'
         )}),
         (_('اطلاعات اضافی'), {'fields': (
-            'is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_consulted', 'is_2fa_active'
+            'is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_in_process', 'is_2fa_active'
         )})
     )
 
@@ -339,7 +339,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted',
+        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_in_process',
         'suspension_reason', 'get_bots_link', 'is_2fa_active'
     )
     preserve_filters = ('archived', )
@@ -916,24 +916,23 @@ class UserFeaturePermAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'national_id', 'verified',)
-    readonly_fields = ('verified',)
+    list_display = ('national_id', 'name', 'status',)
+    readonly_fields = ('status', 'company_documents',)
     actions = ('accept_requests', 'reject_requests', 'fetch_company_info',)
-    list_filter = ('verified',)
-
-    @admin.action(description='تایید اطلاعات', permissions=['view'])
-    def reject_requests(self, request, queryset):
-        qs = queryset.filter(status=PENDING)
-
-        for req in qs:
-            req.reject()
+    raw_id_fields = ('user',)
+    list_filter = ('status',)
 
     @admin.action(description='رد اطلاعات', permissions=['view'])
+    def reject_requests(self, request, queryset):
+        for req in queryset:
+            req.reject()
+
+    @admin.action(description='تایید اطلاعات', permissions=['view'])
     def accept_requests(self, request, queryset):
         for req in queryset:
             req.accept()
 
-    @admin.action(description='رد اطلاعات', permissions=['view'])
+    @admin.action(description='استعلام اطلاعات', permissions=['view'])
     def fetch_company_info(self, request, queryset):
         for req in queryset:
             req.verify_and_fetch_company_data()
