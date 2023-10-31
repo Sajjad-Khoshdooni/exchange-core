@@ -1,17 +1,24 @@
 from decouple import config
+from django.core.exceptions import ValidationError
+from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from django.core.exceptions import ValidationError
 
-from accounts.models import VerificationCode
 from accounts.models import User, CustomToken, SystemConfig
+from accounts.models import VerificationCode
+from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.hijack import get_hijacker_id
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
+
+
+class UserFeatureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserFeaturePerm
+        fields = ('feature', 'limit', 'custom')
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -19,6 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
     show_strategy_bot = serializers.SerializerMethodField()
     is_2fa_active = serializers.SerializerMethodField()
     is_consultation_available = serializers.SerializerMethodField()
+    features = UserFeatureSerializer(source='userfeatureperm_set', many=True)
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -46,7 +54,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
             'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'chat_uuid', 'is_2fa_active',
-            'can_withdraw', 'is_suspended', 'suspended_until', 'is_consultation_available',
+            'can_withdraw', 'is_suspended', 'suspended_until', 'is_consultation_available', 'features'
         )
         ref_name = "User"
 
