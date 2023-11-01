@@ -7,7 +7,7 @@ from multimedia.fields import FileField
 
 
 class DocumentsSerializer(serializers.ModelSerializer):
-    company_documents = FileField(write_only=True)
+    company_documents = FileField()
 
     class Meta:
         model = Company
