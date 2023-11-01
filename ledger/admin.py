@@ -242,7 +242,7 @@ class DepositAddressUserFilter(admin.SimpleListFilter):
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
     list_display = ('address_key', 'network', 'address', 'get_memo',)
-    readonly_fields = ('address_key', 'network', 'address', 'get_memo')
+    readonly_fields = ('address_key', 'network', 'address', 'get_memo',)
     list_filter = ('network', DepositAddressUserFilter)
     search_fields = ('address',)
 
