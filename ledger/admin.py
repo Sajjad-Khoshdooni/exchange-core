@@ -895,7 +895,7 @@ class AlertTriggerAdmin(admin.ModelAdmin):
 class DepositRecoveryRequestAdmin(admin.ModelAdmin):
     list_display = ('coin', 'amount', 'get_description',)
     list_filter = ('status', 'coin',)
-    readonly_fields = ('created', 'status', 'user', 'address', 'coin', 'network', 'amount',)
+    readonly_fields = ('created', 'status', 'user', 'receiver_address', 'coin', 'network', 'amount',)
     raw_id_fields = ('user',)
 
     @admin.display(description='description')
@@ -907,11 +907,11 @@ class DepositRecoveryRequestAdmin(admin.ModelAdmin):
         else:
             return description
 
-    @admin.action(description='استرداد', permissions=['view'])
+    @admin.action(description='استرداد', permissions=['change'])
     def refund_requests(self, request, queryset):
         qs = queryset.filter(status=PROCESS)
         for req in qs:
-            req.refund()
+            req.create_transfer()
 
     @admin.action(description='تایید اطلاعات', permissions=['view'])
     def accept_requests(self, request, queryset):
@@ -922,6 +922,6 @@ class DepositRecoveryRequestAdmin(admin.ModelAdmin):
     @admin.action(description='رد اطلاعات', permissions=['view'])
     def reject_requests(self, request, queryset):
         qs = queryset.filter(status=PENDING)
-        for req in queryset:
+        for req in qs:
             req.reject()
 
