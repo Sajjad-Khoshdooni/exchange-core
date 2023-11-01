@@ -25,7 +25,7 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
-    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback
+    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -889,3 +889,40 @@ class AlertTriggerAdmin(admin.ModelAdmin):
     list_filter = ('asset', 'is_chanel_changed', 'is_triggered',)
     readonly_fields = ('created', 'asset', 'price', 'change_percent', 'chanel', 'cycle',)
     search_fields = ('cycle',)
+
+
+@admin.register(DepositRecoveryRequest)
+class DepositRecoveryRequestAdmin(admin.ModelAdmin):
+    list_display = ('coin', 'amount', 'get_description',)
+    list_filter = ('status', 'coin',)
+    readonly_fields = ('created', 'status', 'user', 'receiver_address', 'coin', 'network', 'amount',)
+    actions = ('accept_requests', 'reject_requests', 'final_accept_requests',)
+    raw_id_fields = ('user',)
+
+    @admin.display(description='description')
+    def get_description(self, deposit_request: DepositRecoveryRequest):
+        n = 300
+        description = deposit_request.description
+        if len(description) > n:
+            return description[:n] + '...'
+        else:
+            return description
+
+    @admin.action(description='تایید نهایی', permissions=['change'])
+    def final_accept_requests(self, request, queryset):
+        qs = queryset.filter(status=PENDING)
+        for req in qs:
+            req.create_transfer()
+
+    @admin.action(description='تایید اولیه', permissions=['view'])
+    def accept_requests(self, request, queryset):
+        qs = queryset.filter(status=PROCESS)
+        for req in qs:
+            req.accept()
+
+    @admin.action(description='رد اطلاعات', permissions=['view'])
+    def reject_requests(self, request, queryset):
+        qs = queryset.filter(status=PROCESS)
+        for req in qs:
+            req.reject()
+
