@@ -15,7 +15,7 @@ class Company(models.Model):
     name = models.CharField(blank=True, max_length=128)
     address = models.TextField(blank=True)
     postal_code = models.CharField(blank=True, max_length=128)
-    registration_id = models.CharField(blank=True, unique=True, max_length=128)
+    registration_id = models.CharField(blank=True, max_length=128)
     company_registration_date = models.CharField(blank=True, max_length=128)
     national_id = models.CharField(validators=[company_national_id_validator], unique=True, max_length=11)
     is_active = models.BooleanField(null=True, blank=True, default=False)
