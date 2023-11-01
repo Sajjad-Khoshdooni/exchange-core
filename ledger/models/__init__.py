@@ -22,3 +22,4 @@ from .position import MarginPosition
 from .manual_trade import ManualTrade
 from .asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from .withdraw_feedback import FeedbackCategory, WithdrawFeedback
+from .deposit_recovery import DepositRecoveryRequest

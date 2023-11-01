@@ -1,10 +1,11 @@
 from django.db import models
 
 from ledger.models import Asset, Network
-from ledger.utils.fields import get_amount_field, get_address_field
+from ledger.utils.fields import get_amount_field, get_address_field, get_status_field
 
 
 class DepositRecoveryRequest(models.Model):
+    status = get_status_field()
     coin = models.ForeignKey(Asset, on_delete=models.PROTECT)
     network = models.ForeignKey(Network, on_delete=models.PROTECT)
     memo = models.CharField(max_length=64, blank=True)
