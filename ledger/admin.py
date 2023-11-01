@@ -720,6 +720,10 @@ class SystemSnapshotAdmin(admin.ModelAdmin):
     def verify_histories(self, request, queryset):
         queryset.update(verified=True)
 
+    @admin.display(description='non reserved')
+    def get_non_reserved(self, snapshot: models.SystemSnapshot):
+        return snapshot.exchange - snapshot.reserved
+
 
 @admin.register(models.AssetSnapshot)
 class AssetSnapshotAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
