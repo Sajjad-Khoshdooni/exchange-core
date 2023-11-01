@@ -293,13 +293,13 @@ class User(AbstractUser):
         verbose_name = _('user')
         verbose_name_plural = _('users')
 
-        constraints = [
-            UniqueConstraint(
-                fields=["national_code"],
-                name="unique_verified_national_code",
-                condition=Q(level__gt=1),
-            )
-        ]
+        # constraints = [
+        #     UniqueConstraint(
+        #         fields=["national_code"],
+        #         name="unique_verified_national_code",
+        #         condition=Q(level__gt=1),
+        #     )
+        # ]
 
         permissions = [
             ("can_generate_notification", "Can Generate All Kind Of Notification"),
