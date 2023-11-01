@@ -241,10 +241,14 @@ class DepositAddressUserFilter(admin.SimpleListFilter):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('address_key', 'network', 'address',)
-    readonly_fields = ('address_key', 'network', 'address',)
+    list_display = ('address_key', 'network', 'address', 'get_memo',)
+    readonly_fields = ('address_key', 'network', 'address', 'get_memo')
     list_filter = ('network', DepositAddressUserFilter)
     search_fields = ('address',)
+
+    @admin.display(description='memo')
+    def get_memo(self, deposit_address: models.DepositAddress):
+        return deposit_address.address_key.memo
 
 
 class OTCRequestUserFilter(SimpleListFilter):
