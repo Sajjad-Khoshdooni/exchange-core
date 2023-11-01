@@ -44,10 +44,10 @@ def get_serializer_amount_field(**kwargs):
     )
 
 
-def get_status_field():
+def get_status_field(default=PENDING):
 
     return models.CharField(
-        default=PENDING,
+        default=default,
         max_length=8,
         choices=[(PROCESS, 'در حال پردازش'), (PENDING, 'در انتظار تایید'), (CANCELED, 'لغو شده'), (DONE, 'انجام شده')]
     )

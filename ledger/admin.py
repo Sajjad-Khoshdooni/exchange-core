@@ -896,6 +896,7 @@ class DepositRecoveryRequestAdmin(admin.ModelAdmin):
     list_display = ('coin', 'amount', 'get_description',)
     list_filter = ('status', 'coin',)
     readonly_fields = ('created', 'status', 'user', 'receiver_address', 'coin', 'network', 'amount',)
+    actions = ('accept_requests', 'reject_requests', 'final_accept_requests',)
     raw_id_fields = ('user',)
 
     @admin.display(description='description')
@@ -907,21 +908,21 @@ class DepositRecoveryRequestAdmin(admin.ModelAdmin):
         else:
             return description
 
-    @admin.action(description='استرداد', permissions=['change'])
-    def refund_requests(self, request, queryset):
-        qs = queryset.filter(status=PROCESS)
+    @admin.action(description='تایید نهایی', permissions=['change'])
+    def final_accept_requests(self, request, queryset):
+        qs = queryset.filter(status=PENDING)
         for req in qs:
             req.create_transfer()
 
-    @admin.action(description='تایید اطلاعات', permissions=['view'])
+    @admin.action(description='تایید اولیه', permissions=['view'])
     def accept_requests(self, request, queryset):
-        qs = queryset.filter(status=PENDING)
+        qs = queryset.filter(status=PROCESS)
         for req in qs:
             req.accept()
 
     @admin.action(description='رد اطلاعات', permissions=['view'])
     def reject_requests(self, request, queryset):
-        qs = queryset.filter(status=PENDING)
+        qs = queryset.filter(status=PROCESS)
         for req in qs:
             req.reject()
 
