@@ -893,10 +893,19 @@ class AlertTriggerAdmin(admin.ModelAdmin):
 
 @admin.register(DepositRecoveryRequest)
 class DepositRecoveryRequestAdmin(admin.ModelAdmin):
-    list_display = ('coin', 'amount', 'description',)
+    list_display = ('coin', 'amount', 'get_description',)
     list_filter = ('status', 'coin',)
     readonly_fields = ('created', 'status', 'user', 'address', 'coin', 'network', 'amount',)
     raw_id_fields = ('user',)
+
+    @admin.display(description='description')
+    def get_description(self, deposit_request: DepositRecoveryRequest):
+        n = 300
+        description = deposit_request.description
+        if len(description) > n:
+            return description[:n] + '...'
+        else:
+            return description
 
     @admin.action(description='استرداد', permissions=['view'])
     def refund_requests(self, request, queryset):
