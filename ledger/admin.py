@@ -706,7 +706,7 @@ class SystemSnapshotVerifiedFilter(admin.SimpleListFilter):
 
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'total', 'users', 'exchange', 'hedge', 'reserved', 'prize', 'verified')
+    list_display = ('created', 'total', 'users', 'exchange', 'get_non_reserved', 'hedge', 'reserved', 'prize', 'verified')
     ordering = ('-created',)
     actions = ('reject_histories', 'verify_histories')
     readonly_fields = ('created',)
