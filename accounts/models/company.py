@@ -65,7 +65,7 @@ class Company(models.Model):
             self.status = VERIFIED
             self.user.level = 4
             self.save(update_fields=['status'])
-            self.user.save()
+            self.user.save(update_fields=['level'])
             EmailNotification.objects.create(
                 recipient=self.user,
                 title='تایید درخواست',
