@@ -895,7 +895,7 @@ class AlertTriggerAdmin(admin.ModelAdmin):
 class DepositRecoveryRequestAdmin(admin.ModelAdmin):
     list_display = ('coin', 'amount', 'get_description',)
     list_filter = ('status', 'coin',)
-    readonly_fields = ('created', 'status', 'user', 'receiver_address', 'coin', 'network', 'amount',)
+    readonly_fields = ('created', 'status', 'user', 'receiver_address', 'coin', 'network', 'amount', 'image',)
     actions = ('accept_requests', 'reject_requests', 'final_accept_requests',)
     raw_id_fields = ('user',)
 
