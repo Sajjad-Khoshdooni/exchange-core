@@ -45,5 +45,5 @@ class FileField(serializers.CharField):
     def to_representation(self, value: File):
         return {
             'uuid': value.uuid,
-            'image': self.context['request'].build_absolute_uri(value.file.url),
+            'file': self.context['request'].build_absolute_uri(value.file.url),
         }
