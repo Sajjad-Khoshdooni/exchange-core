@@ -17,7 +17,7 @@ from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
 from accounts.utils.login import set_login_activity
-from accounts.validators import mobile_number_validator, password_validator
+from accounts.validators import mobile_number_validator, password_validator, company_national_id_validator
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,8 @@ class SignupSerializer(serializers.Serializer):
     referral_code = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     promotion = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     source = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
-    company_national_id = serializers.CharField(allow_null=True, allow_blank=True, write_only=True, required=False)
+    company_national_id = serializers.CharField(allow_null=True, allow_blank=True, write_only=True,
+                                                required=False, validators=[company_national_id_validator])
 
     @staticmethod
     def validate_referral_code(code):
