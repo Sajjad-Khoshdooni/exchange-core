@@ -7,16 +7,15 @@ from django.db import models
 from django.db.models import CharField
 from rest_framework import serializers
 
-
 from ledger.utils.cache import cache_for
 from ledger.utils.precision import normalize_fraction, AMOUNT_PRECISION
 
 PROCESS, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
+INIT, REJECTED, VERIFIED = 'init', 'rejected', 'verified'
 
 
 def get_amount_field(default: Union[Decimal, int] = None, max_digits: int = None, decimal_places: int = None,
-                     null: bool = False, validators: tuple = (MinValueValidator(0), ), verbose_name: str = None):
-
+                     null: bool = False, validators: tuple = (MinValueValidator(0),), verbose_name: str = None):
     if validators is None:
         validators = [MinValueValidator(0)]
 
@@ -44,12 +43,19 @@ def get_serializer_amount_field(**kwargs):
     )
 
 
-def get_status_field():
-
+def get_status_field(default=PENDING):
     return models.CharField(
-        default=PENDING,
+        default=default,
         max_length=8,
         choices=[(PROCESS, 'در حال پردازش'), (PENDING, 'در انتظار تایید'), (CANCELED, 'لغو شده'), (DONE, 'انجام شده')]
+    )
+
+
+def get_verify_status_field(default=INIT):
+    return models.CharField(
+        default=INIT,
+        max_length=8,
+        choices=[(INIT, 'init'), (PENDING, 'pending'), (REJECTED, 'rejected'), (VERIFIED, 'verified')]
     )
 
 

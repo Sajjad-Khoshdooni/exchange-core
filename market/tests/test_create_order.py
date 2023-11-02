@@ -10,6 +10,7 @@ from ledger.utils.external_price import SELL, BUY
 from ledger.utils.test import new_account, set_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, Trade, Order
+from market.models.pair_symbol import DEFAULT_TAKER_FEE, DEFAULT_MAKER_FEE
 from market.utils.order_utils import new_order
 
 
@@ -125,17 +126,17 @@ class CreateOrderTestCase(TestCase):
             scope=Trx.COMMISSION,
             sender=self.btc.get_wallet(self.account)
         )
-        if fill_order.symbol.maker_fee != 0:
+        if DEFAULT_MAKER_FEE != Decimal(0):
             trx_maker_fee = Trx.objects.get(
                 group_id=fill_order.group_id,
                 scope=Trx.COMMISSION,
                 sender=self.btc.get_wallet(Account.system())
             )
-            self.assertEqual(trx_maker_fee, 2 * self.btcirt.maker_fee)
+            self.assertEqual(trx_maker_fee, 2 * DEFAULT_MAKER_FEE)
 
         self.assertEqual(trx_asset.amount, 2)
         self.assertEqual(trx_base_asset.amount, 400000)
-        self.assertEqual(trx_taker_fee.amount, 2 * self.btcirt.taker_fee)
+        self.assertEqual(trx_taker_fee.amount, 2 * DEFAULT_TAKER_FEE)
 
         self.assertEqual(order_3.status, Order.FILLED)
         self.assertEqual(order_4.status, Order.FILLED)
@@ -164,10 +165,10 @@ class CreateOrderTestCase(TestCase):
         trade_between_6_7 = Trade.objects.get(order_id=order_6.id)
         trade_between_7_6 = Trade.objects.get(order_id=order_7.id, group_id=trade_between_6_7.group_id)
 
-        self.assertEqual(trade_between_7_5.fee_amount, 2 * self.btcirt.taker_fee)
-        self.assertEqual(trade_between_5_7.fee_amount, 2 * self.btcirt.maker_fee)
-        self.assertEqual(trade_between_7_6.fee_amount, 3 * self.btcirt.taker_fee)
-        self.assertEqual(trade_between_6_7.fee_amount, 3 * self.btcirt.maker_fee)
+        self.assertEqual(trade_between_7_5.fee_amount, 2 * DEFAULT_TAKER_FEE)
+        self.assertEqual(trade_between_5_7.fee_amount, 2 * DEFAULT_MAKER_FEE)
+        self.assertEqual(trade_between_7_6.fee_amount, 3 * DEFAULT_TAKER_FEE)
+        self.assertEqual(trade_between_6_7.fee_amount, 3 * DEFAULT_MAKER_FEE)
 
         self.assertEqual(order_5.filled_amount, 2)
         self.assertEqual(order_6.filled_amount, 3)

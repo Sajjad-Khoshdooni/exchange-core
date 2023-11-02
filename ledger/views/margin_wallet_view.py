@@ -206,27 +206,31 @@ class MarginBalanceAPIView(APIView):
     loanable balance
     """
     def get(self, request: Request):
+        account = request.user.account
         symbol_name = request.query_params.get('symbol')
         symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, asset__margin_enable=True).first()
+
         if not symbol:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol_name))
 
         side = request.query_params.get('side')
         if side == SELL:
-            margin_cross_wallet = symbol.base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
+            margin_cross_wallet = symbol.base_asset.get_wallet(account, market=Wallet.MARGIN, variant=None)
             return Response({
                 'asset': symbol.base_asset.symbol,
                 'balance': get_presentation_amount(margin_cross_wallet.get_free())
             })
 
         position = MarginPosition.objects.filter(
-            account=request.user.account, symbol=symbol, status=MarginPosition.OPEN).first()
+            account=account, symbol=symbol, status=MarginPosition.OPEN).first()
         if not position or not position.amount:
             return Response({'asset': symbol.asset.symbol, 'balance': get_presentation_amount(Decimal(0))})
 
+        fee_rate = symbol.get_fee_rate(account, is_maker=False)
+
         return Response({
             'asset': symbol.asset.symbol,
-            'balance': get_presentation_amount(position.amount / (Decimal(1) - symbol.taker_fee), symbol.step_size)
+            'balance': get_presentation_amount(position.amount / (Decimal(1) - fee_rate), symbol.step_size)
         })
 
 
@@ -262,3 +266,13 @@ class MarginTransferBalanceAPIView(APIView):
                 'asset': symbol.base_asset.symbol,
                 'balance': get_presentation_amount(position.withdrawable_base_asset)
             })
+        elif transfer_type == MarginTransfer.SPOT_TO_MARGIN:
+            base_asset = Asset.get(request.query_params.get('symbol'))
+            spot_wallet = base_asset.get_wallet(request.user.account, market=Wallet.SPOT, variant=None)
+
+            return Response({
+                            'asset': base_asset.symbol,
+                            'balance': get_presentation_amount(spot_wallet.get_free())
+                        })
+        else:
+            return Response({'Error': 'Invalid type'}, status=400)

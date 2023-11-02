@@ -25,7 +25,7 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
-    ManualTrade, Trx, NetworkAsset, MarginPosition
+    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, MarginPosition
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -176,6 +176,17 @@ class AssetAdmin(AdvancedAdmin):
             create_symbols_for_asset(asset)
 
 
+@admin.register(FeedbackCategory)
+class FeedbackCategoryAdmin(admin.ModelAdmin):
+    list_display = ('category',)
+
+
+@admin.register(WithdrawFeedback)
+class WithdrawFeedbackAdmin(admin.ModelAdmin):
+    list_display = ('category', 'description',)
+    readonly_fields = ('created',)
+
+
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
     list_display = (
@@ -230,10 +241,14 @@ class DepositAddressUserFilter(admin.SimpleListFilter):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('address_key', 'network', 'address',)
-    readonly_fields = ('address_key', 'network', 'address',)
+    list_display = ('address_key', 'network', 'address', 'get_memo',)
+    readonly_fields = ('address_key', 'network', 'address', 'get_memo',)
     list_filter = ('network', DepositAddressUserFilter)
     search_fields = ('address',)
+
+    @admin.display(description='memo')
+    def get_memo(self, deposit_address: models.DepositAddress):
+        return deposit_address.address_key.memo
 
 
 class OTCRequestUserFilter(SimpleListFilter):
@@ -253,10 +268,16 @@ class OTCRequestUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
+    list_display = ('created', 'get_username', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
     readonly_fields = ('account', 'login_activity')
     search_fields = ('token', 'symbol__name')
     list_filter = (OTCRequestUserFilter,)
+
+    @admin.display(description='user')
+    def get_username(self, otc_request: models.OTCRequest):
+        return mark_safe(
+            f'<span dir="ltr">{otc_request.account.user}</span>'
+        )
 
 
 class OTCUserFilter(SimpleListFilter):
@@ -276,12 +297,15 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status', 'get_value', 'get_value_irt', 'execution_type', 'gap_revenue',
-                    'hedged')
+    list_display = ('created', 'get_username', 'otc_request', 'status', 'get_value', 'get_value_irt',
+                    'execution_type', 'gap_revenue', 'hedged')
     list_filter = (OTCUserFilter, 'status', 'execution_type', 'hedged')
     search_fields = ('group_id', 'order_id', 'otc_request__symbol__asset__symbol', 'otc_request__account__user__phone')
-    readonly_fields = ('otc_request',)
+    readonly_fields = ('otc_request', 'get_username')
     actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
+
+    def get_queryset(self, request):
+        return super(OTCTradeAdmin, self).get_queryset(request).prefetch_related('otc_request__account__user')
 
     @admin.display(description='value')
     def get_value(self, otc_trade: models.OTCTrade):
@@ -290,6 +314,13 @@ class OTCTradeAdmin(admin.ModelAdmin):
     @admin.display(description='value_irt')
     def get_value_irt(self, otc_trade: models.OTCTrade):
         return humanize_number(round(otc_trade.otc_request.irt_value, 0))
+
+    @admin.display(description='user')
+    def get_username(self, otc_trade: models.OTCTrade):
+        return anchor_tag(
+            title=f'<span dir="ltr">{otc_trade.otc_request.account.user}</span>',
+            url=url_to_edit_object(otc_trade.otc_request.account.user)
+        )
 
     @admin.action(description='Accept Trade')
     def accept_trade(self, request, queryset):
@@ -309,11 +340,23 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):
-    list_display = ('created', 'sender', 'receiver', 'amount', 'scope', 'group_id')
+    list_display = ('created', 'get_masked_sender', 'get_masked_receiver', 'amount', 'scope', 'group_id')
     search_fields = (
         'sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone', 'group_id')
     readonly_fields = ('sender', 'receiver',)
     list_filter = ('scope',)
+
+    @admin.display(description='sender')
+    def get_masked_sender(self, trx: Trx):
+        return mark_safe(
+            f'<span dir="ltr">{trx.sender}</span>'
+        )
+
+    @admin.display(description='reciever')
+    def get_masked_receiver(self, trx: Trx):
+        return mark_safe(
+            f'<span dir="ltr">{trx.receiver}</span>'
+        )
 
 
 class WalletUserFilter(SimpleListFilter):
@@ -348,7 +391,7 @@ class BalanceLockInline(admin.TabularInline):
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
+    list_display = ('created', 'get_username', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
                     'credit', 'variant')
     inlines = [BalanceLockInline]
     list_filter = [
@@ -357,6 +400,7 @@ class WalletAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ('account', 'asset', 'market', 'balance', 'locked', 'variant')
     search_fields = ('account__user__phone', 'asset__symbol')
+    actions = ('sync_wallet_lock', )
 
     def get_queryset(self, request):
         qs = super(WalletAdmin, self).get_queryset(request)
@@ -382,6 +426,18 @@ class WalletAdmin(admin.ModelAdmin):
     def get_value_usdt(self, wallet: models.Wallet):
         price = get_last_price(wallet.asset.symbol + Asset.USDT) or 0
         return humanize_number(wallet.balance * price)
+
+    @admin.display(description='user')
+    def get_username(self, wallet: Wallet):
+        return mark_safe(
+            f'<span dir="ltr">{wallet.account}</span>'
+        )
+
+    @admin.action(description='Sync Lock', permissions=['change'])
+    def sync_wallet_lock(self, request, queryset):
+        for wallet in queryset:
+            wallet.locked = BalanceLock.objects.filter(wallet=wallet, amount__gt=0).aggregate(sum=Sum('amount'))['sum'] or 0
+            wallet.save(update_fields=['locked'])
 
 
 class TransferUserFilter(SimpleListFilter):
@@ -454,7 +510,7 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
         if user:
             link = url_to_edit_object(user)
-            return anchor_tag(user.phone, link)
+            return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, user))
 
     @admin.display(description='Remaining 48h')
     def get_remaining_time_to_pass_48h(self, transfer: models.Transfer):
@@ -538,9 +594,15 @@ class CloseRequestAdmin(admin.ModelAdmin):
 
 @admin.register(models.AddressBook)
 class AddressBookAdmin(admin.ModelAdmin):
-    list_display = ('name', 'account', 'network', 'address', 'asset',)
+    list_display = ('name', 'get_username', 'network', 'address', 'asset',)
     search_fields = ('address', 'name')
     readonly_fields = ('account', 'network', 'address', 'asset')
+
+    @admin.display(description='user')
+    def get_username(self, address_book: models.AddressBook):
+        return mark_safe(
+            f'<span dir="ltr">{address_book.account}</span>'
+        )
 
 
 class PrizeUserFilter(admin.SimpleListFilter):
@@ -560,7 +622,7 @@ class PrizeUserFilter(admin.SimpleListFilter):
 
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'achievement', 'account', 'get_asset_amount', 'redeemed', 'value')
+    list_display = ('created', 'achievement', 'get_username', 'get_asset_amount', 'redeemed', 'value')
     readonly_fields = ('account', 'asset',)
     list_filter = ('achievement', 'redeemed', PrizeUserFilter)
 
@@ -568,6 +630,12 @@ class PrizeAdmin(admin.ModelAdmin):
         return '%s %s' % (get_presentation_amount(prize.amount), prize.asset)
 
     get_asset_amount.short_description = 'مقدار'
+
+    @admin.display(description='user')
+    def get_username(self, prize: models.Prize):
+        return mark_safe(
+            f'<span dir="ltr">{prize.account.user}</span>'
+        )
 
 
 @admin.register(models.CoinCategory)
@@ -604,8 +672,14 @@ class MarketSpreadAdmin(admin.ModelAdmin):
 
 @admin.register(models.PNLHistory)
 class PNLHistoryAdmin(admin.ModelAdmin):
-    list_display = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
+    list_display = ('date', 'get_username', 'market', 'base_asset', 'snapshot_balance', 'profit')
     readonly_fields = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
+
+    @admin.display(description='user')
+    def get_username(self, pnl_history: models.PNLHistory):
+        return mark_safe(
+            f'<span dir="ltr">{pnl_history.account.user}</span>'
+        )
 
 
 @admin.register(models.CategorySpread)
@@ -636,7 +710,7 @@ class SystemSnapshotVerifiedFilter(admin.SimpleListFilter):
 
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'total', 'users', 'exchange', 'hedge', 'reserved', 'prize', 'verified')
+    list_display = ('created', 'total', 'users', 'exchange', 'get_non_reserved', 'hedge', 'reserved', 'prize', 'verified')
     ordering = ('-created',)
     actions = ('reject_histories', 'verify_histories')
     readonly_fields = ('created',)
@@ -649,6 +723,10 @@ class SystemSnapshotAdmin(admin.ModelAdmin):
     @admin.action(description='تایید', permissions=['change'])
     def verify_histories(self, request, queryset):
         queryset.update(verified=True)
+
+    @admin.display(description='non reserved')
+    def get_non_reserved(self, snapshot: models.SystemSnapshot):
+        return snapshot.exchange - snapshot.reserved
 
 
 @admin.register(models.AssetSnapshot)
@@ -727,9 +805,15 @@ class ManualTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(AssetAlert)
 class AssetAlertAdmin(admin.ModelAdmin):
-    list_display = ('user', 'asset',)
+    list_display = ('get_username', 'asset',)
     search_fields = ['user__username', 'asset__symbol']
     raw_id_fields = ['user']
+
+    @admin.display(description='username')
+    def get_username(self, alert: AssetAlert):
+        return mark_safe(
+            f'<span dir="ltr">{alert.user}</span>'
+        )
 
 
 @admin.register(BalanceLock)
@@ -813,6 +897,42 @@ class AlertTriggerAdmin(admin.ModelAdmin):
     list_filter = ('asset', 'is_chanel_changed', 'is_triggered',)
     readonly_fields = ('created', 'asset', 'price', 'change_percent', 'chanel', 'cycle',)
     search_fields = ('cycle',)
+
+
+@admin.register(DepositRecoveryRequest)
+class DepositRecoveryRequestAdmin(admin.ModelAdmin):
+    list_display = ('coin', 'amount', 'get_description',)
+    list_filter = ('status', 'coin',)
+    readonly_fields = ('created', 'status', 'user', 'receiver_address', 'coin', 'network', 'amount', 'image',)
+    actions = ('accept_requests', 'reject_requests', 'final_accept_requests',)
+    raw_id_fields = ('user',)
+
+    @admin.display(description='description')
+    def get_description(self, deposit_request: DepositRecoveryRequest):
+        n = 300
+        description = deposit_request.description
+        if len(description) > n:
+            return description[:n] + '...'
+        else:
+            return description
+
+    @admin.action(description='تایید نهایی', permissions=['change'])
+    def final_accept_requests(self, request, queryset):
+        qs = queryset.filter(status=PENDING)
+        for req in qs:
+            req.create_transfer()
+
+    @admin.action(description='تایید اولیه', permissions=['view'])
+    def accept_requests(self, request, queryset):
+        qs = queryset.filter(status=PROCESS)
+        for req in qs:
+            req.accept()
+
+    @admin.action(description='رد اطلاعات', permissions=['view'])
+    def reject_requests(self, request, queryset):
+        qs = queryset.filter(status=PROCESS)
+        for req in qs:
+            req.reject()
 
 
 @admin.register(MarginPosition)

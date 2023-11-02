@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework import viewsets
@@ -6,8 +7,14 @@ from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.response import Response
 
 from accounts.models import User
-from ledger.models import AssetAlert, BulkAssetAlert
+from ledger.models import AssetAlert, BulkAssetAlert, Asset
 from ledger.models.asset import AssetSerializerMini, CoinField
+from ledger.models.asset_alert import BASE_ALERT_PACKAGE
+from ledger.utils.coins_info import get_coins_info
+from ledger.utils.dto import CoinInfo
+from ledger.utils.external_price import SELL
+from ledger.utils.precision import get_symbol_presentation_price
+from ledger.utils.price import get_prices, get_coins_symbols
 from ledger.views.coin_category_list_view import CoinCategorySerializer
 
 
@@ -45,10 +52,24 @@ class AssetAlertDeleteSerializer(serializers.ModelSerializer):
 
 class AssetAlertObjectSerializer(serializers.ModelSerializer):
     asset = AssetSerializerMini()
+    price_usdt = serializers.SerializerMethodField()
+    price_irt = serializers.SerializerMethodField()
+    change_24h = serializers.SerializerMethodField()
+
+    def get_change_24h(self, asset_alert: AssetAlert):
+        return self.context['cap_info'].get(asset_alert.asset.symbol, CoinInfo()).change_24h
+
+    def get_price_usdt(self, asset_alert: AssetAlert):
+        price = self.context['prices'].get(asset_alert.asset.symbol + Asset.USDT, 0)
+        return get_symbol_presentation_price(asset_alert.asset.symbol + Asset.USDT, price)
+
+    def get_price_irt(self, asset_alert: AssetAlert):
+        price = self.context['prices'].get(asset_alert.asset.symbol + Asset.IRT, 0)
+        return get_symbol_presentation_price(asset_alert.asset.symbol + Asset.IRT, price)
 
     class Meta:
         model = AssetAlert
-        fields = ('asset',)
+        fields = ('asset', 'price_usdt', 'price_irt', 'change_24h')
 
 
 class BulkAssetAlertViewSerializer(serializers.ModelSerializer):
@@ -89,7 +110,7 @@ class BulkAssetAlertObjectSerializer(serializers.ModelSerializer):
 
 class AssetAlertViewSet(viewsets.ModelViewSet):
     serializer_class = AssetAlertCreateSerializer
-    queryset = AssetAlert.objects.all()
+    queryset = AssetAlert.objects.all().prefetch_related('asset')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
@@ -99,7 +120,10 @@ class AssetAlertViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        serializer = AssetAlertObjectSerializer(queryset, many=True)
+        serializer = AssetAlertObjectSerializer(queryset, many=True, context={
+            'cap_info': get_coins_info(),
+            'prices': get_prices(get_coins_symbols(queryset.values_list('asset__symbol', flat=True)), side=SELL, allow_stale=True)
+        })
         return Response(serializer.data)
 
     def get_object(self):
@@ -112,13 +136,27 @@ class AssetAlertViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return self.get_queryset().get(user=user, asset=asset)
 
+    def perform_destroy(self, instance):
+        with transaction.atomic():
+            instance.delete()
+            user = self.request.user
+            if not(AssetAlert.objects.filter(user=user).exists() or BulkAssetAlert.objects.filter(user=user).exists()):
+                user.is_price_notif_on = False
+                user.save(update_fields=['is_price_notif_on'])
+
     def perform_create(self, serializer):
         serializer.save(
             user=self.request.user
         )
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        coin = self.request.query_params.get('coin')
+        queryset = self.queryset.filter(user=self.request.user)
+
+        if coin:
+            queryset = queryset.filter(asset__symbol=coin)
+
+        return queryset
 
 
 class BulkAssetAlertViewSet(viewsets.ModelViewSet):
@@ -163,3 +201,14 @@ class PriceNotifSwitchView(RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+    def perform_update(self, serializer):
+        with transaction.atomic():
+            serializer.save()
+            user = self.request.user
+            if not AssetAlert.objects.filter(user=user).exists():
+                for asset in Asset.objects.filter(symbol__in=BASE_ALERT_PACKAGE):
+                    AssetAlert.objects.create(
+                        user=user,
+                        asset=asset
+                    )

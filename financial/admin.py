@@ -13,6 +13,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from accounting.models import VaultItem, Vault
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
+from accounts.admin_guard.html_tags import anchor_tag
 from accounts.admin_guard.utils.html import get_table_html
 from accounts.models import User
 from accounts.models.user_feature_perm import UserFeaturePerm
@@ -20,7 +21,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str, gregorian_to_jalali_datetime
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, \
-    GeneralBankAccount, BankPaymentRequest
+    GeneralBankAccount, BankPaymentRequest, BankPaymentRequestReceipt
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.encryption import encrypt
 from financial.utils.payment_id_client import get_payment_id_client
@@ -86,16 +87,18 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
-         'get_withdraw_request_receive_time', 'gateway', 'get_risks')}),
-        ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
-                                      'get_user')}),
+         'get_withdraw_request_withdraw_time', 'get_withdraw_request_receive_time', 'gateway', 'get_risks')}),
+        ('اطلاعات کاربر', {'fields': (
+            'get_withdraw_request_iban', 'get_withdraw_request_user', 'get_user', 'login_activity'
+        )}),
         ('نظر', {'fields': ('comment',)})
     )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
     readonly_fields = (
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
-        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity'
+        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity',
+        'get_withdraw_request_receive_time', 'get_withdraw_request_withdraw_time'
     )
     search_fields = ('bank_account__iban', 'bank_account__user__phone')
 
@@ -110,7 +113,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     @admin.display(description='کاربر')
     def get_user(self, withdraw_request: FiatWithdrawRequest):
         link = url_to_edit_object(withdraw_request.bank_account.user)
-        return mark_safe("<a href='%s'>%s</a>" % (link, withdraw_request.bank_account.user.phone))
+        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, withdraw_request.bank_account.user))
 
     @admin.display(description='شماره شبا')
     def get_withdraw_request_iban(self, withdraw_request: FiatWithdrawRequest):
@@ -125,11 +128,15 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
         return mark_safe(get_risks_html(risks))
 
+    @admin.display(description='زمان تقریبی واریز')
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
         if withdraw.receive_datetime:
             return str(gregorian_to_jalali_datetime(withdraw.receive_datetime.astimezone()))
 
-    get_withdraw_request_receive_time.short_description = 'زمان تقریبی واریز'
+    @admin.display(description='زمان فراخوانی برداشت')
+    def get_withdraw_request_withdraw_time(self, withdraw: FiatWithdrawRequest):
+        if withdraw.withdraw_datetime:
+            return str(gregorian_to_jalali_datetime(withdraw.withdraw_datetime.astimezone()))
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw_request(self, request, queryset):
@@ -216,7 +223,7 @@ class PaymentAdmin(admin.ModelAdmin):
     @admin.display(description='کاربر')
     def get_user(self, payment: Payment):
         link = url_to_edit_object(payment.user)
-        return mark_safe("<a href='%s'>%s</a>" % (link, payment.user.phone))
+        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, payment.user))
 
     @admin.display(description='شماره کارت')
     def get_card_pan(self, payment: Payment):
@@ -244,7 +251,7 @@ class BankCardUserFilter(SimpleListFilter):
 class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     default_edit_condition = M.superuser
 
-    list_display = ('created', 'card_pan', 'user', 'verified', 'deleted')
+    list_display = ('created', 'card_pan', 'get_username', 'verified', 'deleted')
     list_filter = (BankCardUserFilter,)
     search_fields = ('card_pan', )
     readonly_fields = ('user', )
@@ -257,7 +264,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
     @admin.action(description='تایید خودکار شماره کارت')
     def verify_bank_cards(self, request, queryset):
-        for bank_card in queryset.filter(kyc=False):
+        for bank_card in queryset:
             verify_bank_card_task.delay(bank_card.id)
 
     @admin.action(description='تایید شماره کارت')
@@ -277,6 +284,12 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
             if user.level == User.LEVEL1 and user.verify_status == User.PENDING:
                 user.change_status(User.REJECTED)
+
+    @admin.display(description='user')
+    def get_username(self, bank_card: BankCard):
+        return mark_safe(
+            f'<span dir="ltr">{bank_card.user}</span>'
+        )
 
 
 class BankUserFilter(SimpleListFilter):
@@ -298,7 +311,7 @@ class BankUserFilter(SimpleListFilter):
 class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     default_edit_condition = M.superuser
 
-    list_display = ('created', 'iban', 'user', 'verified', 'deleted')
+    list_display = ('created', 'iban', 'get_username', 'verified', 'deleted')
     list_filter = (BankUserFilter, )
     search_fields = ('iban', )
     readonly_fields = ('user', )
@@ -331,6 +344,12 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
             if user.level == User.LEVEL1 and user.verify_status == User.PENDING:
                 user.change_status(User.REJECTED)
+
+    @admin.display(description='user')
+    def get_username(self, bank_account: BankAccount):
+        return mark_safe(
+            f'<span dir="ltr">{bank_account.user}</span>'
+        )
 
 
 @admin.register(MarketingSource)
@@ -438,24 +457,48 @@ class BankPaymentUserFilter(SimpleListFilter):
             return queryset
 
 
+@admin.register(BankPaymentRequestReceipt)
+class BankPaymentRequestReceiptAdmin(ExportMixin, admin.ModelAdmin):
+    list_display = ('id', 'payment_request',)
+    readonly_fields = ('get_receipt_preview', )
+
+    @admin.display(description='receipt preview')
+    def get_receipt_preview(self, req: BankPaymentRequestReceipt):
+        if req.receipt:
+            return mark_safe("<img src='%s' width='400'/>" % req.receipt.url)
+
+
+class BankPaymentRequestReceiptInline(admin.TabularInline):
+    fields = ('receipt', 'get_receipt_preview')
+    readonly_fields = ('get_receipt_preview', )
+
+    @admin.display(description='receipt preview')
+    def get_receipt_preview(self, req: BankPaymentRequestReceipt):
+        if req.receipt:
+            return anchor_tag(
+                title="<img src='%s' width='100'/>" % req.receipt.url,
+                url=url_to_edit_object(req)
+            )
+
+    model = BankPaymentRequestReceipt
+    extra = 0
+
+
 @admin.register(BankPaymentRequest)
 class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
-    list_display = ('created', 'user', 'get_amount_preview', 'ref_id', 'destination_type', 'payment')
-    readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
+    list_display = ('created', 'user', 'get_amount_preview', 'ref_id', 'destination_id', 'destination_type', 'payment')
+    readonly_fields = ('group_id', 'get_amount_preview', 'payment')
     actions = ('accept_payment', 'clone_payment')
     list_filter = (BankPaymentRequestAcceptFilter, BankPaymentUserFilter)
     resource_classes = [BankPaymentRequestResource]
+    list_editable = ('destination_id', 'ref_id')
+    inlines = (BankPaymentRequestReceiptInline, )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "user":
             kwargs["queryset"] = User.objects.filter(userfeatureperm__feature=UserFeaturePerm.BANK_PAYMENT)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-    @admin.display(description='receipt preview')
-    def get_receipt_preview(self, req: BankPaymentRequest):
-        if req.receipt:
-            return mark_safe("<img src='%s' width='200' height='200' />" % req.receipt.url)
 
     @admin.display(description='amount preview', ordering='amount')
     def get_amount_preview(self, req: BankPaymentRequest):

@@ -1,14 +1,29 @@
+from django import forms
 from django.contrib import admin
+from django.db import models
 from django.db.models import F
+from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
-from multimedia.models import Image, Banner, CoinPriceContent, Article, Section
+from multimedia.models import Image, Banner, CoinPriceContent, Article, Section, File
+from multimedia.utils.custom_tags import post_render_html, get_text_of_html
 
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
-    list_display = ('uuid', 'image')
-    search_fields = ('uuid', )
+    list_display = ('uuid', 'image',)
+    readonly_fields = ('get_selfie_image',)
+    search_fields = ('uuid',)
+
+    def get_selfie_image(self, image: Image):
+        return mark_safe("<img src='%s' width='200' height='200' />" % image.get_absolute_image_url())
+
+    get_selfie_image.short_description = 'عکس'
+
+
+@admin.register(File)
+class FileAdmin(admin.ModelAdmin):
+    list_display = ('uuid', 'file',)
 
 
 @admin.register(Banner)
@@ -30,12 +45,32 @@ class CoinPriceContentAdmin(SimpleHistoryAdmin):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ('title',)
-    readonly_fields = ('slug',)
+    list_display = ('title', 'title_en', 'parent', 'order', 'is_pinned')
+    list_editable = ('order', 'is_pinned')
+    list_filter = ('parent', 'is_pinned')
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 1})},
+    }
+    actions = ('refresh_article', )
+    exclude = ('_content_html', '_content_text')
+
+    def save_model(self, request, obj: Article, form, change):
+        obj.save()
+        obj.refresh()
+
+    @admin.action(description='Refresh')
+    def refresh_article(self, request, queryset):
+        for article in queryset:
+            article.refresh()
 
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
-    list_display = ('title',)
-    readonly_fields = ('slug',)
+    list_display = ('title', 'slug', 'order', 'parent')
+    list_editable = ('order', )
+    list_filter = ('parent', )
+    ordering = ('-parent', 'order', 'id')
 
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 1})},
+    }

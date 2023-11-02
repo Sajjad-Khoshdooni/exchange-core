@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.utils.safestring import mark_safe
 
 from ledger.utils.precision import get_presentation_amount
 from market.models import *
@@ -38,7 +39,7 @@ class UserTradeFilter(SimpleListFilter):
 
 @admin.register(PairSymbol)
 class PairSymbolAdmin(admin.ModelAdmin):
-    list_display = ('name', 'enable', 'taker_fee', 'maker_fee', 'tick_size', 'step_size', 'strategy_enable')
+    list_display = ('name', 'enable', 'custom_taker_fee', 'custom_maker_fee', 'tick_size', 'step_size', 'strategy_enable')
     list_editable = ('enable', 'strategy_enable')
     list_filter = ('enable', BaseAssetFilter,)
     readonly_fields = ('last_trade_time', 'last_trade_price')
@@ -82,8 +83,7 @@ class UserFilter(SimpleListFilter):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount',
-                    'wallet')
+    list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
     readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss', 'login_activity')
 
@@ -111,7 +111,7 @@ class TradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount',
                     'fee_revenue', 'get_value_irt', 'get_value_usdt')
     list_filter = ('trade_source', UserTradeFilter, 'symbol')
-    readonly_fields = ('symbol', 'order_id', 'account')
+    readonly_fields = ('symbol', 'order_id', 'account', 'login_activity', 'group_id')
     search_fields = ('symbol__name', )
 
     def created_at_millis(self, instance):
@@ -137,8 +137,14 @@ class ReferralTrxAdmin(admin.ModelAdmin):
 
 @admin.register(StopLoss)
 class StopLossAdmin(admin.ModelAdmin):
-    list_display = ('created', 'wallet', 'symbol', 'fill_type', 'amount', 'filled_amount', 'trigger_price', 'price', 'side')
+    list_display = ('created', 'get_masked_wallet', 'symbol', 'fill_type', 'amount', 'filled_amount', 'trigger_price', 'price', 'side')
     readonly_fields = ('wallet', 'symbol', 'group_id', 'login_activity')
+
+    @admin.display(description='wallet')
+    def get_masked_wallet(self, stopLoss: StopLoss):
+        return mark_safe(
+            f'<span dir="ltr">{stopLoss.wallet}</span>'
+        )
 
 
 @admin.register(OCO)

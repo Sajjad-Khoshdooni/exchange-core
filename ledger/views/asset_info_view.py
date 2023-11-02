@@ -194,6 +194,7 @@ class AssetsViewSet(ModelViewSet):
             'can_deposit': self.request.query_params.get('can_deposit') == '1',
             'can_withdraw': self.request.query_params.get('can_withdraw') == '1',
             'is_base': self.request.query_params.get('is_base') == '1',
+            'active': self.request.query_params.get('active') == '1',
         }
 
         return options[key]
@@ -205,7 +206,7 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        if self.get_options('extra_info'):
+        if self.get_options('extra_info') and not self.get_options('active'):
             queryset = Asset.objects.filter(Q(enable=True) | Q(price_page=True))
         else:
             queryset = Asset.live_objects.all()

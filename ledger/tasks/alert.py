@@ -271,4 +271,7 @@ def send_price_notifications():
     send_notifications(asset_alert_list, altered_coins)
 
     if randint(1, 100) < 10:
-        AlertTrigger.objects.filter(created__lte=timezone.now() - timedelta(days=10)).delete()
+        AlertTrigger.objects.filter(created__lte=timezone.now() - timedelta(days=10)).exclude(
+            is_chanel_changed=True,
+            is_triggered=True
+        ).delete()

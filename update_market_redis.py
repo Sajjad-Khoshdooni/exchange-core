@@ -42,6 +42,8 @@ def main():
                     'asks': Order.get_formatted_orders(asks, symbol, SELL),
                 }
                 pipeline.hset('market_depth_snapshot', symbol.name, msgpack.packb(depth))
+                pipeline.set('market_depth_snapshot_liveness', 1, 60)
+
             pipeline.execute()
 
             logger.info('market depth inserted to redis')

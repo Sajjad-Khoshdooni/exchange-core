@@ -8,8 +8,7 @@ from django.db.models import CheckConstraint, Q
 from accounts.models import Account
 from ledger.utils.fields import get_amount_field
 
-DEFAULT_MAKER_FEE = 0
-# DEFAULT_TAKER_FEE = 0
+DEFAULT_MAKER_FEE = Decimal(0)
 DEFAULT_TAKER_FEE = Decimal('0.002')
 
 
@@ -20,8 +19,8 @@ class PairSymbol(models.Model):
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT, related_name='pair')
     base_asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT, related_name='trading_pair')
 
-    taker_fee = models.DecimalField(max_digits=9, decimal_places=8, default=DEFAULT_TAKER_FEE)
-    maker_fee = models.DecimalField(max_digits=9, decimal_places=8, default=DEFAULT_MAKER_FEE)
+    custom_maker_fee = get_amount_field(null=True)
+    custom_taker_fee = get_amount_field(null=True)
 
     tick_size = models.PositiveSmallIntegerField(default=2, validators=[MaxValueValidator(8)])
     step_size = models.PositiveSmallIntegerField(default=4, validators=[MaxValueValidator(8)])
@@ -61,7 +60,16 @@ class PairSymbol(models.Model):
         if account.is_system():
             return Decimal(0)
 
-        if account.get_voucher_wallet():
-            return Decimal(0)
+        if is_maker:
+            fees = [account.custom_maker_fee, self.custom_maker_fee, DEFAULT_MAKER_FEE]
         else:
-            return self.maker_fee if is_maker else self.taker_fee
+            fees = [account.custom_taker_fee, self.custom_taker_fee, DEFAULT_TAKER_FEE]
+
+        if fees[0] is None and account.get_voucher_wallet():
+            return Decimal(0)
+
+        for f in fees:
+            if f is not None:
+                return f
+
+        return Decimal(0)

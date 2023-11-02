@@ -9,6 +9,7 @@ from ledger.utils.external_price import BUY, SELL
 from ledger.utils.test import new_account, set_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, Trade, BaseTrade
+from market.models.pair_symbol import DEFAULT_TAKER_FEE
 from market.utils.order_utils import new_order
 from market.utils.trade import get_fee_info
 
@@ -64,13 +65,13 @@ class ReferralTestCase(TestCase):
         self.assertEqual(
             trx_referral.amount,
             account_1_referral.owner_share_percent / Decimal('100') *
-            self.btcitr.taker_fee * trade.amount * trade.price
+            DEFAULT_TAKER_FEE * trade.amount * trade.price
         )
         self.assertEqual(
             fee_trx_referred.amount,
             (1 - ((Referral.REFERRAL_MAX_RETURN_PERCENT - account_1_referral.owner_share_percent) / Decimal(
                 '100'))) *
-            self.btcitr.taker_fee * trade.amount
+            DEFAULT_TAKER_FEE * trade.amount
         )
 
     def test_referral_btc_usdt(self):
@@ -101,13 +102,13 @@ class ReferralTestCase(TestCase):
         self.assertEqual(
             trx_referral.amount,
             account_1_referral.owner_share_percent / Decimal('100') *
-            self.btcitr.taker_fee * trade.amount * trade.price
+            DEFAULT_TAKER_FEE * trade.amount * trade.price
         )
         self.assertEqual(
             fee_trx_referred.amount,
             (1 - ((Referral.REFERRAL_MAX_RETURN_PERCENT - account_1_referral.owner_share_percent) / Decimal(
                 '100'))) *
-            self.btcitr.taker_fee * trade.amount
+            DEFAULT_TAKER_FEE * trade.amount
         )
 
     def test_referral_usdt_irt(self):
@@ -153,27 +154,27 @@ class ReferralTestCase(TestCase):
         self.assertEqual(
             trx_referral.amount,
             account_1_referral.owner_share_percent / Decimal('100') *
-            self.usdtirt.taker_fee * trade.amount * trade.price
+            DEFAULT_TAKER_FEE * trade.amount * trade.price
         )
 
         self.assertEqual(
             fee_trx_referred.amount,
             (1 - ((Referral.REFERRAL_MAX_RETURN_PERCENT - account_1_referral.owner_share_percent) / Decimal(
                 '100'))) *
-            self.usdtirt.taker_fee * trade.amount * trade.price
+            DEFAULT_TAKER_FEE * trade.amount * trade.price
         )
 
         self.assertEqual(
             trx_referral_2.amount,
             account_1_referral.owner_share_percent / Decimal('100') *
-            self.usdtirt.taker_fee * trade_2.amount * trade_2.price
+            DEFAULT_TAKER_FEE * trade_2.amount * trade_2.price
         )
 
         self.assertEqual(
             fee_trx_referred_2.amount,
             (1 - ((Referral.REFERRAL_MAX_RETURN_PERCENT - account_1_referral.owner_share_percent) / Decimal(
                 '100'))) *
-            self.usdtirt.taker_fee * trade_2.amount
+            DEFAULT_TAKER_FEE * trade_2.amount
         )
 
     def test_fee_info(self):
@@ -181,8 +182,8 @@ class ReferralTestCase(TestCase):
             name='TESTUSDT',
             asset=Asset.objects.create(symbol='TEST'),
             base_asset=self.usdt,
-            taker_fee=Decimal('0.003'),
-            maker_fee=Decimal('0')
+            custom_taker_fee=Decimal('0.003'),
+            custom_maker_fee=Decimal('0')
         )
 
         referrer = Account.objects.create()

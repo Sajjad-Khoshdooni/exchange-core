@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 
+
 def populate_fill_order_values(apps, schema_editor):
     FillOrder = apps.get_model('market', 'FillOrder')
     for fill in FillOrder.objects.all():

@@ -18,6 +18,11 @@ class PaymentId(models.Model):
 
     destination = models.ForeignKey('financial.GeneralBankAccount', on_delete=models.PROTECT)
 
+    group_id = get_group_id_field()
+
+    provider_status = models.CharField(max_length=256, blank=True)
+    provider_reason = models.CharField(max_length=256, blank=True)
+
     def __str__(self):
         return self.pay_id
 

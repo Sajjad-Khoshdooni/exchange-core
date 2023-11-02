@@ -6,6 +6,7 @@ from django.db.models import UniqueConstraint, Q
 from django.utils import timezone
 
 from ledger.utils.external_price import BUY
+from ledger.utils.fields import get_amount_field
 
 
 class Account(models.Model):
@@ -43,6 +44,9 @@ class Account(models.Model):
     bookmark_assets = models.ManyToManyField("ledger.Asset")
 
     owned = models.BooleanField(default=False)
+
+    custom_maker_fee = get_amount_field(null=True)
+    custom_taker_fee = get_amount_field(null=True)
 
     def is_system(self) -> bool:
         return self.type == self.SYSTEM

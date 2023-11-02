@@ -42,6 +42,9 @@ class AlertTrigger(models.Model):
         ]
 
 
+BASE_ALERT_PACKAGE = ["USDT", "BTC", "ETH", "SHIB", "DOGE"]
+
+
 class AssetAlert(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
