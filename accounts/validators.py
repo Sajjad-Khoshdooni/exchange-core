@@ -82,10 +82,9 @@ def company_national_id_validator(value):
     _sum = 0
     const = array[9] + 2
     coefficients = [29, 27, 23, 19, 17]
-    for i in range(9):
+    for i in range(10):
         _sum += (const + array[i]) * coefficients[i % 5]
 
     control = (_sum % 11) % 10
-
     if control != array[10]:
         raise ValidationError('شناسه‌ملی  معتبر نیست.')
