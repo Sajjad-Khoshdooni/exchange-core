@@ -6,9 +6,9 @@ from django.db.models import Sum
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from accounts.models import LevelGrants
 from accounting.models import TradeRevenue
-from financial.utils.withdraw_limit import (FIAT_WITHDRAW_LIMIT, CRYPTO_WITHDRAW_LIMIT,
-                                            get_crypto_withdraw_irt_value, get_fiat_withdraw_irt_value)
+from financial.utils.withdraw_limit import get_crypto_withdraw_irt_value, get_fiat_withdraw_irt_value
 
 
 class UserStatisticsView(APIView):
@@ -24,14 +24,12 @@ class UserStatisticsView(APIView):
         current_day_fiat_withdraw = get_fiat_withdraw_irt_value(user)
         current_day_crypto_withdraw = get_crypto_withdraw_irt_value(user)
 
-        daily_fiat_withdraw_limit = FIAT_WITHDRAW_LIMIT[user.level]
-        daily_crypto_withdraw_limit = CRYPTO_WITHDRAW_LIMIT[user.level]
         return Response(
             {
                 'all_trades_irt': all_trades_irt,
                 'last_30d_trades_irt': last_30d_trades_irt,
-                'daily_fiat_withdraw_limit': daily_fiat_withdraw_limit,
-                'daily_crypto_withdraw_limit': daily_crypto_withdraw_limit,
+                'daily_fiat_withdraw_limit': LevelGrants.get_max_daily_fiat_withdraw(user),
+                'daily_crypto_withdraw_limit': LevelGrants.get_max_daily_crypto_withdraw(user),
                 'current_day_fiat_withdraw': current_day_fiat_withdraw,
                 'current_day_crypto_withdraw': current_day_crypto_withdraw
             }

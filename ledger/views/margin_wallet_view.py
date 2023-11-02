@@ -266,3 +266,13 @@ class MarginTransferBalanceAPIView(APIView):
                 'asset': symbol.base_asset.symbol,
                 'balance': get_presentation_amount(position.withdrawable_base_asset)
             })
+        elif transfer_type == MarginTransfer.SPOT_TO_MARGIN:
+            base_asset = Asset.get(request.query_params.get('symbol'))
+            spot_wallet = base_asset.get_wallet(request.user.account, market=Wallet.SPOT, variant=None)
+
+            return Response({
+                            'asset': base_asset.symbol,
+                            'balance': get_presentation_amount(spot_wallet.get_free())
+                        })
+        else:
+            return Response({'Error': 'Invalid type'}, status=400)

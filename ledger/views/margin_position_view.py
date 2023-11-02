@@ -1,13 +1,15 @@
 import django_filters
-
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import MarginPosition
 from ledger.models.asset import AssetSerializerMini
+from market.serializers.symbol_serializer import SymbolSerializer
 
 
 class MarginPositionSerializer(AssetSerializerMini):
+    symbol = SymbolSerializer()
+
     class Meta:
         model = MarginPosition
         fields = ('created', 'account', 'wallet', 'symbol', 'amount', 'average_price', 'liquidation_price', 'side',

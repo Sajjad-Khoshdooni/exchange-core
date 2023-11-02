@@ -16,8 +16,7 @@ from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
-from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
-    get_crypto_withdraw_irt_value
+from financial.utils.withdraw_limit import get_fiat_withdraw_irt_value, get_crypto_withdraw_irt_value
 from ledger.models import OTCTrade, DepositAddress, Prize, Transfer, Wallet
 from ledger.utils.external_price import BUY
 from ledger.utils.fields import PENDING
@@ -26,7 +25,7 @@ from market.models import Trade, ReferralTrx, Order
 from stake.models import StakeRequest
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
-from .models import User, Account, Notification, FinotechRequest
+from .models import User, Account, Notification, FinotechRequest, Company, LevelGrants
 from .models.change_requests import BaseChangeRequest
 from .models.login_activity import LoginActivity
 from .models.sms_notification import SmsNotification
@@ -310,7 +309,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred'
         )}),
         (_('اطلاعات اضافی'), {'fields': (
-            'is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_consulted', 'is_2fa_active'
+            'is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_2fa_active'
         )})
     )
 
@@ -340,7 +339,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted',
+        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended',
         'suspension_reason', 'get_bots_link', 'is_2fa_active'
     )
     preserve_filters = ('archived', )
@@ -614,12 +613,16 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_last_login_jalali.short_description = 'آخرین ورود'
 
     def get_remaining_fiat_withdraw_limit(self, user: User):
-        return humanize_number(FIAT_WITHDRAW_LIMIT[user.level] - get_fiat_withdraw_irt_value(user))
+        return humanize_number(
+            LevelGrants.get_max_daily_fiat_withdraw(user) - get_fiat_withdraw_irt_value(user)
+        )
 
     get_remaining_fiat_withdraw_limit.short_description = 'باقی مانده سقف مجاز برداشت ریالی روزانه'
 
     def get_remaining_crypto_withdraw_limit(self, user: User):
-        return humanize_number(CRYPTO_WITHDRAW_LIMIT[user.level] - get_crypto_withdraw_irt_value(user))
+        return humanize_number(
+            LevelGrants.get_max_daily_crypto_withdraw(user) - get_crypto_withdraw_irt_value(user)
+        )
 
     get_remaining_crypto_withdraw_limit.short_description = 'باقی مانده سقف مجاز برداشت رمزارز   روزانه'
 
@@ -909,3 +912,32 @@ class UserFeaturePermAdmin(admin.ModelAdmin):
     list_display = ('user', 'feature', 'limit')
     search_fields = ('user__phone', )
     list_filter = ('feature', )
+
+
+@admin.register(Company)
+class CompanyAdmin(admin.ModelAdmin):
+    list_display = ('national_id', 'name', 'status',)
+    readonly_fields = ('status', 'company_documents',)
+    actions = ('accept_requests', 'reject_requests', 'fetch_company_info',)
+    raw_id_fields = ('user',)
+    list_filter = ('status',)
+
+    @admin.action(description='رد اطلاعات', permissions=['view'])
+    def reject_requests(self, request, queryset):
+        for req in queryset:
+            req.reject()
+
+    @admin.action(description='تایید اطلاعات', permissions=['view'])
+    def accept_requests(self, request, queryset):
+        for req in queryset:
+            req.accept()
+
+    @admin.action(description='استعلام اطلاعات', permissions=['view'])
+    def fetch_company_info(self, request, queryset):
+        for req in queryset:
+            req.verify_and_fetch_company_data()
+
+
+@admin.register(LevelGrants)
+class LevelGrantsAdmin(admin.ModelAdmin):
+    list_display = ('level',)
