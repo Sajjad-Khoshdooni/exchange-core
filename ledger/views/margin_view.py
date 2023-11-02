@@ -10,44 +10,59 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds, HedgeError
+from ledger.exceptions import InsufficientBalance
 from ledger.margin.margin_info import MarginInfo
-from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet
+from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
-from ledger.utils.price import get_last_price
-from ledger.utils.wallet_pipeline import WalletPipeline
+from ledger.utils.precision import floor_precision, get_presentation_amount
+from ledger.utils.price import get_last_price, get_last_prices, get_coins_symbols
 
 
 class MarginInfoView(APIView):
+
+    @staticmethod
+    def aggregate_wallets_values(wallets, prices):
+        total_irt_value = total_usdt_value = Decimal(0)
+        for wallet in wallets:
+            coin = wallet.asset.symbol
+            price_usdt = prices.get(coin + Asset.USDT, 0)
+            price_irt = prices.get(coin + Asset.IRT, 0)
+
+            total_usdt_value += wallet.balance * price_usdt
+            total_irt_value += wallet.balance * price_irt
+        return {
+            'IRT': get_presentation_amount(floor_precision(total_irt_value)),
+            'USDT': get_presentation_amount(floor_precision(total_usdt_value))
+        }
+
     def get(self, request: Request):
         account = request.user.get_account()
-        margin_info = MarginInfo.get(account)
 
-        margin_level = min(margin_info.get_margin_level(), Decimal(999))
+        user_margin_wallets = Wallet.objects.filter(market=Wallet.MARGIN, account=account, variant__isnull=False)
 
-        if margin_level > 10:
-            margin_level_precision = 0
-        elif margin_level > 2:
-            margin_level_precision = 1
-        else:
-            margin_level_precision = 3
+        coins = list(user_margin_wallets.values_list('asset__symbol', flat=True))
+        prices = get_last_prices(get_coins_symbols(coins))
+
+        total_asset = self.aggregate_wallets_values(user_margin_wallets.filter(balance__gt=Decimal('0')), prices)
+        total_debt = self.aggregate_wallets_values(user_margin_wallets.filter(balance__lt=Decimal('0')), prices)
 
         return Response({
-            'total_assets': round(Decimal(margin_info.total_assets), 2),
-            'total_debt': round(Decimal(margin_info.total_debt), 2),
-            'margin_level': round(margin_level, margin_level_precision),
-            'total_equity': round(Decimal(margin_info.get_total_equity()), 2),
-            'has_position': Wallet.objects.filter(account=account, market=Wallet.LOAN, balance__lt=0).exists()
+            'total_assets': total_asset,
+            'total_debt': total_debt,
+            'total_equity': {
+                'IRT': total_asset['IRT'] + total_debt['IRT'],
+                'USDT': total_asset['USDT'] + total_debt['USDT'],
+            }
         })
 
 
 class AssetMarginInfoView(APIView):
     def get(self, request: Request, symbol):
         account = request.user.get_account()
-        asset = get_object_or_404(Asset, symbol=symbol.upper(), margin_enable=True)
+        asset = get_object_or_404(Asset, symbol=symbol.upper())
 
         margin_info = MarginInfo.get(account)
 
@@ -79,9 +94,8 @@ class MarginTransferSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context['request'].user
 
-        asset = validated_data['asset']
-        check_margin_view_permission(user.get_account(), asset)
-        # print(validated_data)
+        symbol = validated_data['position_symbol']
+        check_margin_view_permission(user.get_account(), symbol)
 
         return super(MarginTransferSerializer, self).create(validated_data)
 
@@ -119,52 +133,15 @@ class MarginTransferViewSet(ModelViewSet):
         ).order_by('-created')
 
 
-class MarginLoanSerializer(serializers.ModelSerializer):
-    coin = CoinField(source='asset')
-    amount = get_serializer_amount_field()
-    asset = AssetSerializerMini(read_only=True)
+class MarginPositionInfoView(APIView):
+    def get(self, request: Request, symbol):
+        account = request.user.get_account()
+        position = MarginPosition.objects.filter(status=MarginPosition.OPEN, account=account, symbol__name=symbol).first()
 
-    def create(self, validated_data):
-        user = self.context['request'].user
-        asset = validated_data['asset']
+        if not position:
+            return Response({'Error': 'There is no open position '}, 400)
 
-        check_margin_view_permission(user.get_account(), asset)
-
-        validated_data['loan_type'] = validated_data.pop('type')
-
-        if validated_data['amount'] <= 0:
-            raise ValidationError('مقداری بزرگتر از صفر انتخاب کنید.')
-
-        try:
-            with WalletPipeline() as pipeline:
-                return MarginLoan.new_loan(
-                    **validated_data,
-                    pipeline=pipeline
-                )
-        except InsufficientDebt:
-            raise ValidationError('میزان بدهی کمتر از مقدار بازپرداخت است.')
-        except MaxBorrowableExceeds:
-            raise ValidationError('میزان بدهی بیشتر از حد مجاز است.')
-        except HedgeError:
-            raise ValidationError('مشکلی در پردازش اطلاعات به وجود آمد.')
-
-    class Meta:
-        fields = ('created', 'amount', 'type', 'coin', 'asset', 'status')
-        read_only_fields = ('created', 'status')
-        model = MarginLoan
-
-
-class MarginLoanViewSet(ModelViewSet):
-    serializer_class = MarginLoanSerializer
-    pagination_class = LimitOffsetPagination
-
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['status', 'type']
-
-    def perform_create(self, serializer):
-        serializer.save(account=self.request.user.get_account())
-
-    def get_queryset(self):
-        return MarginLoan.objects.filter(
-            account=self.request.user.get_account()
-        ).order_by('-created')
+        return Response({
+            'max_buy_volume': abs(Wallet.get_margin_position_max_asset(variant=position.variant, price=position.symbol.last_trade_price, side='buy')),
+            'max_sell_volume': abs(Wallet.get_margin_position_max_asset(variant=position.variant, price=position.symbol.last_trade_price, side='sell')),
+        })

@@ -50,10 +50,10 @@ class AssetAdmin(AdvancedAdmin):
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
-        'margin_enable', 'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
+        'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
     )
-    list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge', 'price_page')
+    list_filter = ('enable', 'trend', 'spread_category')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'hedge', 'price_page')
     search_fields = ('symbol',)
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset',)

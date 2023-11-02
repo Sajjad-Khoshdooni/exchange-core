@@ -33,7 +33,7 @@ class Wallet(models.Model):
     balance = get_amount_field(default=Decimal(0), validators=())
     locked = get_amount_field(default=Decimal(0))
 
-    variant = get_group_id_field(null=True, default=None)
+    variant = get_group_id_field(null=True, default=None, db_index=True)
     expiration = models.DateTimeField(null=True, blank=True)
     credit = get_amount_field(default=0)
 
@@ -64,8 +64,8 @@ class Wallet(models.Model):
                 check=Q(check_balance=False) |
                       (~Q(market__in=('loan', 'debt', 'margin')) & Q(balance__gte=F('locked') - F('credit'))) |
                       (Q(market__in=('loan', 'debt')) & Q(balance__lte=0) & Q(locked=0)) |
-                      Q(market='margin') & Q(variant__isnull=True) & Q(balance__gte=F('locked') - F('credit')) |
-                      Q(market='margin') & Q(variant__isnull=False),
+                      (Q(market='margin') & Q(variant__isnull=True) & Q(balance__gte=F('locked') - F('credit'))) |
+                      (Q(market='margin') & Q(variant__isnull=False))
             ),
             CheckConstraint(
                 name='valid_locked_constraint',
@@ -90,11 +90,28 @@ class Wallet(models.Model):
 
         return can
 
-    def get_margin_balance_pair(self):
-        assert self.market == self.MARGIN
-        from ledger.models import MarginPosition
-        position = MarginPosition.objects.filter(Q(asset_wallet=self) | Q(base_wallet=self)).first()
-        return position.asset_margin_wallet.balance, position.base_margin_wallet.balance
+    @staticmethod
+    def get_base_from_asset(assets):
+        from ledger.models import Asset
+        if Asset.IRT in assets:
+            return Asset.IRT
+        elif Asset.USDT in assets:
+            return Asset.USDT
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def get_margin_position_max_asset(variant, price, side):
+        wallets = Wallet.objects.filter(variant=variant)
+        base = Wallet.get_base_from_asset([wallets[0].asset.symbol, wallets[1].asset.symbol])
+
+        if wallets[1].asset.name == base:
+            a, b = wallets[0].balance, wallets[1].balance
+        else:
+            a, b = wallets[1].balance, wallets[0].balance
+
+        k = Decimal('0.5') if side == SELL else Decimal('2')
+        return Decimal(a*price + k*b) / Decimal((k-1) * price)
 
     def has_margin_balance(self, amount: Decimal, side: str, price: Decimal, raise_exception: bool = False, check_system_wallets: bool = False,
                            pipeline_balance_diff=Decimal(0)) -> bool:
@@ -104,11 +121,7 @@ class Wallet(models.Model):
 
         else:
 
-            k = Decimal('0.5') if side == SELL else Decimal('2')
-
-            a, b = self.get_margin_balance_pair()
-
-            x = Decimal(a*price + k*b) / Decimal((k-1) * price)
+            x = Wallet.get_margin_position_max_asset(variant=self.variant, price=price, side=side)
 
             if side == SELL:
                 max_asset = - x

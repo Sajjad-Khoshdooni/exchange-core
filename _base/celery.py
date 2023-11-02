@@ -115,7 +115,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/8'),
         'options': {
             'queue': 'margin',
-            'expires': 30
+            'expires': 3600
         },
     },
 

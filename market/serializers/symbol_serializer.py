@@ -21,7 +21,6 @@ class SymbolSerializer(serializers.ModelSerializer):
     asset = AssetSerializerMini(read_only=True)
     base_asset = AssetSerializerMini(read_only=True)
     bookmark = serializers.SerializerMethodField()
-    margin_enable = serializers.SerializerMethodField()
 
     maker_fee = serializers.SerializerMethodField()
     taker_fee = serializers.SerializerMethodField()
@@ -33,10 +32,7 @@ class SymbolSerializer(serializers.ModelSerializer):
         return representation
 
     def get_bookmark(self, pair_symbol: PairSymbol):
-        return pair_symbol.id in self.context.get('bookmarks')
-
-    def get_margin_enable(self, pair_symbol: PairSymbol):
-        return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
+        return pair_symbol.id in self.context.get('bookmarks', [])
 
     def get_maker_fee(self, pair_symbol: PairSymbol):
         return '0'
@@ -56,7 +52,6 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     change_percent = serializers.SerializerMethodField()
     bookmark = serializers.SerializerMethodField()
-    margin_enable = serializers.SerializerMethodField()
 
     def get_price(self, symbol: PairSymbol):
         last_prices = get_symbol_prices()['last']
@@ -65,10 +60,7 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
             return decimal_to_str(floor_precision(price, symbol.tick_size))
 
     def get_bookmark(self, pair_symbol: PairSymbol):
-        return pair_symbol.id in self.context.get('bookmarks')
-
-    def get_margin_enable(self, pair_symbol: PairSymbol):
-        return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
+        return pair_symbol.id in self.context.get('bookmarks', [])
 
     def get_change_value_pairs(self, symbol: PairSymbol):
         last_prices = get_symbol_prices()

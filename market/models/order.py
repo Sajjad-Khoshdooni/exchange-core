@@ -298,8 +298,8 @@ class Order(models.Model):
 
         pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
-        if self.wallet.market == Wallet.MARGIN:
-            position.update_side(pipeline)
+        # if self.wallet.market == Wallet.MARGIN:
+        #     position.update_side(pipeline)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             return floor_precision(lock_amount / self.price, self.symbol.step_size)

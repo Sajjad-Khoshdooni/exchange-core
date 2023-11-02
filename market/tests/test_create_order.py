@@ -38,8 +38,8 @@ class CreateOrderTestCase(TestCase):
         self.btcirt = PairSymbol.objects.get(name='BTCIRT')
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
 
-        Asset.objects.filter(symbol='BTC').update(margin_enable=True)
-        Asset.objects.filter(symbol='USDT').update(enable=True, margin_enable=True)
+        # Asset.objects.filter(symbol='BTC').update(margin_enable=True)
+        # Asset.objects.filter(symbol='USDT').update(enable=True, margin_enable=True)
 
         self.fill = Trade.objects.all()
 

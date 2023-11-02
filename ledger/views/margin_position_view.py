@@ -62,6 +62,6 @@ class MarginClosePositionView(APIView):
         serializer.is_valid(raise_exception=True)
 
         with WalletPipeline() as pipeline:
-            serializer.position.liquidate(pipeline=pipeline, do_collect_fee=False)
+            serializer.position.liquidate(pipeline=pipeline, charge_insurance=False)
 
         return Response(200)

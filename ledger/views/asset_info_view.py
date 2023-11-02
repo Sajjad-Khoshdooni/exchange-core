@@ -162,7 +162,6 @@ class AssetsViewSet(ModelViewSet):
     authentication_classes = ()
     permission_classes = ()
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['margin_enable']
 
     def get_serializer_context(self):
 
@@ -225,9 +224,6 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
-
-        if self.get_options('market') == Wallet.MARGIN:
-            queryset = queryset.filter(margin_enable=True)
 
         if self.get_options('coin'):
             queryset = queryset.exclude(symbol=Asset.IRT)

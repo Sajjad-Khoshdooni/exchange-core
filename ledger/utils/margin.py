@@ -4,9 +4,10 @@ from accounts.models import Account, User
 from accounts.tasks import send_message_by_kavenegar
 from ledger.models import Asset, CloseRequest, Wallet, Trx
 from ledger.utils.wallet_pipeline import WalletPipeline
+from market.models import PairSymbol
 
 
-def check_margin_view_permission(account: Account, asset: Asset):
+def check_margin_view_permission(account: Account, symbol: PairSymbol):
     user = account.user
 
     assert user
@@ -14,7 +15,7 @@ def check_margin_view_permission(account: Account, asset: Asset):
     # if user.level < user.LEVEL3:
     #     raise ValidationError('برا استفاده از حساب تعهدی باید احراز هویت سطح ۳ را انجام دهید.')
 
-    if not user.show_margin or not asset.margin_enable:
+    if not user.show_margin or not symbol.margin_enable:
         raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 
     if not user.margin_quiz_pass_date:

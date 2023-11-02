@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 class MarginPosition(models.Model):
     DEFAULT_LIQUIDATION_LEVEL = Decimal('1.1')
     DEFAULT_INSURANCE_FEE_PERCENTAGE = Decimal('0.02')
-    DEFAULT_INTEREST_FEE_PERCENTAGE = Decimal('0.00005')
+    DEFAULT_USDT_INTEREST_FEE_PERCENTAGE = Decimal('0.00009')
+    DEFAULT_IRT_INTEREST_FEE_PERCENTAGE = Decimal('0.00025')
 
     OPEN, CLOSED, TERMINATING = 'open', 'closed', 'terminating'
     STATUS_CHOICES = [(OPEN, OPEN), (CLOSED, CLOSED), (TERMINATING, TERMINATING)]
@@ -208,15 +209,19 @@ class MarginPosition(models.Model):
         else:
             raise NotImplementedError
 
-    def get_margin_pool_wallet(self, side):
-        if side == SHORT:
-            return self.symbol.base_asset.get_wallet(account=Account.objects.get(id=MARGIN_POOL_ACCOUNT))
-        elif side == LONG:
-            return self.symbol.asset.get_wallet(account=Account.objects.get(id=MARGIN_POOL_ACCOUNT))
-        else:
-            raise NotImplementedError
+    @staticmethod
+    def get_margin_pool_wallet(loan_wallet):
+        return loan_wallet.asset.get_wallet(account=Account.objects.get(id=MARGIN_POOL_ACCOUNT))
 
-    def liquidate(self, pipeline, do_collect_fee: bool = True):
+    @classmethod
+    def get_interest_rate(cls, loan_wallet):
+        from ledger.models import Asset
+
+        if loan_wallet.asset.name == Asset.IRT:
+            return cls.DEFAULT_IRT_INTEREST_FEE_PERCENTAGE
+        return cls.DEFAULT_USDT_INTEREST_FEE_PERCENTAGE
+
+    def liquidate(self, pipeline, charge_insurance: bool = True):
         if self.status != self.OPEN:
             return
 
@@ -229,7 +234,7 @@ class MarginPosition(models.Model):
         Order.cancel_orders(Order.open_objects.filter(wallet__in=[self.base_wallet, self.asset_wallet]))
 
         to_close_amount = ceil_precision((self.debt_amount - pipeline.get_wallet_balance_diff(self.loan_wallet.id))
-                                         / (1 - self.symbol.taker_fee), self.symbol.step_size)
+                                         / (1 - self.symbol.get_fee_rate(self.account, is_maker=False)), self.symbol.step_size)
         margin_side = self.get_side(pipeline)
         if margin_side == SHORT:
             side = BUY
@@ -289,7 +294,7 @@ class MarginPosition(models.Model):
         if remaining_balance > Decimal('0'):
             insurance_fee_amount = min(remaining_balance,
                                        to_close_amount * price * self.DEFAULT_INSURANCE_FEE_PERCENTAGE)
-            if insurance_fee_amount > Decimal(0) and do_collect_fee:
+            if insurance_fee_amount > Decimal(0) and charge_insurance:
                 pipeline.new_trx(
                     self.margin_wallet,
                     self.get_insurance_wallet(margin_side),

@@ -12,8 +12,8 @@ from rest_framework.generics import get_object_or_404
 from accounts.models import LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Wallet, Asset, MarginPosition
-from ledger.utils.external_price import IRT, SELL, SHORT
+from ledger.models import Wallet, Asset
+from ledger.utils.external_price import IRT
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
@@ -120,7 +120,7 @@ class OrderSerializer(serializers.ModelSerializer):
         position = types.SimpleNamespace(variant=None)
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
-            check_margin_view_permission(self.context['account'], symbol.asset)
+            check_margin_view_permission(self.context['account'], symbol)
             position = symbol.get_margin_position(self.context['account'],
                                                   validated_data['amount'] * validated_data['price'],
                                                   side=validated_data['side'])

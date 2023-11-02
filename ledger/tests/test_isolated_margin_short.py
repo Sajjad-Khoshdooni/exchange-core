@@ -45,12 +45,8 @@ class ShortIsolatedMarginTestCase(TestCase):
         self.user3.save()
 
         self.usdt = Asset.get(Asset.USDT)
-        self.usdt.margin_enable = True
-        self.usdt.save()
 
         self.btc = Asset.get('BTC')
-        self.btc.margin_enable = True
-        self.btc.save()
 
         self.usdt.get_wallet(self.account).airdrop(TO_TRANSFER_USDT * 3)
 
@@ -68,6 +64,7 @@ class ShortIsolatedMarginTestCase(TestCase):
 
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
         self.btcusdt.enable = True
+        self.btcusdt.margin_enable = True
         self.btcusdt.save()
 
         self.btc.enable = True

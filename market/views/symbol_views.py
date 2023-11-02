@@ -20,7 +20,7 @@ class SymbolFilter(django_filters.FilterSet):
 
     class Meta:
         model = PairSymbol
-        fields = ('name', 'asset', 'base_asset', 'enable', 'strategy_enable')
+        fields = ('name', 'asset', 'base_asset', 'enable', 'strategy_enable', 'margin_enable')
 
 
 class SymbolListAPIView(ListAPIView):
@@ -28,7 +28,7 @@ class SymbolListAPIView(ListAPIView):
     permission_classes = ()
     filter_backends = [DjangoFilterBackend]
     filter_class = SymbolFilter
-    filterset_fields = ('strategy_enable', )
+    filterset_fields = ('strategy_enable', 'margin_enable')
 
     def get_queryset(self):
         if self.request.query_params.get('include_hidden') == '1':
