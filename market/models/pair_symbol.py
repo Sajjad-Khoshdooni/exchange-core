@@ -47,9 +47,9 @@ class PairSymbol(models.Model):
             raise Exception('Could not set name for pair symbol!')
         return super(PairSymbol, self).save(**kwargs)
 
-    def get_margin_position(self, account: Account):
+    def get_margin_position(self, account: Account, order_value=Decimal('0'), side: str = None):
         from ledger.models.position import MarginPosition
-        return MarginPosition.get_by(self, account)
+        return MarginPosition.get_by(self, account=account, order_value=order_value, side=side)
 
     class Meta:
         unique_together = ('asset', 'base_asset')

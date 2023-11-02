@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -13,7 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds, HedgeError
 from ledger.margin.margin_info import MarginInfo
-from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
+from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
 from ledger.utils.fields import get_serializer_amount_field
@@ -77,16 +76,6 @@ class MarginTransferSerializer(serializers.ModelSerializer):
     symbol = SymbolField(source='position_symbol')
     asset = AssetSerializerMini(read_only=True)
 
-    def validate(self, attrs):
-        self.validate_coin(attrs['asset'])
-        return attrs
-
-    @staticmethod
-    def validate_coin(coin):
-        if coin.symbol not in (Asset.USDT, Asset.IRT):
-            raise ValidationError(_('Invalid coin to transfer'))
-        return coin
-
     def create(self, validated_data):
         user = self.context['request'].user
 
@@ -95,6 +84,15 @@ class MarginTransferSerializer(serializers.ModelSerializer):
         # print(validated_data)
 
         return super(MarginTransferSerializer, self).create(validated_data)
+
+    def validate(self, attrs):
+        if attrs['asset'] not in Asset.objects.filter(symbol__in=[Asset.IRT, Asset.USDT]):
+            raise ValidationError({'asset': 'فقط میتوانید ریال و تتر انتقال دهید.'})
+
+        if attrs['type'] == MarginTransfer.SPOT_TO_MARGIN and not self.context['request'].user.show_margin:
+            raise ValidationError('Dont Have allow to place Margin Order')
+
+        return attrs
 
     class Meta:
         model = MarginTransfer
@@ -170,12 +168,3 @@ class MarginLoanViewSet(ModelViewSet):
         return MarginLoan.objects.filter(
             account=self.request.user.get_account()
         ).order_by('-created')
-
-
-class MarginClosePositionView(APIView):
-    def post(self, request: Request):
-        account = request.user.get_account()
-
-        CloseRequest.close_margin(account, reason=CloseRequest.USER)
-
-        return Response('ok', status=201)

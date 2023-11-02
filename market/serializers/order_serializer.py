@@ -12,8 +12,8 @@ from rest_framework.generics import get_object_or_404
 from accounts.models import LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Wallet, Asset
-from ledger.utils.external_price import IRT
+from ledger.models import Wallet, Asset, MarginPosition
+from ledger.utils.external_price import IRT, SELL, SHORT
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
@@ -121,8 +121,9 @@ class OrderSerializer(serializers.ModelSerializer):
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
             check_margin_view_permission(self.context['account'], symbol.asset)
-            position = symbol.get_margin_position(self.context['account'])
-
+            position = symbol.get_margin_position(self.context['account'],
+                                                  validated_data['amount'] * validated_data['price'],
+                                                  side=validated_data['side'])
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
         wallet = symbol.asset.get_wallet(
             self.context['account'], market=market, variant=position.variant or self.context['variant']
@@ -177,6 +178,8 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 {'price': _('price is mandatory in limit order.')}
             )
+        if attrs['wallet']['market'] == Wallet.MARGIN and not self.context['request'].user.show_margin:
+            raise ValidationError('Dont Have allow to place Margin Order')
         return attrs
 
     def get_filled_amount(self, order: Order):

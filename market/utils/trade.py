@@ -98,20 +98,8 @@ def _update_trading_positions(trading_positions, pipeline):
                                       short_amount * trade_info.trade_price) / position.amount
         position.update_liquidation_price(pipeline)
         to_update_positions[position.id] = position
-        if position.amount == 0:
-            position.status = MarginPosition.CLOSED
-            margin_cross_wallet = position.margin_base_wallet.asset.get_wallet(
-                position.account, market=Wallet.MARGIN, variant=None)
-            remaining_balance = position.margin_base_wallet.balance + pipeline.get_wallet_balance_diff(
-                position.margin_base_wallet.id)
-            if remaining_balance:
-                pipeline.new_trx(
-                    position.margin_base_wallet, margin_cross_wallet, remaining_balance, Trx.MARGIN_TRANSFER,
-                    trade_info.group_id
-                )
-
     MarginPosition.objects.bulk_update(
-        to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status']
+        to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status', 'side']
     )
 
 
@@ -182,41 +170,12 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
             trade_amount = trade.amount - trade.fee_amount if order_side == BUY else trade.amount
             from ledger.models import MarginLoan
             position = order.symbol.get_margin_position(order.account)
+            position.update_liquidation_price(pipeline, save=True)
             if loan_type == MarginLoan.REPAY:
                 trade_amount = min(position.amount, trade_amount)
             if not trade_amount:
                 continue
 
-            trade_value = trade_price * trade_amount
-
-            if not position.has_enough_margin(trade_value):
-                if loan_type == MarginLoan.BORROW:
-                    margin_wallet = order.base_wallet.asset.get_wallet(
-                        order.base_wallet.account, market=order.base_wallet.market, variant=None
-                    )
-                    pipeline.new_trx(
-                        group_id=uuid4(),
-                        sender=margin_wallet,
-                        receiver=order.base_wallet,
-                        amount=trade_value,
-                        scope=Trx.MARGIN_TRANSFER
-                    )
-                elif loan_type == MarginLoan.REPAY:
-                    margin_wallet = order.base_wallet.asset.get_wallet(
-                        order.base_wallet.account, market=order.base_wallet.market, variant=order.wallet.variant
-                    )
-
-                else:
-                    raise NotImplementedError
-
-            MarginLoan.new_loan(
-                account=order.account,
-                asset=order.symbol.asset,
-                amount=trade_amount,
-                loan_type=loan_type,
-                pipeline=pipeline,
-                variant=order.wallet.variant,
-            )
             fee_amount = floor_precision(trade.fee_amount,
                                          Trade.fee_amount.field.decimal_places) if trade.fee_amount else Decimal(0)
             trade_amount = trade.amount - fee_amount if order_side == BUY else trade.amount
