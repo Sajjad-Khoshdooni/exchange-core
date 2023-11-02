@@ -37,32 +37,6 @@ class UserType(Enum):
     PERSONAL = 'personal'
 
 
-class LevelGrants(models.Model):
-    LEVEL1 = 1
-    LEVEL2 = 2
-    LEVEL3 = 3
-    LEVEL4 = 4
-
-    level = models.PositiveSmallIntegerField(
-        unique=True,
-        default=LEVEL1,
-        choices=(
-            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3'),
-            (LEVEL4, 'level 4'),
-        ),
-        verbose_name='سطح',
-    )
-
-    max_daily_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
-
-    max_daily_fiat_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
-    max_daily_fiat_deposit = models.PositiveBigIntegerField(null=True, blank=True, default=None)
-
-    @classmethod
-    def get_level_grants(cls, level: int) -> 'LevelGrants':
-        return LevelGrants.objects.filter(level=level).last() or LevelGrants()
-
-
 class User(AbstractUser):
     LEVEL1 = 1
     LEVEL2 = 2
@@ -207,16 +181,6 @@ class User(AbstractUser):
             name += ' ' + self.get_full_name()
 
         return name
-
-    @property
-    def is_in_process(self):
-        from accounts.models import Consultation
-        from ledger.utils.fields import PENDING
-        
-        return Consultation.objects.filter(
-            user=self,
-            status=PENDING
-        ).exists()
 
     @property
     def registration_type(self):
@@ -486,3 +450,37 @@ def handle_user_save(sender, instance, created, **kwargs):
         first_crypto_deposit_date=instance.first_crypto_deposit_date,
     )
     producer.produce(event)
+
+
+class LevelGrants(models.Model):
+    LEVEL1 = 1
+    LEVEL2 = 2
+    LEVEL3 = 3
+    LEVEL4 = 4
+
+    level = models.PositiveSmallIntegerField(
+        unique=True,
+        default=LEVEL1,
+        choices=(
+            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3'),
+            (LEVEL4, 'level 4'),
+        ),
+        verbose_name='سطح',
+    )
+
+    max_daily_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
+    max_daily_fiat_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
+
+    max_daily_fiat_deposit = models.PositiveBigIntegerField(null=True, blank=True, default=None)
+
+    @classmethod
+    def get_level_grants(cls, level: int) -> 'LevelGrants':
+        return LevelGrants.objects.filter(level=level).last() or LevelGrants()
+
+    @classmethod
+    def get_max_daily_crypto_withdraw(cls, user: 'User'):
+        return user.custom_crypto_withdraw_ceil or LevelGrants.get_level_grants(user.level).max_daily_crypto_withdraw
+
+    @classmethod
+    def get_max_daily_fiat_withdraw(cls, user: 'User'):
+        return user.custom_fiat_withdraw_ceil or LevelGrants.get_level_grants(user.level).max_daily_fiat_withdraw

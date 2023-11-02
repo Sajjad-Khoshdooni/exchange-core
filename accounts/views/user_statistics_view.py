@@ -24,14 +24,12 @@ class UserStatisticsView(APIView):
         current_day_fiat_withdraw = get_fiat_withdraw_irt_value(user)
         current_day_crypto_withdraw = get_crypto_withdraw_irt_value(user)
 
-        daily_fiat_withdraw_limit = LevelGrants.get_level_grants(user.level).max_daily_fiat_withdraw
-        daily_crypto_withdraw_limit = LevelGrants.get_level_grants(user.level).max_daily_crypto_withdraw
         return Response(
             {
                 'all_trades_irt': all_trades_irt,
                 'last_30d_trades_irt': last_30d_trades_irt,
-                'daily_fiat_withdraw_limit': daily_fiat_withdraw_limit,
-                'daily_crypto_withdraw_limit': daily_crypto_withdraw_limit,
+                'daily_fiat_withdraw_limit': LevelGrants.get_max_daily_fiat_withdraw(user),
+                'daily_crypto_withdraw_limit': LevelGrants.get_max_daily_crypto_withdraw(user),
                 'current_day_fiat_withdraw': current_day_fiat_withdraw,
                 'current_day_crypto_withdraw': current_day_crypto_withdraw
             }

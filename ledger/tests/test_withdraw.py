@@ -37,6 +37,7 @@ class WithdrawTestCase(TestCase):
             'network': 'BSC',
             'code': generate_otp_code(self.user, 'withdraw')
         })
+        self.assertEqual(resp.status_code, 201)
         self.assertEqual((get_presentation_amount(resp.data['amount'])), amount)
 
     def test_withdraw_with_addressbook(self):
