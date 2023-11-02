@@ -49,7 +49,7 @@ class Company(models.Model):
                 self.provider_data = json.dumps(data, default=lambda o: o.__dict__)
                 self.save(
                     update_fields=[
-                        'name, address', 'postal_code', 'registration_id', 'provider_data', 'is_active',
+                        'name', 'address', 'postal_code', 'registration_id', 'provider_data', 'is_active',
                         'company_registration_date'
                     ]
                 )
