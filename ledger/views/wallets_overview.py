@@ -59,8 +59,11 @@ class WalletsOverviewAPIView(APIView):
 
         stake_wallets = Wallet.objects.filter(account=account, market=Wallet.STAKE).exclude(balance=0)
 
+        margin_wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN).exclude(balance=0)
+
         return Response({
             Wallet.SPOT: self.aggregate_wallets_values(spot_wallets, prices),
             'strategy': self.aggregate_wallets_values(strategy_wallets, prices),
             Wallet.STAKE: self.aggregate_wallets_values(stake_wallets, prices),
+            Wallet.MARGIN: self.aggregate_wallets_values(margin_wallets, prices),
         })
