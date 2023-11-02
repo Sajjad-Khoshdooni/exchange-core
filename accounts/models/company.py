@@ -18,7 +18,7 @@ class Company(models.Model):
     registration_id = models.CharField(blank=True, max_length=128)
     company_registration_date = models.CharField(blank=True, max_length=128)
     national_id = models.CharField(validators=[company_national_id_validator], unique=True, max_length=11)
-    is_active = models.BooleanField(null=True, blank=True, default=False)
+    is_active = models.BooleanField(null=True, blank=True)
     company_documents = models.OneToOneField(
         to='multimedia.File',
         on_delete=models.PROTECT,
