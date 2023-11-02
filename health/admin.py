@@ -14,6 +14,9 @@ class AlertTypeAdmin(admin.ModelAdmin):
 
     @admin.display(description='status', )
     def get_status(self, alert_type: AlertType):
+        if not alert_type.id:
+            return
+
         status = alert_type.get_status()
 
         colors = {status.OK: 'green', status.WARNING: 'darkorange', status.ERROR: 'red'}
@@ -26,6 +29,9 @@ class AlertTypeAdmin(admin.ModelAdmin):
 
     @admin.display(description='description')
     def get_description(self, alert_type: AlertType):
+        if not alert_type.id:
+            return
+
         status = alert_type.get_status()
         return status.description
 

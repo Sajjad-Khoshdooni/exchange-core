@@ -23,6 +23,8 @@ class Network(models.Model):
 
     need_memo = models.BooleanField(default=False)
 
+    expected_confirmation_minutes = models.PositiveSmallIntegerField(default=10)
+
     def __str__(self):
         return self.symbol
 

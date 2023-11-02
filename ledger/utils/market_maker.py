@@ -7,8 +7,11 @@ from django.conf import settings
 from django.core.cache import cache
 from urllib3.exceptions import ReadTimeoutError
 
+from accounts.utils.admin import url_to_admin_list
+from accounts.utils.telegram import send_system_message
 from accounts.verifiers.jibit import Response
 from ledger.utils.cache import get_cache_func_key
+from market.models import Trade
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +62,13 @@ class MarketMakerRequester:
 
     def get_trade_hedge_info(self, origin_id: str) -> dict:
         resp = self.collect_api(f'/api/v1/trades/{origin_id}/')
+
         if resp.status_code == 404:
             logger.warning(f'MarketMaker Missing Order:{origin_id}')
+            # send_system_message(
+            #     f'Market maker missing order:{origin_id}',
+            #     link=url_to_admin_list(Trade, filters={'id': origin_id})
+            # )
 
         return resp.data
 
