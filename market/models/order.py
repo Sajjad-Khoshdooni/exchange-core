@@ -14,10 +14,10 @@ from django.utils import timezone
 
 from accounting.models import TradeRevenue
 from accounts.models import Notification
-from ledger.models import Wallet, Trx
+from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
-from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE
+from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE, SHORT, LONG
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -83,8 +83,9 @@ class Order(models.Model):
     DEPTH = 'depth'
     BOT = 'bot'
     ORDINARY = None
+    LIQUIDATION = 'liquid'
 
-    TYPE_CHOICES = ((DEPTH, 'depth'), (BOT, 'bot'), (ORDINARY, 'ordinary'))
+    TYPE_CHOICES = ((DEPTH, 'depth'), (BOT, 'bot'), (ORDINARY, 'ordinary'), (LIQUIDATION, LIQUIDATION))
 
     type = models.CharField(
         max_length=8,
@@ -208,29 +209,26 @@ class Order(models.Model):
         return {'price__lte': price} if side == BUY else {'price__gte': price}
 
     @staticmethod
-    def get_to_lock_wallet(wallet, base_wallet, side, symbol) -> Wallet:
+    def get_position(account, symbol):
+        from ledger.models import MarginPosition
+        return MarginPosition.objects.filter(
+            account=account, symbol=symbol, status__in=[MarginPosition.OPEN, MarginPosition.TERMINATING]
+        ).first()
+
+    @staticmethod
+    def get_to_lock_wallet(wallet, base_wallet, side, position=None) -> Wallet:
         if wallet.market == Wallet.MARGIN:
-
-            if side == SELL:
-                margin_cross_wallet = base_wallet.asset.get_wallet(
-                    base_wallet.account, market=base_wallet.market, variant=None
-                )
-                return margin_cross_wallet
+            if not position or not position.side or position.side == SHORT:
+                return position.base_margin_wallet
+            elif position.side == LONG:
+                return position.asset_margin_wallet
             else:
-                from ledger.models import MarginPosition
-
-                position = MarginPosition.objects.filter(
-                    account=wallet.account, symbol=symbol, status=MarginPosition.OPEN
-                ).first()
-
-                return position.margin_base_wallet
+                raise NotImplementedError
 
         return base_wallet if side == BUY else wallet
 
     @classmethod
-    def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str, market: str) -> Decimal:
-        if market == Wallet.MARGIN:
-            return amount * price
+    def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == BUY else amount
 
     def handle_oco_updates(self, pipeline):
@@ -269,23 +267,45 @@ class Order(models.Model):
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):
-        lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side, self.wallet.market)
-        to_lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, self.symbol)
+        position = None
+        if self.wallet.market == Wallet.MARGIN:
+            position = Order.get_position(account=self.account, symbol=self.symbol)
+
+        lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
+        to_lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, position=position)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             free_amount = to_lock_wallet.get_free()
             if free_amount > Decimal('0.95') * lock_amount:
                 lock_amount = min(lock_amount, free_amount)
 
-        to_lock_wallet.has_balance(lock_amount, raise_exception=True)
+        if self.wallet.market == Wallet.MARGIN and self.type != self.LIQUIDATION:
+            from ledger.utils.price import get_price
+
+            to_lock_wallet.has_margin_balance(
+                amount=lock_amount,
+                raise_exception=True,
+                pipeline_balance_diff=pipeline.get_wallet_free_balance_diff(to_lock_wallet.id),
+                side=self.side,
+                price=self.price or get_price(symbol=self.symbol.name, side=self.side)
+            )
+        else:
+            to_lock_wallet.has_balance(
+                lock_amount,
+                raise_exception=True,
+                pipeline_balance_diff=pipeline.get_wallet_free_balance_diff(to_lock_wallet.id)
+            )
 
         pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
+
+        # if self.wallet.market == Wallet.MARGIN:
+        #     position.update_side(pipeline)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             return floor_precision(lock_amount / self.price, self.symbol.step_size)
 
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
-        release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side, self.wallet.market)
+        release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
         pipeline.release_lock(key=self.group_id, amount=release_amount)
 
     def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]) -> MatchedTrades:

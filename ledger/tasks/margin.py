@@ -1,7 +1,9 @@
+import uuid
 import logging
 from decimal import Decimal
-
 from celery import shared_task
+from django.db.models import F
+from django.utils import timezone
 
 from accounts.models import Account, Notification, EmailNotification
 from accounts.tasks import send_message_by_kavenegar
@@ -9,8 +11,11 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
     MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD, get_bulk_margin_info
-from ledger.models import Wallet
+from ledger.models import Wallet, MarginPosition, Trx
 from ledger.models.margin import CloseRequest
+from ledger.utils.external_price import SHORT, LONG
+from ledger.utils.wallet_pipeline import WalletPipeline
+from market.models import PairSymbol
 
 logger = logging.getLogger(__name__)
 
@@ -85,3 +90,39 @@ def alert_liquidation(account: Account):
         recipient=user,
         template='margin_liquidated'
     )
+
+
+@shared_task(queue='margin')
+def collect_margin_interest():
+    now = timezone.now().replace(minute=0, second=0, microsecond=0)
+    group_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"{now}:{int(now.hour) // 8}")
+
+    with WalletPipeline() as pipeline:
+        for position in MarginPosition.objects.filter(status=MarginPosition.OPEN):
+            loan_wallet = position.loan_wallet
+            pipeline.new_trx(
+                loan_wallet,
+                MarginPosition.get_margin_pool_wallet(loan_wallet),
+                abs(position.debt_amount) * MarginPosition.get_interest_rate(loan_wallet),
+                Trx.MARGIN_INTEREST,
+                group_id,
+            )
+            position.update_liquidation_price(pipeline)
+
+    to_liquid_short_positions = MarginPosition.objects.filter(
+        side=SHORT,
+        status=MarginPosition.OPEN,
+        liquidation_price__lte=F('symbol__last_trade_price'),
+    ).order_by('liquidation_price')
+
+    for position in to_liquid_short_positions:
+        position.liquidate(pipeline)
+
+    to_liquid_long_positions = MarginPosition.objects.filter(
+        side=LONG,
+        status=MarginPosition.OPEN,
+        liquidation_price__gte=F('symbol__last_trade_price'),
+    ).order_by('liquidation_price')
+
+    for position in to_liquid_long_positions:
+        position.liquidate(pipeline)

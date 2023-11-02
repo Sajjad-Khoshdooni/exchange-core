@@ -120,9 +120,10 @@ class OrderSerializer(serializers.ModelSerializer):
         position = types.SimpleNamespace(variant=None)
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
-            check_margin_view_permission(self.context['account'], symbol.asset)
-            position = symbol.get_margin_position(self.context['account'])
-
+            check_margin_view_permission(self.context['account'], symbol)
+            position = symbol.get_margin_position(self.context['account'],
+                                                  validated_data['amount'] * validated_data['price'],
+                                                  side=validated_data['side'])
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
         wallet = symbol.asset.get_wallet(
             self.context['account'], market=market, variant=position.variant or self.context['variant']
@@ -177,6 +178,8 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 {'price': _('price is mandatory in limit order.')}
             )
+        if attrs['wallet']['market'] == Wallet.MARGIN and not self.context['request'].user.show_margin:
+            raise ValidationError('Dont Have allow to place Margin Order')
         return attrs
 
     def get_filled_amount(self, order: Order):

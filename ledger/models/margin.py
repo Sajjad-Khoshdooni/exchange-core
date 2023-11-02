@@ -132,7 +132,7 @@ class MarginLoan(models.Model):
             loan.loan_wallet.has_debt(-amount, raise_exception=True)
             loan.margin_wallet.has_balance(
                 amount, raise_exception=True,
-                pipeline_balance_diff=pipeline.get_wallet_balance_diff(loan.margin_wallet.id)
+                pipeline_balance_diff=pipeline.get_wallet_free_balance_diff(loan.margin_wallet.id)
             )
         else:
             margin_info = MarginInfo.get(account)

@@ -52,7 +52,6 @@ class Asset(models.Model):
     trade_enable = models.BooleanField(default=True)
     hedge = models.BooleanField(default=True)
 
-    margin_enable = models.BooleanField(default=False)
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.SET_NULL, null=True, blank=True)
 
     publish_date = models.DateTimeField(null=True, blank=True)
@@ -175,7 +174,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'margin_enable', 'precision', 'step_size', 'name', 'name_fa', 'logo', 'original_symbol',
+        fields = ('symbol', 'precision', 'step_size', 'name', 'name_fa', 'logo', 'original_symbol',
                   'original_name_fa')
 
 

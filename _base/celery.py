@@ -110,6 +110,15 @@ app.conf.beat_schedule = {
         },
     },
 
+    'collect_margin_interest': {
+        'task': 'ledger.tasks.margin.collect_margin_interest',
+        'schedule': crontab(hour='*/8'),
+        'options': {
+            'queue': 'margin',
+            'expires': 3600
+        },
+    },
+
     'fill_trades_revenue': {
         'task': 'accounting.tasks.revenue.fill_revenue_filled_prices',
         'schedule': 120 * TASK_MULTIPLIER,
