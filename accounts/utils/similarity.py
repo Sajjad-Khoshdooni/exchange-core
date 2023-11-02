@@ -30,6 +30,10 @@ def clean_persian_name(name: str):
         'ٓ': '',
         'ٰ': '',
         'ٔ': '',
+        'ﻓ': 'ف',
+        'ﻌ': 'ع',
+        'ﺎ': 'ا',
+        'ﻝ': 'ل'
     }
 
     name = name.translate(str.maketrans(mapping)).strip()
