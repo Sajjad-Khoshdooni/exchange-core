@@ -350,7 +350,8 @@ class ZibalChannel(FiatWithdraw):
 
         total_wallet_irt_value = 0
         for wallet in resp:
-            total_wallet_irt_value += Decimal(wallet['balance']) + Decimal(wallet.get('pendingPFAmount', 0))
+            total_wallet_irt_value += Decimal(wallet['balance']) + Decimal(wallet.get('pendingPFAmount', 0)) + \
+                                      Decimal(wallet.get('pendingCashIn', 0))
 
         return total_wallet_irt_value // 10
 
