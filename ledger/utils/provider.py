@@ -277,7 +277,10 @@ class ProviderRequester:
         return resp.data
 
     def get_balances(self, profile_id: int, market: str) -> Union[dict, None]:
-        resp = self.collect_api('/api/v1/profiles/{}/{}/balances/'.format(profile_id, market))
+        resp = self.collect_api(
+            path='/api/v1/profiles/{}/{}/balances/'.format(profile_id, market),
+            timeout=60
+        )
 
         if not resp.success:
             return
