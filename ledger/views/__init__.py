@@ -30,3 +30,4 @@ from .withdraw_transfer_request_view import WithdrawTransferUpdateView
 from .withdraw_view import WithdrawView
 from .withdraw_view import WithdrawView, FeedbackCategories, WithdrawFeedbackSubmitView
 from .withdraw_viewset import WithdrawViewSet
+from .deposit_recovery_view import DepositRecoveryView

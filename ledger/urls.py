@@ -101,4 +101,6 @@ urlpatterns = [
     path('v1/fast_buy/', views.FastBuyTokenAPI.as_view()),
 
     path('v1/transactions/recent/', views.RecentTransactionsView.as_view()),
+
+    path('v1/deposit/recover/', views.DepositRecoveryView.as_view()),
 ]
