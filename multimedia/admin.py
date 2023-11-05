@@ -11,19 +11,19 @@ from multimedia.utils.custom_tags import post_render_html, get_text_of_html
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
-    list_display = ('uuid', 'image',)
-    readonly_fields = ('get_selfie_image',)
+    list_display = ('created', 'uuid',)
+    readonly_fields = ('uuid', 'get_selfie_image',)
     search_fields = ('uuid',)
 
+    @admin.display(description='preview')
     def get_selfie_image(self, image: Image):
         return mark_safe("<img src='%s' width='200' height='200' />" % image.get_absolute_image_url())
-
-    get_selfie_image.short_description = 'عکس'
 
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    list_display = ('uuid', 'file',)
+    list_display = ('created', 'uuid',)
+    readonly_fields = ('uuid', )
 
 
 @admin.register(Banner)
