@@ -182,7 +182,7 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
         if resp.success:
             update_bank_card_info(bank_card, data)
 
-            verified = name_similarity(bank_card.user.get_full_name(), bank_card.owner_name)
+            verified = name_similarity(bank_card.user.get_legal_name(), bank_card.owner_name)
 
             bank_card.verified = verified
 
@@ -267,7 +267,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
     if len(owners) >= 1:
         owner = owners[0]
         owner_full_name = owner['firstName'] + ' ' + owner['lastName']
-        verified = name_similarity(owner_full_name, user.get_full_name())
+        verified = name_similarity(owner_full_name, user.get_legal_name())
 
     bank_account.verified = verified
     bank_account.save(update_fields=['verified', 'bank', 'deposit_address', 'deposit_status', 'owners'])
