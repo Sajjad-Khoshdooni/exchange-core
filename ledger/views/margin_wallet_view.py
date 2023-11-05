@@ -208,7 +208,7 @@ class MarginBalanceAPIView(APIView):
     def get(self, request: Request):
         account = request.user.account
         symbol_name = request.query_params.get('symbol')
-        symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, asset__margin_enable=True).first()
+        symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, margin_enable=True).first()
 
         if not symbol:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol_name))
@@ -250,7 +250,7 @@ class MarginTransferBalanceAPIView(APIView):
 
         elif transfer_type == MarginTransfer.POSITION_TO_MARGIN:
             symbol_name = request.query_params.get('symbol')
-            symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, asset__margin_enable=True).first()
+            symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, margin_enable=True).first()
 
             if not symbol:
                 raise ValidationError(_('{symbol} is not enable').format(symbol=symbol_name))
