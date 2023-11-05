@@ -1,12 +1,14 @@
 from decimal import Decimal
 from typing import Union
 
+from django.conf import settings
 from django.db import models
 from django.db.models import UniqueConstraint, Q
 from django.utils import timezone
 
 from ledger.utils.external_price import BUY
 from ledger.utils.fields import get_amount_field
+from ledger.utils.price import USDT_IRT
 
 
 class Account(models.Model):
@@ -62,7 +64,10 @@ class Account(models.Model):
     @classmethod
     def out(cls) -> 'Account':
         return Account.objects.get(type=cls.OUT)
-    
+
+    def is_system_trader(self):
+        return self.is_system() and self.id != settings.OTC_ACCOUNT_ID
+
     def get_voucher_wallet(self):
         from ledger.models import Wallet
         from ledger.models import Asset

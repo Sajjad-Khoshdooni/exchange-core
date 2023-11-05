@@ -301,7 +301,7 @@ class Order(models.Model):
 
         maker_side = self.get_opposite_side(self.side)
 
-        matching_orders = Order.open_objects.filter(symbol=symbol, side=maker_side)
+        matching_orders = Order.open_objects.filter(symbol=symbol, side=maker_side).prefetch_related('wallet__account')
         if maker_side == BUY:
             matching_orders = matching_orders.filter(price__gte=self.price).order_by('-price', 'id')
         else:
@@ -337,8 +337,7 @@ class Order(models.Model):
 
         hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == USDT_IRT
 
-        taker_is_system = self.wallet.account.is_system() or (
-                hedging_usdt and self.account_id == settings.TRADER_ACCOUNT_ID)
+        taker_is_system = self.wallet.account.is_system_trader()
 
         oco_orders = [self] if self.oco else []
         for maker_order in matching_orders:
@@ -356,8 +355,7 @@ class Order(models.Model):
             else:
                 base_usdt_price = 1 / tether_irt
 
-            maker_is_system = maker_order.wallet.account.is_system() or (
-                    hedging_usdt and maker_order.account_id == settings.TRADER_ACCOUNT_ID)
+            maker_is_system = maker_order.wallet.account.is_system_trader()
 
             source_map = {
                 (True, True): Trade.SYSTEM,
