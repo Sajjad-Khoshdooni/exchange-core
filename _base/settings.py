@@ -373,6 +373,9 @@ OTC_ACCOUNT_ID = config('OTC_ACCOUNT', cast=int)
 RANDOM_TRADER_ACCOUNT_ID = config('BOT_RANDOM_TRADER_ACCOUNT_ID', default=None)
 MARKET_MAKER_ACCOUNT_ID = config('MARKET_MAKER_ACCOUNT_ID', cast=int, default=0)
 TRADER_ACCOUNT_ID = config('TRADER_ACCOUNT_ID', cast=int, default=0)
+MARGIN_INSURANCE_ACCOUNT = config('MARGIN_INSURANCE_ACCOUNT', cast=int, default=None)
+MARGIN_POOL_ACCOUNT = config('MARGIN_POOL_ACCOUNT', cast=int, default=0)
+
 
 BRAND_EN = config('BRAND_EN', default='')
 BRAND = config('BRAND', default='')

@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from decouple import config
+from django.conf import settings
 from django.db import transaction
 
 from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, MarginLoan, Trx
@@ -13,8 +14,6 @@ from market.models.pair_symbol import DEFAULT_TAKER_FEE
 
 logger = logging.getLogger(__name__)
 
-MARGIN_INSURANCE_ACCOUNT = config('MARGIN_INSURANCE_ACCOUNT', cast=int)
-MARGIN_POOL_ACCOUNT = config('MARGIN_POOL_ACCOUNT', cast=int)
 LIQUIDATION_FEE_RATE = Decimal('0.02')
 
 
@@ -75,7 +74,7 @@ class MarginCloser:
     def _acquire_liquidation_fee(self):
         fee = self._liquidated_value * LIQUIDATION_FEE_RATE
         margin_usdt_wallet = self.tether.get_wallet(self.account, market=Wallet.MARGIN)
-        margin_insurance_usdt_wallet = self.tether.get_wallet(MARGIN_INSURANCE_ACCOUNT)
+        margin_insurance_usdt_wallet = self.tether.get_wallet(settings.MARGIN_INSURANCE_ACCOUNT)
 
         with WalletPipeline() as pipeline:
             pipeline.new_trx(
@@ -183,7 +182,7 @@ class MarginCloser:
             insure = usdt_need - margin_usdt_wallet.balance
             self.info_log('Asking insurance to give funds %s$' % insure)
 
-            margin_insurance_usdt_wallet = self.tether.get_wallet(MARGIN_INSURANCE_ACCOUNT)
+            margin_insurance_usdt_wallet = self.tether.get_wallet(settings.MARGIN_INSURANCE_ACCOUNT)
 
             with WalletPipeline() as pipeline:
                 pipeline.new_trx(

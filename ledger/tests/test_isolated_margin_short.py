@@ -5,8 +5,6 @@ from django.test import Client
 from django.test import TestCase
 from django.utils import timezone
 
-from accounting.models import Account
-from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Asset, Wallet, MarginPosition
 from ledger.utils.external_price import SELL, BUY, SHORT
 from ledger.utils.precision import floor_precision

@@ -1,14 +1,12 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.db.models import Sum
 
 from accounting.models import VaultItem, Vault, ReservedAsset
 from accounts.models import Account
 from financial.models import FiatWithdrawRequest
-from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Wallet, Prize, Asset
-from ledger.requester.internal_assets_requester import InternalAssetsRequester
-from ledger.utils.cache import cache_for
 from ledger.utils.price import USDT_IRT
 from ledger.utils.provider import get_provider_requester, BINANCE
 
@@ -108,4 +106,4 @@ class AssetOverview:
         return self.get_all_real_assets_value() - self.get_all_users_asset_value()
 
     def get_margin_insurance_balance(self):
-        return Asset.get(Asset.USDT).get_wallet(MARGIN_INSURANCE_ACCOUNT).balance
+        return Asset.get(Asset.USDT).get_wallet(settings.MARGIN_INSURANCE_ACCOUNT).balance

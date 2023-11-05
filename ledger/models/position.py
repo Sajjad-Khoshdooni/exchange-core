@@ -4,11 +4,10 @@ from dataclasses import dataclass
 from decimal import Decimal
 from uuid import UUID
 
+from django.conf import settings
 from django.db import models
 
 from accounts.models import Account
-from ledger.exceptions import InsufficientBalance
-from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT, MARGIN_POOL_ACCOUNT
 from ledger.models import Trx
 from ledger.utils.external_price import SHORT, LONG, BUY, SELL, get_other_side
 from ledger.utils.fields import get_amount_field
@@ -203,15 +202,15 @@ class MarginPosition(models.Model):
 
     def get_insurance_wallet(self, side):
         if side == SHORT:
-            return self.symbol.base_asset.get_wallet(account=Account.objects.get(id=MARGIN_INSURANCE_ACCOUNT))
+            return self.symbol.base_asset.get_wallet(account=Account.objects.get(id=settings.MARGIN_INSURANCE_ACCOUNT))
         elif side == LONG:
-            return self.symbol.asset.get_wallet(account=Account.objects.get(id=MARGIN_INSURANCE_ACCOUNT))
+            return self.symbol.asset.get_wallet(account=Account.objects.get(id=settings.MARGIN_INSURANCE_ACCOUNT))
         else:
             raise NotImplementedError
 
     @staticmethod
     def get_margin_pool_wallet(loan_wallet):
-        return loan_wallet.asset.get_wallet(account=Account.objects.get(id=MARGIN_POOL_ACCOUNT))
+        return loan_wallet.asset.get_wallet(account=Account.objects.get(id=settings.MARGIN_POOL_ACCOUNT))
 
     @classmethod
     def get_interest_rate(cls, loan_wallet):
