@@ -8,7 +8,6 @@ from django.utils import timezone
 
 from ledger.utils.external_price import BUY
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import USDT_IRT
 
 
 class Account(models.Model):
