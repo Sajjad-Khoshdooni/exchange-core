@@ -29,6 +29,10 @@ def fill_revenue_filled_prices():
     usdt_irt_symbol = PairSymbol.objects.get(asset__symbol=Asset.USDT, base_asset__symbol=Asset.IRT)
 
     for revenue in trade_revenues:
+        if revenue.account_id == settings.OTC_ACCOUNT_ID:
+            revenue.account = TradeRevenue.objects.get(id=revenue.id - 1).account
+            revenue.save(update_fields=['account'])
+
         if revenue.source == TradeRevenue.USER:
             revenue.coin_filled_price = revenue.coin_price
             revenue.filled_amount = revenue.amount
