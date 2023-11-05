@@ -18,8 +18,8 @@ class MarginPositionSerializer(AssetSerializerMini):
 
     class Meta:
         model = MarginPosition
-        fields = ('created', 'account', 'wallet', 'symbol', 'amount', 'average_price', 'liquidation_price', 'side',
-                  'status', 'id')
+        fields = ('id', 'created', 'account', 'symbol', 'amount', 'average_price', 'liquidation_price', 'side',
+                  'status', 'leverage')
 
 
 class MarginPositionFilter(django_filters.FilterSet):
