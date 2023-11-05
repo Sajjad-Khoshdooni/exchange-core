@@ -1,5 +1,7 @@
 from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 
@@ -44,8 +46,9 @@ class NetworkAssetView(ListAPIView):
     authentication_classes = []
     permission_classes = []
     pagination_class = LimitOffsetPagination
-
+    search_fields = ['asset__symbol', 'asset__name', 'asset__name_fa', 'network__symbol', 'network__name']
     serializer_class = NetworkAssetSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
 
     queryset = NetworkAsset.objects.filter(
         Q(can_deposit=True, network__can_deposit=True) | Q(network__can_withdraw=True, can_withdraw=True),
