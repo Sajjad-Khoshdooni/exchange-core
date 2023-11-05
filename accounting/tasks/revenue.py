@@ -30,7 +30,7 @@ def fill_revenue_filled_prices():
 
     for revenue in trade_revenues:
         if revenue.account_id == settings.OTC_ACCOUNT_ID:
-            revenue.account = TradeRevenue.objects.get(id=revenue.id - 1).account
+            revenue.account = TradeRevenue.objects.get(id=revenue.id + 1).account
             revenue.save(update_fields=['account'])
 
         if revenue.source == TradeRevenue.USER:
