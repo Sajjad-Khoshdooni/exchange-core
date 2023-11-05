@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models import CheckConstraint, Q, F, UniqueConstraint
 
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
+from ledger.utils.external_price import SELL, BUY
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -32,7 +33,7 @@ class Wallet(models.Model):
     balance = get_amount_field(default=Decimal(0), validators=())
     locked = get_amount_field(default=Decimal(0))
 
-    variant = get_group_id_field(null=True, default=None)
+    variant = get_group_id_field(null=True, default=None, db_index=True)
     expiration = models.DateTimeField(null=True, blank=True)
     credit = get_amount_field(default=0)
 
@@ -61,8 +62,10 @@ class Wallet(models.Model):
             CheckConstraint(
                 name='valid_balance_constraint',
                 check=Q(check_balance=False) |
-                      (~Q(market__in=('loan', 'debt')) & Q(balance__gte=F('locked') - F('credit'))) |
-                      (Q(market__in=('loan', 'debt')) & Q(balance__lte=0) & Q(locked=0)),
+                      (~Q(market__in=('loan', 'debt', 'margin')) & Q(balance__gte=F('locked') - F('credit'))) |
+                      (Q(market__in=('loan', 'debt')) & Q(balance__lte=0) & Q(locked=0)) |
+                      (Q(market='margin') & Q(variant__isnull=True) & Q(balance__gte=F('locked') - F('credit'))) |
+                      (Q(market='margin') & Q(variant__isnull=False))
             ),
             CheckConstraint(
                 name='valid_locked_constraint',
@@ -85,6 +88,51 @@ class Wallet(models.Model):
         if raise_exception and not can:
             raise InsufficientBalance()
 
+        return can
+
+    @staticmethod
+    def get_base_from_asset(assets):
+        from ledger.models import Asset
+        if Asset.IRT in assets:
+            return Asset.IRT
+        elif Asset.USDT in assets:
+            return Asset.USDT
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def get_margin_position_max_asset(variant, price, side):
+        wallets = Wallet.objects.filter(variant=variant)
+        base = Wallet.get_base_from_asset([wallets[0].asset.symbol, wallets[1].asset.symbol])
+
+        if wallets[1].asset.name == base:
+            a, b = wallets[0].balance, wallets[1].balance
+        else:
+            a, b = wallets[1].balance, wallets[0].balance
+
+        k = Decimal('0.5') if side == SELL else Decimal('2')
+        return Decimal(a*price + k*b) / Decimal((k-1) * price)
+
+    def has_margin_balance(self, amount: Decimal, side: str, price: Decimal, raise_exception: bool = False, check_system_wallets: bool = False,
+                           pipeline_balance_diff=Decimal(0)) -> bool:
+        assert self.market == self.MARGIN
+        if not check_system_wallets and not self.check_balance:
+            can = True
+
+        else:
+
+            x = Wallet.get_margin_position_max_asset(variant=self.variant, price=price, side=side)
+
+            if side == SELL:
+                max_asset = - x
+            elif side == BUY:
+                max_asset = x * price
+            else:
+                raise NotImplementedError
+            can = max_asset >= amount - pipeline_balance_diff
+
+        if raise_exception and not can:
+            raise InsufficientBalance()
         return can
 
     def has_debt(self, amount: Decimal, raise_exception: bool = False) -> bool:

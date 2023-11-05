@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Q
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -90,7 +90,7 @@ class MarginAssetListSerializer(AssetSerializerMini):
 
 class MarginWalletViewSet(ModelViewSet):
     serializer_class = MarginAssetListSerializer
-    queryset = Asset.live_objects.filter(margin_enable=True)
+    queryset = Asset.live_objects.filter(Q(pair__margin_enable=True) | Q(trading_pair__margin_enable=True)).distinct()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -180,7 +180,7 @@ class MarginAssetSerializer(AssetSerializerMini):
 
 class MarginAssetViewSet(ModelViewSet):
     serializer_class = MarginAssetSerializer
-    queryset = Asset.live_objects.filter(margin_enable=True)
+    queryset = Asset.live_objects.filter(Q(pair__margin_enable=True) | Q(trading_pair__margin_enable=True)).distinct()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()

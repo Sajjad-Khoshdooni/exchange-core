@@ -57,14 +57,13 @@ class OCOSerializer(OrderSerializer):
                 lock_amount = Order.get_to_lock_amount(
                     validated_data['amount'],
                     max(validated_data['price'], validated_data['stop_loss_price']),
-                    validated_data['side'],
-                    wallet.market
+                    validated_data['side']
                 )
                 releasable_lock = Decimal(0)
                 if validated_data['side'] == BUY:
                     releasable_lock = (validated_data['stop_loss_price'] - validated_data['price']) * validated_data['amount']
                 base_wallet = symbol.base_asset.get_wallet(wallet.account, wallet.market)
-                lock_wallet = Order.get_to_lock_wallet(wallet, base_wallet, validated_data['side'], symbol)
+                lock_wallet = Order.get_to_lock_wallet(wallet, base_wallet, validated_data['side'])
                 if lock_wallet.has_balance(lock_amount, raise_exception=True):
                     login_activity = LoginActivity.from_request(request=self.context['request'])
 

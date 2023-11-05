@@ -25,7 +25,7 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
-    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest
+    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, MarginPosition
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -50,10 +50,10 @@ class AssetAdmin(AdvancedAdmin):
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
-        'margin_enable', 'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
+        'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
     )
-    list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge', 'price_page')
+    list_filter = ('enable', 'trend', 'spread_category')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'hedge', 'price_page')
     search_fields = ('symbol',)
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset',)
@@ -392,7 +392,7 @@ class BalanceLockInline(admin.TabularInline):
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_username', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
-                    'credit')
+                    'credit', 'variant')
     inlines = [BalanceLockInline]
     list_filter = [
         ('asset', RelatedDropdownFilter),
@@ -934,3 +934,7 @@ class DepositRecoveryRequestAdmin(admin.ModelAdmin):
         for req in qs:
             req.reject()
 
+
+@admin.register(MarginPosition)
+class MarginPositionAdmin(admin.ModelAdmin):
+    list_display = ('created',)

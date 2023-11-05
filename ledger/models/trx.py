@@ -14,6 +14,8 @@ class Trx(models.Model):
     TRANSFER = 'f'
     MARGIN_TRANSFER = 'm'
     MARGIN_BORROW = 'b'
+    MARGIN_INSURANCE = 'mi'
+    MARGIN_INTEREST = 'in'
     FAST_LIQUID = 'fl'
     LIQUID = 'l'
     COMMISSION = 'c'
@@ -47,7 +49,8 @@ class Trx(models.Model):
             (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
             (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'),
             (STAKE, 'stake'), (STAKE_REVENUE, 'stake revenue'), (STAKE_FEE, 'stake fee'), (RESERVE, 'reserve'),
-            (DUST, 'dust'), (MANUAL, 'manual'), (DELIST, 'delist')
+            (DUST, 'dust'), (MANUAL, 'manual'), (DELIST, 'delist'), (MARGIN_INSURANCE, 'margin_insurance'),
+            (MARGIN_INTEREST, 'margin_interest')
         )
     )
 
