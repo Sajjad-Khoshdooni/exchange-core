@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin import SimpleListFilter
 from django.db.models import Sum
 from django.utils import timezone
 from simple_history.admin import SimpleHistoryAdmin
@@ -95,6 +96,21 @@ class AssetPriceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     search_fields = ('coin', )
 
 
+class GapFilledFilter(SimpleListFilter):
+    title = "gap filled"
+    parameter_name = "gap_filled"
+
+    def lookups(self, request, model_admin):
+        return (1, 'بله'), (0, 'خیر')
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value is not None:
+            queryset = queryset.filter(gap_revenue__isnull=value == '0')
+
+        return queryset
+
+
 @admin.register(TradeRevenue)
 class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = (
@@ -102,7 +118,7 @@ class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
         'coin_filled_price', 'hedge_key')
 
     search_fields = ('group_id', 'hedge_key', 'symbol__name', )
-    list_filter = ('symbol', 'source',)
+    list_filter = (GapFilledFilter, 'symbol', 'source',)
     readonly_fields = ('account', 'symbol', 'group_id')
     actions = ('zero_gap_revenue', )
 
