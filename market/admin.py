@@ -108,7 +108,7 @@ class CancelRequestAdmin(admin.ModelAdmin):
 
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount',
+    list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'is_maker', 'amount', 'fee_amount',
                     'fee_revenue', 'get_value_irt', 'get_value_usdt')
     list_filter = ('trade_source', UserTradeFilter, 'symbol')
     readonly_fields = ('symbol', 'order_id', 'account', 'login_activity', 'group_id')
