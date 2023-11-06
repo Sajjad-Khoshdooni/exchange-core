@@ -72,6 +72,8 @@ class MarginClosePositionSerializer(serializers.Serializer):
                 {'id': _('there is no open position with this Id.')}
             )
 
+        return attrs
+
 
 class MarginClosePositionView(APIView):
     def post(self, request):
