@@ -104,6 +104,11 @@ class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     search_fields = ('group_id', 'hedge_key', 'symbol__name', )
     list_filter = ('symbol', 'source',)
     readonly_fields = ('account', 'symbol', 'group_id')
+    actions = ('zero_gap_revenue', )
+
+    @admin.action(description='Zero Gap Revenue')
+    def zero_gap_revenue(self, request, queryset):
+        queryset.filter(gap_revenue__isnull=True).update(gap_revenue=0)
 
 
 @admin.register(ProviderIncome)

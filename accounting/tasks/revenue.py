@@ -22,8 +22,8 @@ def fill_revenue_filled_prices():
         return
 
     trade_revenues = TradeRevenue.objects.filter(
-        coin_filled_price__isnull=True
-    ).exclude(source=TradeRevenue.MANUAL).order_by('id').prefetch_related('symbol__asset', 'symbol__base_asset')
+        gap_revenue__isnull=True
+    ).order_by('id').prefetch_related('symbol__asset', 'symbol__base_asset')
 
     delegated_hedges = defaultdict(list)
     usdt_irt_symbol = PairSymbol.objects.get(asset__symbol=Asset.USDT, base_asset__symbol=Asset.IRT)
@@ -61,6 +61,10 @@ def fill_revenue_filled_prices():
             revenue.filled_amount = revenue.amount
             revenue.gap_revenue = revenue.get_gap_revenue()
             revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue'])
+
+        elif not revenue.symbol.enable:
+            revenue.gap_revenue = 0
+            revenue.save(update_fields=['gap_revenue'])
 
         else:
             coin = revenue.symbol.asset.symbol
