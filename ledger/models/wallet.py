@@ -110,8 +110,12 @@ class Wallet(models.Model):
         else:
             a, b = wallets[1].balance, wallets[0].balance
 
+        return Wallet.get_margin_position_max_asset_by_wallet(a, b, price, side)
+
+    @staticmethod
+    def get_margin_position_max_asset_by_wallet(a, b, price, side):
         k = Decimal('0.5') if side == SELL else Decimal('2')
-        return Decimal(a*price + k*b) / Decimal((k-1) * price)
+        return Decimal(a * price + k * b) / Decimal((k - 1) * price)
 
     def has_margin_balance(self, amount: Decimal, side: str, price: Decimal, raise_exception: bool = False, check_system_wallets: bool = False,
                            pipeline_balance_diff=Decimal(0)) -> bool:
