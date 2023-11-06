@@ -18,6 +18,8 @@ class MarginPositionSerializer(AssetSerializerMini):
     symbol = SymbolSerializer()
     margin_ratio = serializers.SerializerMethodField()
     equity = serializers.SerializerMethodField()
+    balance = serializers.SerializerMethodField()
+    debt = serializers.SerializerMethodField()
 
     def get_margin_ratio(self, instance):
         return floor_precision(instance.get_margin_ratio(), 2)
@@ -25,10 +27,16 @@ class MarginPositionSerializer(AssetSerializerMini):
     def get_equity(self, instance):
         return instance.equity
 
+    def get_balance(self, instance):
+        return instance.total_balance
+
+    def get_debt(self, instance):
+        return instance.debt_amount
+
     class Meta:
         model = MarginPosition
         fields = ('created', 'account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price',
-                  'liquidation_price', 'side', 'status', 'id', 'margin_ratio', 'equity')
+                  'liquidation_price', 'side', 'status', 'id', 'margin_ratio', 'equity', 'balance', 'debt')
 
 
 class MarginPositionFilter(django_filters.FilterSet):
