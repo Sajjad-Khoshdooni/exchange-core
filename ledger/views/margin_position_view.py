@@ -64,7 +64,7 @@ class MarginClosePositionSerializer(serializers.Serializer):
     def __init__(self, *args, **kwargs):
         super(MarginClosePositionSerializer, self).__init__(*args, **kwargs)
 
-        self.position = MarginPosition.objects.filter(id=kwargs['id'], status=MarginPosition.OPEN).first()
+        self.position = MarginPosition.objects.filter(id=kwargs.get('data', {})['id'], status=MarginPosition.OPEN).first()
 
     def validate(self, attrs):
         if not self.position:
