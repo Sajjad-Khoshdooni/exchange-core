@@ -82,6 +82,14 @@ class MarginPosition(models.Model):
         return self.base_margin_wallet.balance + self.asset_margin_wallet.balance * self.symbol.last_trade_price
 
     @property
+    def base_debt_amount(self):
+        if self.base_margin_wallet.balance < 0:
+            return -self.base_margin_wallet.balance
+        elif self.asset_margin_wallet.balance < 0:
+            return -self.asset_margin_wallet.balance * self.symbol.last_trade_price
+        return None
+
+    @property
     def debt_amount(self):
         loan_wallet = self.loan_wallet
         if loan_wallet:

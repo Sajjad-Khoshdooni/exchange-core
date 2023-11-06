@@ -35,13 +35,13 @@ class MarginInfoView(APIView):
             total_irt_value += wallet.balance * price_irt
         return {
             'IRT': get_presentation_amount(floor_precision(total_irt_value)),
-            'USDT': get_presentation_amount(floor_precision(total_usdt_value))
+            'USDT': get_presentation_amount(floor_precision(total_usdt_value, 2))
         }
 
     def get(self, request: Request):
         account = request.user.get_account()
 
-        user_margin_wallets = Wallet.objects.filter(market=Wallet.MARGIN, account=account, variant__isnull=False)
+        user_margin_wallets = Wallet.objects.filter(market=Wallet.MARGIN, account=account)
 
         coins = list(user_margin_wallets.values_list('asset__symbol', flat=True))
         prices = get_last_prices(get_coins_symbols(coins))
@@ -53,8 +53,8 @@ class MarginInfoView(APIView):
             'total_assets': total_asset,
             'total_debt': total_debt,
             'total_equity': {
-                'IRT': total_asset['IRT'] + total_debt['IRT'],
-                'USDT': total_asset['USDT'] + total_debt['USDT'],
+                'IRT': get_presentation_amount(Decimal(total_asset['IRT']) + Decimal(total_debt['IRT'])),
+                'USDT': get_presentation_amount(Decimal(total_asset['USDT']) + Decimal(total_debt['USDT'])),
             }
         })
 
@@ -88,13 +88,13 @@ class AssetMarginInfoView(APIView):
 class MarginTransferSerializer(serializers.ModelSerializer):
     amount = get_serializer_amount_field()
     coin = CoinField(source='asset')
-    symbol = SymbolField(source='position_symbol')
+    symbol = SymbolField(source='position_symbol', required=False)
     asset = AssetSerializerMini(read_only=True)
 
     def create(self, validated_data):
         user = self.context['request'].user
 
-        symbol = validated_data['position_symbol']
+        symbol = validated_data.get('position_symbol')
         check_margin_view_permission(user.get_account(), symbol)
 
         return super(MarginTransferSerializer, self).create(validated_data)
@@ -103,10 +103,18 @@ class MarginTransferSerializer(serializers.ModelSerializer):
         if attrs['asset'] not in Asset.objects.filter(symbol__in=[Asset.IRT, Asset.USDT]):
             raise ValidationError({'asset': 'فقط میتوانید ریال و تتر انتقال دهید.'})
 
-        if attrs['type'] == MarginTransfer.SPOT_TO_MARGIN and not self.context['request'].user.show_margin:
-            raise ValidationError('Dont Have allow to Transfer Margin')
+        if attrs['type'] not in [MarginTransfer.SPOT_TO_MARGIN, MarginTransfer.MARGIN_TO_SPOT] and not attrs.get('position_symbol'):
+            raise ValidationError({'position_symbol': 'بازار را وارد کنید'})
+
+        if attrs['type'] == MarginTransfer.SPOT_TO_MARGIN:
+            if not self.context['request'].user.show_margin:
+                raise ValidationError('Dont Have allow to Transfer Margin')
 
         if attrs['type'] == MarginTransfer.POSITION_TO_MARGIN:
+            if attrs['position_symbol'].base_asset != attrs['asset']:
+                asset = attrs['position_symbol'].base_asset.name_fa
+                raise ValidationError({'asset': f'فقط میتوانید {asset} انتقال دهید.'})
+
             position = MarginPosition.objects.filter(
                 account=self.context['request'].user.get_account(),
                 symbol=attrs['position_symbol'],
@@ -146,12 +154,18 @@ class MarginTransferViewSet(ModelViewSet):
 
 
 class MarginPositionInfoView(APIView):
-    def get(self, request: Request, symbol):
+    def get(self, request: Request):
+
         account = request.user.get_account()
+        symbol = request.GET.get('symbol')
+
+        if not symbol:
+            return Response({'Error': 'need symbol'}, 400)
+
         position = MarginPosition.objects.filter(status=MarginPosition.OPEN, account=account, symbol__name=symbol).first()
 
         if not position:
-            return Response({'Error': 'There is no open position '}, 400)
+            return Response({'Error': 'There is no open position'}, 400)
 
         return Response({
             'max_buy_volume': abs(Wallet.get_margin_position_max_asset(variant=position.variant, price=position.symbol.last_trade_price, side='buy')),
