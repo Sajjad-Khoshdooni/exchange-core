@@ -174,7 +174,9 @@ class MarginPositionInfoView(APIView):
                 'max_buy_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
                                                                            price=position.symbol.last_trade_price,
                                                                            side='buy')),
-                'max_sell_volume': Decimal('0'),
+                'max_sell_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
+                                                                           price=position.symbol.last_trade_price,
+                                                                           side='sell')),
             })
 
         return Response({
