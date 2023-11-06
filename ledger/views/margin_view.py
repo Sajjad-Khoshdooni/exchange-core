@@ -165,7 +165,17 @@ class MarginPositionInfoView(APIView):
         position = MarginPosition.objects.filter(status=MarginPosition.OPEN, account=account, symbol__name=symbol).first()
 
         if not position:
-            return Response({'Error': 'There is no open position'}, 400)
+            from market.models import PairSymbol
+
+            free = PairSymbol.get_by(symbol).base_asset.get_wallet(
+                account, Wallet.MARGIN, None
+            ).get_free()
+            return Response({
+                'max_buy_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
+                                                                           price=position.symbol.last_trade_price,
+                                                                           side='buy')),
+                'max_sell_volume': Decimal('0'),
+            })
 
         return Response({
             'max_buy_volume': abs(Wallet.get_margin_position_max_asset(variant=position.variant, price=position.symbol.last_trade_price, side='buy')),
