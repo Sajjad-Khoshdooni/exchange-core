@@ -54,13 +54,13 @@ urlpatterns = [
     path('v1/trade/otc/myTrades/', views.OTCHistoryView.as_view()),
 
     # path('v1/margin/info/', views.MarginInfoView.as_view()),
-    path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
+    # path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
     path('v1/margin/transfer/', views.MarginTransferViewSet.as_view({
         'get': 'list',
         'post': 'create'
     })),
 
-    path('v1/margin/wallets/', views.MarginWalletViewSet.as_view({'get': 'list'})),
+    # path('v1/margin/wallets/', views.MarginWalletViewSet.as_view({'get': 'list'})),
     # path('v1/margin/loan/', views.MarginLoanViewSet.as_view({
     #     'get': 'list',
     #     'post': 'create'

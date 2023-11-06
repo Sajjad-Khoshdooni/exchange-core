@@ -80,6 +80,13 @@ class ShortIsolatedMarginTestCase(TestCase):
         print(resp.json())
         self.assertEqual(resp.status_code, check_status)
 
+    def get_position_api(self, check_status=200):
+        resp = self.client.get('/api/v2/margin/positions/', {
+            'symbol': 'BTCUSDT'
+        })
+        print(resp.json())
+        self.assertEqual(resp.status_code, check_status)
+
     def transfer_btc_api(self, amount, type: str = 'sm', check_status=201):
         resp = self.client.post('/api/v1/margin/transfer/', {
             'amount': amount,
@@ -147,6 +154,7 @@ class ShortIsolatedMarginTestCase(TestCase):
         self.assertEqual(mp.debt_amount, loan_amount)
         self.assertEqual(mp.side, SHORT)
         self.assertTrue(mp.liquidation_price > Decimal('1818'))
+        self.get_position_api()
 
     def test_short_sell2(self):
         self.transfer_usdt_api(2 * TO_TRANSFER_USDT)
