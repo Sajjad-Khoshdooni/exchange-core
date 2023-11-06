@@ -22,7 +22,7 @@ class MarginPositionSerializer(AssetSerializerMini):
     debt = serializers.SerializerMethodField()
 
     def get_margin_ratio(self, instance):
-        return floor_precision(instance.get_margin_ratio(), 2)
+        return floor_precision(instance.get_margin_ratio() or 0, 2)
     
     def get_equity(self, instance):
         return instance.equity
