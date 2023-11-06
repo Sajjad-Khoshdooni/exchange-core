@@ -166,16 +166,16 @@ class MarginPositionInfoView(APIView):
 
         if not position:
             from market.models import PairSymbol
-
-            free = PairSymbol.get_by(symbol).base_asset.get_wallet(
+            symbol_model = PairSymbol.get_by(symbol)
+            free = symbol_model.base_asset.get_wallet(
                 account, Wallet.MARGIN, None
             ).get_free()
             return Response({
                 'max_buy_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
-                                                                           price=position.symbol.last_trade_price,
+                                                                           price=symbol_model.last_trade_price,
                                                                            side='buy')),
                 'max_sell_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
-                                                                           price=position.symbol.last_trade_price,
+                                                                           price=symbol_model.last_trade_price,
                                                                            side='sell')),
             })
 
