@@ -75,7 +75,7 @@ class ShortIsolatedMarginTestCase(TestCase):
             'amount': amount,
             'type': type,
             'coin': 'USDT',
-            'symbol': 'BTCUSDT'
+            # 'symbol': 'BTCUSDT'
         })
         print(resp.json())
         self.assertEqual(resp.status_code, check_status)
