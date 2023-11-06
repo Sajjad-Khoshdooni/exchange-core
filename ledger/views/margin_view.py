@@ -104,8 +104,20 @@ class MarginTransferSerializer(serializers.ModelSerializer):
             raise ValidationError({'asset': 'فقط میتوانید ریال و تتر انتقال دهید.'})
 
         if attrs['type'] == MarginTransfer.SPOT_TO_MARGIN and not self.context['request'].user.show_margin:
-            raise ValidationError('Dont Have allow to place Margin Order')
+            raise ValidationError('Dont Have allow to Transfer Margin')
 
+        if attrs['type'] == MarginTransfer.POSITION_TO_MARGIN:
+            position = MarginPosition.objects.filter(
+                account=self.context['request'].user.get_account(),
+                symbol=attrs['position_symbol'],
+                status__in=[MarginPosition.CLOSED, MarginPosition.OPEN],
+            ).first()
+
+            if not position:
+                raise ValidationError('There is no valid position to transfer margin')
+
+            if position.withdrawable_base_asset < Decimal(attrs['amount']):
+                raise ValidationError(f'You can only transfer: {position.withdrawable_base_asset}')
         return attrs
 
     class Meta:

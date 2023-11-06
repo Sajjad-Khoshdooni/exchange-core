@@ -9,17 +9,26 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import MarginPosition
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.precision import floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.serializers.symbol_serializer import SymbolSerializer
 
 
 class MarginPositionSerializer(AssetSerializerMini):
     symbol = SymbolSerializer()
+    margin_ratio = serializers.SerializerMethodField()
+    equity = serializers.SerializerMethodField()
+
+    def get_margin_ratio(self, instance):
+        return floor_precision(instance.get_margin_ratio(), 2)
+    
+    def get_equity(self, instance):
+        return instance.equity
 
     class Meta:
         model = MarginPosition
-        fields = ('created', 'account', 'wallet', 'symbol', 'amount', 'average_price', 'liquidation_price', 'side',
-                  'status', 'id')
+        fields = ('created', 'account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price',
+                  'liquidation_price', 'side', 'status', 'id', 'margin_ratio', 'equity')
 
 
 class MarginPositionFilter(django_filters.FilterSet):

@@ -7,7 +7,6 @@ from uuid import UUID
 from django.db import models
 
 from accounts.models import Account
-from ledger.exceptions import InsufficientBalance
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT, MARGIN_POOL_ACCOUNT
 from ledger.models import Trx
 from ledger.utils.external_price import SHORT, LONG, BUY, SELL, get_other_side
@@ -79,6 +78,10 @@ class MarginPosition(models.Model):
         return total_balance
 
     @property
+    def equity(self):
+        return self.base_margin_wallet.balance + self.asset_margin_wallet.balance * self.symbol.last_trade_price
+
+    @property
     def debt_amount(self):
         loan_wallet = self.loan_wallet
         if loan_wallet:
@@ -87,7 +90,7 @@ class MarginPosition(models.Model):
 
     @property
     def withdrawable_base_asset(self):
-        return self.total_balance - self.debt_amount * (1 + self.leverage)
+        return max(self.base_margin_wallet.balance, Decimal('0')) + min(self.asset_margin_wallet.balance, 0) * 2
 
     @property
     def margin_wallet(self):
@@ -107,14 +110,14 @@ class MarginPosition(models.Model):
         else:
             raise NotImplementedError
 
-    @classmethod
-    def get_margin_ratio(cls, side):
-        if side == SHORT:
-            return 1 / cls.DEFAULT_LIQUIDATION_LEVEL
+    def get_margin_ratio(self, side=None):
+        side = side or self.side
+        if not side:
+            return None
+        elif side == SHORT:
+            return 1 / self.DEFAULT_LIQUIDATION_LEVEL
         elif side == LONG:
-            return cls.DEFAULT_LIQUIDATION_LEVEL
-        else:
-            raise NotImplementedError
+            return self.DEFAULT_LIQUIDATION_LEVEL
 
     def get_side(self, pipeline=None):
 
@@ -312,17 +315,17 @@ class MarginPosition(models.Model):
                     liquidation_order.group_id
                 )
 
-        vice_versa_margin = self.margin_vice_versa_wallet
-        balance = vice_versa_margin.balance + pipeline.get_wallet_balance_diff(vice_versa_margin.id)
-
-        if balance:
-            pipeline.new_trx(
-                vice_versa_margin,
-                vice_versa_margin.asset.get_wallet(self.account, market=Wallet.MARGIN, variant=None),
-                balance,
-                Trx.LIQUID,
-                uuid.uuid4()
-            )
+        # vice_versa_margin = self.margin_vice_versa_wallet
+        # balance = vice_versa_margin.balance + pipeline.get_wallet_balance_diff(vice_versa_margin.id)
+        #
+        # if balance:
+        #     pipeline.new_trx(
+        #         vice_versa_margin,
+        #         vice_versa_margin.asset.get_wallet(self.account, market=Wallet.MARGIN, variant=None),
+        #         balance,
+        #         Trx.LIQUID,
+        #         uuid.uuid4()
+        #     )
 
         liquidation_order.refresh_from_db()
 

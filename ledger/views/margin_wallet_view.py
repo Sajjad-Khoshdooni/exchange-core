@@ -15,7 +15,7 @@ from ledger.utils.external_price import SELL
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import get_last_price
-from market.models import Order, PairSymbol
+from market.models import PairSymbol
 
 
 class MarginAssetListSerializer(AssetSerializerMini):
@@ -259,13 +259,17 @@ class MarginTransferBalanceAPIView(APIView):
                 account=request.user.account, symbol=symbol, status=MarginPosition.OPEN
             ).first()
 
-            if not position:
-                return Response({'asset': symbol.asset.symbol, 'balance': get_presentation_amount(Decimal(0))})
+            if not position or position.status in [MarginPosition.CLOSED, MarginPosition.OPEN]:
+                return Response({
+                    'asset': symbol.base_asset.symbol,
+                    'balance': get_presentation_amount(position.withdrawable_base_asset)
+                })
+            else:
+                return Response({
+                    'asset': symbol.base_asset.symbol,
+                    'balance': Decimal('0')
+                })
 
-            return Response({
-                'asset': symbol.base_asset.symbol,
-                'balance': get_presentation_amount(position.withdrawable_base_asset)
-            })
         elif transfer_type == MarginTransfer.SPOT_TO_MARGIN:
             base_asset = Asset.get(request.query_params.get('symbol'))
             spot_wallet = base_asset.get_wallet(request.user.account, market=Wallet.SPOT, variant=None)
