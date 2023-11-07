@@ -259,15 +259,15 @@ class MarginTransferBalanceAPIView(APIView):
                 account=request.user.account, symbol=symbol, status=MarginPosition.OPEN
             ).first()
 
-            if not position or position.status in [MarginPosition.CLOSED, MarginPosition.OPEN]:
+            if not position or not position.status in [MarginPosition.CLOSED, MarginPosition.OPEN]:
                 return Response({
                     'asset': symbol.base_asset.symbol,
-                    'balance': get_presentation_amount(position.withdrawable_base_asset)
+                    'balance': Decimal('0')
                 })
             else:
                 return Response({
                     'asset': symbol.base_asset.symbol,
-                    'balance': Decimal('0')
+                    'balance': get_presentation_amount(position.withdrawable_base_asset)
                 })
 
         elif transfer_type == MarginTransfer.SPOT_TO_MARGIN:
