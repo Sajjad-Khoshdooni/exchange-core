@@ -110,7 +110,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
             if not self.context['request'].user.show_margin:
                 raise ValidationError('Dont Have allow to Transfer Margin')
 
-        if attrs['type'] == MarginTransfer.POSITION_TO_MARGIN:
+        if attrs['type'] in [MarginTransfer.POSITION_TO_MARGIN, MarginTransfer.MARGIN_TO_POSITION]:
             if attrs['position_symbol'].base_asset != attrs['asset']:
                 asset = attrs['position_symbol'].base_asset.name_fa
                 raise ValidationError({'asset': f'فقط میتوانید {asset} انتقال دهید.'})
@@ -118,7 +118,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
             position = MarginPosition.objects.filter(
                 account=self.context['request'].user.get_account(),
                 symbol=attrs['position_symbol'],
-                status__in=[MarginPosition.CLOSED, MarginPosition.OPEN],
+                status__in=[MarginPosition.OPEN],
             ).first()
 
             if not position:
