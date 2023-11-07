@@ -110,24 +110,24 @@ def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow
             # logger.error('{} price fallback to stale'.format(c))
 
         for s in sides:
-            prices = []
+            _prices = []
 
             spot_price = spot_price_dict.get(SIDE_MAP[s])
             if spot_price is not None and _check_price_dict_time_frame(spot_price_dict, allow_stale=allow_stale):
-                prices.append(Decimal(spot_price))
+                _prices.append(Decimal(spot_price))
 
             futures_price = futures_price_dict.get(SIDE_MAP[s])
 
             if futures_price is not None and _check_price_dict_time_frame(futures_price_dict, allow_stale=allow_stale):
-                prices.append(Decimal(futures_price))
+                _prices.append(Decimal(futures_price))
 
-            if not prices:
+            if not _prices:
                 continue
 
             func = min if s == BUY else max
 
             results.append(
-                Price(coin=c, price=func(prices), side=s)
+                Price(coin=c, price=func(_prices), side=s)
             )
 
     return results
