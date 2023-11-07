@@ -170,8 +170,7 @@ class JibitClient(BaseClient):
 
     def _create_and_verify_payment_data(self, data: dict):
         merchant_ref = data['merchantReferenceNumber']
-        user_id = int(merchant_ref[2:])
-        payment_id = PaymentId.objects.get(pay_id=data['paymentId'], user_id=user_id)
+        payment_id = PaymentId.objects.get(pay_id=data['paymentId'], group_id=merchant_ref)
         deposit_time = jdatetime.datetime.strptime(data['rawBankTimestamp'], '%Y/%m/%d %H:%M:%S').togregorian().astimezone()
 
         if data['status'] == 'SUCCESSFUL':
