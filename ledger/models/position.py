@@ -118,12 +118,15 @@ class MarginPosition(models.Model):
         else:
             raise NotImplementedError
 
-    def get_margin_ratio(self, side=None):
+    def get_margin_ratio(self, side=None) -> Decimal:
         side = side or self.side
+
         if not side:
-            return None
+            return Decimal(0)
+
         elif side == SHORT:
             return 1 / self.DEFAULT_LIQUIDATION_LEVEL
+
         elif side == LONG:
             return self.DEFAULT_LIQUIDATION_LEVEL
 
