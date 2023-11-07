@@ -169,7 +169,7 @@ class MarginPositionInfoView(APIView):
             symbol_model = PairSymbol.get_by(symbol)
             free = symbol_model.base_asset.get_wallet(
                 account, Wallet.MARGIN, None
-            ).get_free()
+            ).balance
             return Response({
                 'max_buy_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
                                                                            price=symbol_model.last_trade_price,
