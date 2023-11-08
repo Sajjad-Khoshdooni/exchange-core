@@ -8,6 +8,7 @@ from django.db.models import Sum, F
 
 from accounting.models import TradeRevenue
 from ledger.models import Asset
+from ledger.utils.external_price import SELL
 from ledger.utils.market_maker import get_market_maker_requester
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.trader import get_trader_requester
@@ -45,14 +46,16 @@ def fill_revenue_filled_prices():
                 quote_cum_usdt=Sum(F('amount') * F('price') * F('base_usdt_price')),
                 amount_sum=Sum('amount'),
             )
-            # TODO: gap_revenue will be a little negative because of base usdt price field in
-            #  Trade decimal places (8 != 20)
 
             filled_amount = info['amount_sum'] or 0
+            filled_price = info['quote_cum'] / filled_amount
+            gap = (revenue.price - filled_price) * revenue.amount
+            if revenue.side == SELL:
+                gap = -gap
 
             revenue.filled_amount = filled_amount
             revenue.coin_filled_price = info['quote_cum_usdt'] / filled_amount
-            revenue.gap_revenue = revenue.get_gap_revenue()
+            revenue.gap_revenue = gap * revenue.base_usdt_price
 
             revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue', 'coin_price'])
 
