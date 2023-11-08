@@ -115,7 +115,7 @@ class GapFilledFilter(SimpleListFilter):
 class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = (
         'created', 'symbol', 'source', 'side', 'amount', 'price', 'value', 'gap_revenue', 'fee_revenue', 'coin_price',
-        'coin_filled_price', 'hedge_key')
+        'coin_filled_price', 'hedge_key', 'value_is_fake')
 
     search_fields = ('group_id', 'hedge_key', 'symbol__name', )
     list_filter = (GapFilledFilter, 'symbol', 'source',)
