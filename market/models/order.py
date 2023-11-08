@@ -471,7 +471,7 @@ class Order(models.Model):
                         )
 
                 elif trades[0].account_id != trades[1].account_id:
-                    hedge_key = f'{hedger_prefix}-{trades[0].id}'
+                    hedge_key = f'{hedger_prefix}-{trades[1].id}'
 
                     trade = trades[1]
 
