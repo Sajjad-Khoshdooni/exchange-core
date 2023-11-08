@@ -138,7 +138,7 @@ class OTCRequest(BaseTrade):
         return (timezone.now() - self.created).total_seconds() >= self.EXPIRATION_TIME
 
     def __str__(self):
-        return '%s %s in %s' % (self.side, self.amount, self.symbol)
+        return '%s %s @ %s in %s' % (self.side, self.amount, self.price, self.symbol)
 
     class Meta:
         constraints = [
