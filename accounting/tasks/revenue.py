@@ -95,7 +95,7 @@ def fill_revenue_filled_prices():
                     revenue.coin_filled_price = info['hedge_price']
                     revenue.save(update_fields=['coin_filled_price', 'filled_amount', 'gap_revenue'])
 
-            elif revenue.hedge_key:
+            elif revenue.hedge_key:  # for otc-p trades which already hedged!
                 revenues = [*delegated_hedges[coin], revenue]
                 delegated_hedges[coin] = []
 
@@ -113,5 +113,5 @@ def fill_revenue_filled_prices():
                         executed_amount -= r.filled_amount
 
                     TradeRevenue.objects.bulk_update(revenues, ['coin_filled_price', 'filled_amount', 'gap_revenue'])
-            else:
+            else:  # for otc-p small amount trades
                 delegated_hedges[coin].append(revenue)
