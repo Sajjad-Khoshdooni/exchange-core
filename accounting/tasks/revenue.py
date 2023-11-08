@@ -7,12 +7,13 @@ from django.conf import settings
 from django.db.models import Sum, F
 
 from accounting.models import TradeRevenue
-from ledger.models import Asset, OTCTrade
+from ledger.models import OTCTrade
 from ledger.utils.external_price import SELL
 from ledger.utils.market_maker import get_market_maker_requester
+from ledger.utils.price import USDT_IRT
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.trader import get_trader_requester
-from market.models import Trade, PairSymbol, Order
+from market.models import Trade, Order
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,6 @@ def fill_revenue_filled_prices():
     ).order_by('id').prefetch_related('symbol__asset', 'symbol__base_asset')
 
     delegated_hedges = defaultdict(list)
-    usdt_irt_symbol = PairSymbol.objects.get(asset__symbol=Asset.USDT, base_asset__symbol=Asset.IRT)
 
     for revenue in trade_revenues:
         if revenue.account_id == settings.OTC_ACCOUNT_ID:
@@ -66,13 +66,13 @@ def fill_revenue_filled_prices():
 
             revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue', 'coin_price'])
 
-        elif not settings.ZERO_USDT_HEDGE and revenue.symbol == usdt_irt_symbol:
+        elif not settings.ZERO_USDT_HEDGE and revenue.symbol.name == USDT_IRT:
             revenue.coin_filled_price = 1
             revenue.filled_amount = revenue.amount
             revenue.gap_revenue = revenue.get_gap_revenue()
             revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue'])
 
-        elif not revenue.symbol.enable:
+        elif not revenue.symbol.asset.enable:
             revenue.gap_revenue = 0
             revenue.save(update_fields=['gap_revenue'])
 
