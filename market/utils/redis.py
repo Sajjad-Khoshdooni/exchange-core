@@ -10,7 +10,7 @@ from django.utils import timezone
 from redis import Redis
 
 from ledger.utils.external_price import BUY, SELL
-from ledger.utils.precision import floor_precision, get_presentation_amount
+from ledger.utils.precision import floor_precision, get_presentation_amount, decimal_to_str
 
 prefix_top_price = 'market_top_price'
 prefix_top_depth_price = 'market_top_depth_price'
@@ -157,19 +157,19 @@ class MarketStreamCache:
                     self.market_pipeline.delete(f'market:depth:price:{self._symbol.name}:{order_type}')
                     self.market_pipeline.delete(f'market:depth:amount:{self._symbol.name}:{order_type}')
                     continue
-                top_orders[f'{order_type}_price'] = str(top_order.price)
-                top_orders[f'{order_type}_amount'] = str(top_order.amount)
+                top_orders[f'{order_type}_price'] = decimal_to_str(top_order.price)
+                top_orders[f'{order_type}_amount'] = decimal_to_str(top_order.amount)
 
                 amount_updated[order_type] = self.set_if_not_equal(
-                    f'market:depth:amount:{self._symbol.name}:{order_type}', str(top_order.amount)
+                    f'market:depth:amount:{self._symbol.name}:{order_type}', decimal_to_str(top_order.amount)
                 )
 
                 if canceled:
-                    self.market_pipeline.set(f'market:depth:price:{self._symbol.name}:{order_type}', str(top_order.price))
+                    self.market_pipeline.set(f'market:depth:price:{self._symbol.name}:{order_type}', decimal_to_str(top_order.price))
                 else:
                     set_func = self.set_if_higher if order_type == BUY else self.set_if_lower
                     price_updated[order_type] = set_func(
-                        f'market:depth:price:{self._symbol.name}:{order_type}', str(top_order.price)
+                        f'market:depth:price:{self._symbol.name}:{order_type}', decimal_to_str(top_order.price)
                     )
             else:
                 missing_price_fallback = 0 if side == BUY else 'inf'
@@ -203,7 +203,7 @@ class MarketStreamCache:
     def update_order_status(self, order):
         self.market_pipeline.publish(
             f'market:orders:status:{order.symbol.name}',
-            f'{order.client_order_id or order.id}-{order.side}-{order.price}-{order.status}'
+            f'{order.client_order_id or order.id}-{order.side}-{decimal_to_str(order.price)}-{order.status}'
         )
         logger.info(f'publishing order:{order.id} to socket server redis')
 
