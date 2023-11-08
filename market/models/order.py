@@ -335,8 +335,6 @@ class Order(models.Model):
 
         tether_irt = get_last_price(USDT_IRT)
 
-        taker_is_proxy = self.wallet.account.is_proxy_trader(symbol.name)
-
         oco_orders = [self] if self.oco else []
 
         total_matched = 0
@@ -436,55 +434,7 @@ class Order(models.Model):
             for oco_order in oco_orders:
                 oco_order.handle_oco_updates(pipeline)
 
-            if symbol.name == USDT_IRT:
-                if settings.ZERO_USDT_HEDGE:
-                    hedger_account_id = settings.TRADER_ACCOUNT_ID
-                    hedger_prefix = 'tr'
-                else:
-                    hedger_account_id = settings.MARKET_MAKER_ACCOUNT_ID
-                    hedger_prefix = ''
-            else:
-                hedger_account_id = settings.MARKET_MAKER_ACCOUNT_ID
-                hedger_prefix = 'mm'
-
-            trade_revenues = []
-            for maker_trade, taker_trade in trade_pairs:
-                maker_is_proxy = maker_trade.account.is_proxy_trader(symbol.name)
-                any_proxy = taker_is_proxy or maker_is_proxy
-
-                trades = sorted(
-                    [maker_trade, taker_trade],
-                    key=lambda _t: _t.account_id == hedger_account_id,
-                    reverse=True
-                )
-
-                if trades[0].account_id != hedger_account_id:
-                    for t in trades:
-                        trade_revenues.append(
-                            TradeRevenue.new(
-                                user_trade=t,
-                                group_id=t.group_id,
-                                source=TradeRevenue.USER,
-                                hedge_key='',
-                                ignore_trade_value=any_proxy or (t == maker_trade)
-                            )
-                        )
-
-                elif trades[0].account_id != trades[1].account_id:
-                    hedge_key = f'{hedger_prefix}-{trades[1].id}'
-
-                    trade = trades[1]
-
-                    trade_revenues.append(TradeRevenue.new(
-                        user_trade=trade,
-                        group_id=trade.group_id,
-                        source=TradeRevenue.MAKER if trades[0].is_maker else TradeRevenue.TAKER,
-                        hedge_key=hedge_key,
-                        ignore_trade_value=any_proxy
-                    ))
-
-            if trade_revenues:
-                TradeRevenue.objects.bulk_create(trade_revenues)
+            self.create_trade_revenues(trade_pairs)
 
         # updating trade_volume_irt of accounts
         for trade in trades:
@@ -595,3 +545,66 @@ class Order(models.Model):
             total_amount=Sum('unfilled_amount')
         )['total_amount']
         return TopOrder(side=side, price=top_price, amount=unfilled_amount)
+
+    def create_trade_revenues(self, trade_pairs: list):
+        from ledger.utils.price import USDT_IRT
+
+        symbol = self.symbol
+
+        taker_is_proxy = self.wallet.account.is_proxy_trader(symbol.name)
+
+        trade_revenues = []
+        for maker_trade, taker_trade in trade_pairs:
+            maker_is_proxy = maker_trade.account.is_proxy_trader(symbol.name)
+            any_proxy = taker_is_proxy or maker_is_proxy
+
+            if symbol.name == USDT_IRT:
+                if settings.ZERO_USDT_HEDGE:
+                    hedger_account_id = settings.TRADER_ACCOUNT_ID
+                    hedger_prefix = 'tr'
+                else:
+                    hedger_account_id = settings.MARKET_MAKER_ACCOUNT_ID
+                    hedger_prefix = ''
+            else:
+                hedger_account_id = settings.MARKET_MAKER_ACCOUNT_ID
+                hedger_prefix = 'mm'
+
+            trades = sorted(
+                [maker_trade, taker_trade],
+                key=lambda _t: _t.account_id == hedger_account_id,
+                reverse=True
+            )
+
+            if trades[0].account_id != hedger_account_id:
+                for t in trades:
+                    trade_revenues.append(
+                        TradeRevenue.new(
+                            user_trade=t,
+                            group_id=t.group_id,
+                            source=TradeRevenue.USER,
+                            hedge_key='',
+                            ignore_trade_value=any_proxy or (t == maker_trade)
+                        )
+                    )
+
+            elif trades[0].account_id != trades[1].account_id:
+                if hedger_prefix == 'tr':
+                    hedge_key = f'{hedger_prefix}-{trades[0].id}'
+                elif hedger_prefix == 'mm':
+                    taker = trades[1] if trades[0].is_maker else trades[0]
+                    hedge_key = f'{hedger_prefix}-{taker.id}'
+                else:
+                    hedge_key = ''
+
+                trade = trades[1]
+
+                trade_revenues.append(TradeRevenue.new(
+                    user_trade=trade,
+                    group_id=trade.group_id,
+                    source=TradeRevenue.MAKER if trades[0].is_maker else TradeRevenue.TAKER,
+                    hedge_key=hedge_key,
+                    ignore_trade_value=any_proxy
+                ))
+
+        if trade_revenues:
+            TradeRevenue.objects.bulk_create(trade_revenues)
