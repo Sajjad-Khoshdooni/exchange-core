@@ -60,7 +60,15 @@ class Vault(models.Model):
 
             coins.append(vd.coin)
 
-        VaultItem.objects.filter(vault=self).exclude(coin__in=coins).update(
+        VaultItem.objects.filter(
+            vault=self
+        ).exclude(
+            coin__in=coins
+        ).exclude(
+            balance=0,
+            value_usdt=0,
+            value_irt=0
+        ).update(
             balance=0,
             value_usdt=0,
             value_irt=0,
