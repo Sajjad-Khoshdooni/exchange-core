@@ -36,7 +36,8 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
               market: str = Wallet.SPOT, order_type: str = Order.ORDINARY,
               parent_lock_group_id: Union[UUID, None] = None, stop_loss_id: Union[int, None] = None,
               time_in_force: str = Order.GTC, pass_min_notional: bool = False,
-              variant: Union[str, None] = None, oco_id: Union[int, None] = None) -> Union[Order, None]:
+              variant: Union[str, None] = None, oco_id: Union[int, None] = None,
+              client_order_id: str = None) -> Union[Order, None]:
 
     assert price or fill_type == Order.MARKET
 
@@ -98,6 +99,7 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
         fill_type=fill_type,
         type=order_type,
         time_in_force=time_in_force,
+        client_order_id=client_order_id,
         **additional_params
     )
 
@@ -106,11 +108,13 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
     matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss, is_oco=is_oco)
     extra = {} if matched_trades.trade_pairs else {'side': order.side}
     pipeline.add_market_cache_data(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
+
     if matched_trades and matched_trades.to_cancel_stoploss:
         from market.models import StopLoss
         StopLoss.objects.filter(id__in=map(lambda s: s.id, matched_trades.to_cancel_stoploss)).update(
             canceled_at=timezone.now()
         )
+
     order.trades = [p[0] for p in matched_trades.trade_pairs]
     return order
 
