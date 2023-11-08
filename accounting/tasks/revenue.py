@@ -7,12 +7,12 @@ from django.conf import settings
 from django.db.models import Sum, F
 
 from accounting.models import TradeRevenue
-from ledger.models import Asset
+from ledger.models import Asset, OTCTrade
 from ledger.utils.external_price import SELL
 from ledger.utils.market_maker import get_market_maker_requester
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.trader import get_trader_requester
-from market.models import Trade, PairSymbol
+from market.models import Trade, PairSymbol, Order
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,17 @@ def fill_revenue_filled_prices():
     usdt_irt_symbol = PairSymbol.objects.get(asset__symbol=Asset.USDT, base_asset__symbol=Asset.IRT)
 
     for revenue in trade_revenues:
+        if revenue.account_id == settings.OTC_ACCOUNT_ID:
+            otc_order = Order.objects.get(
+                id=Trade.objects.filter(
+                    group_id=revenue.group_id,
+                    is_maker=False
+                ).first().order_id
+            )
+            if otc_order.client_order_id:
+                revenue.account = OTCTrade.objects.get(group_id=otc_order.client_order_id).otc_request.account
+                revenue.save(update_fields=['account'])
+
         if revenue.source == TradeRevenue.USER:
             revenue.coin_filled_price = revenue.coin_price
             revenue.filled_amount = revenue.amount
