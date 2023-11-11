@@ -387,7 +387,7 @@ class Order(models.Model):
                 group_id=uuid4()
             )
 
-            if not maker_order.wallet.account.system():
+            if not maker_order.wallet.account.is_system():
                 Notification.send(
                     recipient=maker_order.wallet.account.user,
                     title='معامله {} انجام شد'.format(maker_order.symbol),
@@ -426,7 +426,7 @@ class Order(models.Model):
                 self.save(update_fields=['status'])
                 break
 
-        if total_matched > 0 and not self.wallet.account.system():
+        if total_matched > 0 and not self.wallet.account.is_system():
             Notification.send(
                 recipient=self.wallet.account.user,
                 title='معامله {} انجام شد'.format(symbol),
