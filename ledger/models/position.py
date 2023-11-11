@@ -280,7 +280,7 @@ class MarginPosition(models.Model):
                 group_id,
             )
         liquidation_order = None
-        if to_close_amount > Decimal('0') and margin_side:
+        if to_close_amount > Decimal('0'):
             liquidation_order = new_order(
                 pipeline=pipeline,
                 symbol=self.symbol,
