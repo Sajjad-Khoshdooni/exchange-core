@@ -117,6 +117,8 @@ class OrderSerializer(serializers.ModelSerializer):
         if not symbol.enable and self.context['account'].id != settings.MARKET_MAKER_ACCOUNT_ID:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
 
+        validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
+
         position = types.SimpleNamespace(variant=None)
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
@@ -124,7 +126,6 @@ class OrderSerializer(serializers.ModelSerializer):
             position = symbol.get_margin_position(self.context['account'],
                                                   validated_data['amount'] * validated_data['price'],
                                                   side=validated_data['side'])
-        validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
         wallet = symbol.asset.get_wallet(
             self.context['account'], market=market, variant=position.variant or self.context['variant']
         )
