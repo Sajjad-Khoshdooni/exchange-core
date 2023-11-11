@@ -69,6 +69,8 @@ class Asset(models.Model):
 
     distribution_factor = models.FloatField(default=0)
 
+    stale_price = get_amount_field(null=True)
+
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order',)
 
