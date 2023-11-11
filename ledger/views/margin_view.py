@@ -185,8 +185,12 @@ class MarginPositionInfoView(APIView):
             }
         else:
             data = {
-                'max_buy_volume': abs(Wallet.get_margin_position_max_asset(variant=position.variant, price=calculation_price, side='buy')),
-                'max_sell_volume': abs(Wallet.get_margin_position_max_asset(variant=position.variant, price=calculation_price, side='sell')),
+                'max_buy_volume': max(abs(Wallet.get_margin_position_max_asset(variant=position.variant,
+                                                                               price=calculation_price, side='buy'))
+                                      - position.base_margin_wallet.locked, Decimal('0')),
+                'max_sell_volume': max(abs(Wallet.get_margin_position_max_asset(variant=position.variant,
+                                                                                price=calculation_price, side='sell'))
+                                       - position.asset_margin_wallet.locked, Decimal('0')),
             }
 
         if not price:
