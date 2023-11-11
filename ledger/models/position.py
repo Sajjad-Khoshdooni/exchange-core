@@ -247,7 +247,10 @@ class MarginPosition(models.Model):
 
         Order.cancel_orders(Order.open_objects.filter(wallet__in=[self.base_wallet, self.asset_wallet]))
 
-        to_close_amount = ceil_precision((self.debt_amount - pipeline.get_wallet_balance_diff(self.loan_wallet.id))
+        id = self.loan_wallet and self.loan_wallet.id
+        loan_wallet_balance_diff = pipeline.get_wallet_balance_diff(id) if id else Decimal('0')
+
+        to_close_amount = ceil_precision((self.debt_amount - loan_wallet_balance_diff)
                                          / (1 - self.symbol.get_fee_rate(self.account, is_maker=False)), self.symbol.step_size)
         margin_side = self.get_side(pipeline)
         if margin_side == SHORT:
@@ -268,7 +271,7 @@ class MarginPosition(models.Model):
             loss_amount *= price
 
         group_id = uuid.uuid4()
-        if loss_amount > Decimal('0'):
+        if loss_amount > Decimal('0') and margin_side:
             pipeline.new_trx(
                 self.get_insurance_wallet(margin_side),
                 self.margin_wallet,
@@ -276,24 +279,24 @@ class MarginPosition(models.Model):
                 Trx.MARGIN_INSURANCE,
                 group_id,
             )
-
-        liquidation_order = new_order(
-            pipeline=pipeline,
-            symbol=self.symbol,
-            account=self.account,
-            amount=ceil_precision(to_close_amount, self.symbol.step_size),
-            fill_type=Order.MARKET,
-            side=side,
-            market=Wallet.MARGIN,
-            variant=self.variant,
-            pass_min_notional=True,
-            order_type=Order.LIQUIDATION,
-            parent_lock_group_id=group_id
-        )
+        liquidation_order = None
+        if to_close_amount > Decimal('0') and margin_side:
+            liquidation_order = new_order(
+                pipeline=pipeline,
+                symbol=self.symbol,
+                account=self.account,
+                amount=ceil_precision(to_close_amount, self.symbol.step_size),
+                fill_type=Order.MARKET,
+                side=side,
+                market=Wallet.MARGIN,
+                variant=self.variant,
+                pass_min_notional=True,
+                order_type=Order.LIQUIDATION,
+                parent_lock_group_id=group_id
+            )
 
         margin_cross_wallet = self.margin_wallet.asset.get_wallet(self.account, market=Wallet.MARGIN, variant=None)
-        remaining_balance = self.margin_wallet.balance + pipeline.get_wallet_balance_diff(
-            self.margin_wallet.id)
+        remaining_balance = self.margin_wallet.balance + pipeline.get_wallet_balance_diff(self.margin_wallet.id)
 
         if remaining_balance > Decimal('0') and loss_amount > Decimal('0'):
             pipeline.new_trx(
@@ -314,7 +317,7 @@ class MarginPosition(models.Model):
                     self.get_insurance_wallet(margin_side),
                     insurance_fee_amount,
                     Trx.LIQUID,
-                    liquidation_order.group_id
+                    group_id
                 )
                 remaining_balance -= insurance_fee_amount
             if remaining_balance > Decimal(0):
@@ -323,8 +326,10 @@ class MarginPosition(models.Model):
                     margin_cross_wallet,
                     remaining_balance,
                     Trx.LIQUID,
-                    liquidation_order.group_id
+                    group_id
                 )
+            else:
+                logger.warning(f"Negative remaining balance for position:{self.id}")
 
         # vice_versa_margin = self.margin_vice_versa_wallet
         # balance = vice_versa_margin.balance + pipeline.get_wallet_balance_diff(vice_versa_margin.id)
@@ -338,19 +343,23 @@ class MarginPosition(models.Model):
         #         uuid.uuid4()
         #     )
 
-        liquidation_order.refresh_from_db()
+        if liquidation_order:
+            liquidation_order.refresh_from_db()
 
-        if liquidation_order.filled_amount >= to_close_amount:
+            if liquidation_order.filled_amount >= to_close_amount:
+                self.amount = Decimal(0)
+                self.status = self.CLOSED
+            else:
+                filled_amount = liquidation_order.filled_amount if margin_side == SHORT else liquidation_order.filled_amount * liquidation_order.price
+                self.amount = max(self.debt_amount - filled_amount, Decimal('0'))
+                logger.warning(f'Position:{self.id} doesnt close in Liquidation Process Due to Order'
+                               f' filled amount{liquidation_order.filled_amount}/{self.debt_amount}')
+
+            if liquidation_order.filled_amount == Decimal('0') and liquidation_order.status == Order.CANCELED:
+                self.status = self.OPEN
+        else:
             self.amount = Decimal(0)
             self.status = self.CLOSED
-        else:
-            filled_amount = liquidation_order.filled_amount if margin_side == SHORT else liquidation_order.filled_amount * liquidation_order.price
-            self.amount = max(self.debt_amount - filled_amount, Decimal('0'))
-            logger.warning(f'Position:{self.id} doesnt close in Liquidation Process Due to Order'
-                           f' filled amount{liquidation_order.filled_amount}/{self.debt_amount}')
-
-        if liquidation_order.filled_amount == Decimal('0') and liquidation_order.status == Order.CANCELED:
-            self.status = self.OPEN
 
         self.save(update_fields=['amount', 'status'])
         self.update_liquidation_price(pipeline)

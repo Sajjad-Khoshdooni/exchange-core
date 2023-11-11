@@ -124,7 +124,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
             if not position:
                 raise ValidationError('There is no valid position to transfer margin')
 
-            if position.withdrawable_base_asset < Decimal(attrs['amount']):
+            if attrs['type'] == MarginTransfer.POSITION_TO_MARGIN and position.withdrawable_base_asset < Decimal(attrs['amount']):
                 raise ValidationError(f'You can only transfer: {position.withdrawable_base_asset}')
         return attrs
 
