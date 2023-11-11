@@ -184,27 +184,28 @@ class MarginPosition(models.Model):
             return position
         else:
             assert side is not None
-
-            group_id = uuid.uuid4()
-            position = cls.objects.create(
-                account=account,
-                symbol=symbol,
-                status=cls.OPEN,
-                group_id=group_id,
-                base_wallet=symbol.base_asset.get_wallet(
-                    account, Wallet.MARGIN, group_id
-                ),
-                asset_wallet=symbol.asset.get_wallet(
-                    account, Wallet.MARGIN, group_id,
-                )
-            )
             if order_value:
                 with WalletPipeline() as pipeline:
+                    group_id = uuid.uuid4()
+                    position = cls.objects.create(
+                        account=account,
+                        symbol=symbol,
+                        status=cls.OPEN,
+                        group_id=group_id,
+                        base_wallet=symbol.base_asset.get_wallet(account, Wallet.MARGIN, group_id),
+                        asset_wallet=symbol.asset.get_wallet(account, Wallet.MARGIN, group_id)
+                    )
+                    cross_margin_wallet = symbol.base_asset.get_wallet(account, Wallet.MARGIN, None)
+                    amount = order_value if side == SELL else order_value / (1 + position.leverage)
+                    if amount > cross_margin_wallet.get_free():
+                        from ledger.exceptions import InsufficientBalance
+                        raise InsufficientBalance
+
                     pipeline.new_trx(
                         group_id=group_id,
-                        sender=symbol.base_asset.get_wallet(account, Wallet.MARGIN, None),
+                        sender=cross_margin_wallet,
                         receiver=position.base_margin_wallet,
-                        amount=order_value if side == SELL else order_value / (1 + position.leverage),
+                        amount=amount,
                         scope=Trx.MARGIN_TRANSFER
                     )
 
