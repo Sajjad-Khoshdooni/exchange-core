@@ -3,7 +3,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.shortcuts import render
 
-from accounts.models import Forget2FA, ChangePhone
+from accounts.models import Forget2FA, ChangePhone, Company
 from accounts.models.user import User
 from financial.models.withdraw_request import FiatWithdrawRequest
 from ledger.models import Transfer
@@ -50,6 +50,7 @@ def dashboard(request):
             'crypto_withdraw_count': crypto_withdraw_count,
             'forget_2fa_count': Forget2FA.objects.filter(status=PENDING).count(),
             'phone_change_count': ChangePhone.objects.filter(status=PENDING).count(),
+            'pending_companies_count': Company.objects.filter(status=PENDING).count(),
         }
 
         return render(request, 'accounts/dashboard.html', context)

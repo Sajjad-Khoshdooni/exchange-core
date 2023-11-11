@@ -232,7 +232,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
         owner = owners[0]
         owner_full_name = owner['firstName'] + ' ' + owner['lastName']
 
-        name1, name2 = clean_persian_name(owner_full_name), clean_persian_name(user.get_full_name())
+        name1, name2 = clean_persian_name(owner_full_name), clean_persian_name(user.get_legal_name())
 
         verified = str_similar_rate(name1, name2) >= IBAN_NAME_SIMILARITY_THRESHOLD
 

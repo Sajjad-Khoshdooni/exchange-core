@@ -2,10 +2,9 @@ from django.db import models
 
 from uuid import uuid4
 
-# todo: maybe refactoring?
-
 
 class Image(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
     uuid = models.UUIDField(default=uuid4, unique=True)
     image = models.ImageField()
 
@@ -13,10 +12,11 @@ class Image(models.Model):
         return self.image.url
 
     def __str__(self):
-        return self.get_absolute_image_url()
+        return f'Image {self.id}'
 
 
 class File(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
     uuid = models.UUIDField(default=uuid4, unique=True)
     file = models.FileField()
     
@@ -24,6 +24,4 @@ class File(models.Model):
         return self.file.url
     
     def __str__(self):
-        return self.get_absolute_file_url()
-    
-    
+        return f'File {self.id}'

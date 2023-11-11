@@ -48,7 +48,10 @@ def update_provider_vaults(now: datetime, prices: dict):
 
             vault_data = []
 
-            balances_data = provider.get_balances(profile_id, market)
+            try:
+                balances_data = provider.get_balances(profile_id, market)
+            except TimeoutError:
+                continue
 
             if not balances_data:
                 continue

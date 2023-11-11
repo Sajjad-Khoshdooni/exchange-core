@@ -410,6 +410,14 @@ class User(AbstractUser):
         else:
             return UserFeaturePerm.DEFAULT_LIMITS.get(name)
 
+    def get_legal_name(self):
+        company = getattr(self, 'company', None)
+
+        if company:
+            return company.name
+        else:
+            return self.get_full_name()
+
 
 @receiver(post_save, sender=User)
 def handle_user_save(sender, instance, created, **kwargs):

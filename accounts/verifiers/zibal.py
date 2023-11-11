@@ -51,7 +51,7 @@ class ZibalRequester:
         request_kwargs = {
             'url': url,
             'timeout': 30,
-            'headers': {'Authorization': config('ZIBAL_KYC_API_TOKEN')}
+            'headers': {'Authorization': 'Bearer ' + config('ZIBAL_KYC_API_TOKEN')}
         }
 
         try:

@@ -7,11 +7,13 @@ from django.conf import settings
 from django.db.models import Sum, F
 
 from accounting.models import TradeRevenue
-from ledger.models import Asset
+from ledger.models import OTCTrade
+from ledger.utils.external_price import SELL
 from ledger.utils.market_maker import get_market_maker_requester
+from ledger.utils.price import USDT_IRT
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.trader import get_trader_requester
-from market.models import Trade, PairSymbol
+from market.models import Trade, Order
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +24,23 @@ def fill_revenue_filled_prices():
         return
 
     trade_revenues = TradeRevenue.objects.filter(
-        coin_filled_price__isnull=True
-    ).exclude(source=TradeRevenue.MANUAL).order_by('id').prefetch_related('symbol__asset', 'symbol__base_asset')
+        gap_revenue__isnull=True
+    ).order_by('id').prefetch_related('symbol__asset', 'symbol__base_asset')
 
     delegated_hedges = defaultdict(list)
-    usdt_irt_symbol = PairSymbol.objects.get(asset__symbol=Asset.USDT, base_asset__symbol=Asset.IRT)
 
     for revenue in trade_revenues:
+        if revenue.account_id == settings.OTC_ACCOUNT_ID:
+            otc_order = Order.objects.get(
+                id=Trade.objects.filter(
+                    group_id=revenue.group_id,
+                    is_maker=False
+                ).first().order_id
+            )
+            if otc_order.client_order_id:
+                revenue.account = OTCTrade.objects.get(group_id=otc_order.client_order_id).otc_request.account
+                revenue.save(update_fields=['account'])
+
         if revenue.source == TradeRevenue.USER:
             revenue.coin_filled_price = revenue.coin_price
             revenue.filled_amount = revenue.amount
@@ -41,22 +53,28 @@ def fill_revenue_filled_prices():
                 quote_cum_usdt=Sum(F('amount') * F('price') * F('base_usdt_price')),
                 amount_sum=Sum('amount'),
             )
-            # TODO: gap_revenue will be a little negative because of base usdt price field in
-            #  Trade decimal places (8 != 20)
 
             filled_amount = info['amount_sum'] or 0
+            filled_price = info['quote_cum'] / filled_amount
+            gap = (revenue.price - filled_price) * revenue.amount
+            if revenue.side == SELL:
+                gap = -gap
 
             revenue.filled_amount = filled_amount
             revenue.coin_filled_price = info['quote_cum_usdt'] / filled_amount
-            revenue.gap_revenue = revenue.get_gap_revenue()
+            revenue.gap_revenue = gap * revenue.base_usdt_price
 
             revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue', 'coin_price'])
 
-        elif not settings.ZERO_USDT_HEDGE and revenue.symbol == usdt_irt_symbol:
+        elif not settings.ZERO_USDT_HEDGE and revenue.symbol.name == USDT_IRT:
             revenue.coin_filled_price = 1
             revenue.filled_amount = revenue.amount
             revenue.gap_revenue = revenue.get_gap_revenue()
             revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue'])
+
+        elif not revenue.symbol.asset.enable:
+            revenue.gap_revenue = 0
+            revenue.save(update_fields=['gap_revenue'])
 
         else:
             coin = revenue.symbol.asset.symbol
@@ -68,6 +86,7 @@ def fill_revenue_filled_prices():
                     revenue.filled_amount = info['amount']
                     revenue.coin_filled_price = info['hedge_price']
                     revenue.save(update_fields=['coin_filled_price', 'filled_amount', 'gap_revenue'])
+
             elif revenue.hedge_key and revenue.hedge_key.startswith('tr-'):
                 info = get_trader_requester().get_trade_hedge_info(revenue.hedge_key.replace('tr-', ''))
                 if info and info.get('revenue'):
@@ -75,7 +94,8 @@ def fill_revenue_filled_prices():
                     revenue.filled_amount = info['amount']
                     revenue.coin_filled_price = info['hedge_price']
                     revenue.save(update_fields=['coin_filled_price', 'filled_amount', 'gap_revenue'])
-            elif revenue.hedge_key:
+
+            elif revenue.hedge_key:  # for otc-p trades which already hedged!
                 revenues = [*delegated_hedges[coin], revenue]
                 delegated_hedges[coin] = []
 
@@ -93,5 +113,5 @@ def fill_revenue_filled_prices():
                         executed_amount -= r.filled_amount
 
                     TradeRevenue.objects.bulk_update(revenues, ['coin_filled_price', 'filled_amount', 'gap_revenue'])
-            else:
+            else:  # for otc-p small amount trades
                 delegated_hedges[coin].append(revenue)

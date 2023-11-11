@@ -36,8 +36,8 @@ class PaymentIdRequest(models.Model):
     owner = models.ForeignKey(PaymentId, on_delete=models.PROTECT)
     status = get_status_field()
 
-    amount = models.PositiveIntegerField()
-    fee = models.PositiveIntegerField()
+    amount = models.PositiveBigIntegerField()
+    fee = models.PositiveBigIntegerField()
 
     bank_ref = models.CharField(max_length=64, blank=True)
     external_ref = models.CharField(max_length=64, blank=True, unique=True)

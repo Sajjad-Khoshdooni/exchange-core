@@ -2,6 +2,7 @@ import json
 
 from django.db import models, transaction
 
+from accounts.utils.similarity import clean_persian_name
 from accounts.validators import company_national_id_validator
 from accounts.models import User
 from ledger.utils.fields import get_verify_status_field, REJECTED, VERIFIED
@@ -18,7 +19,7 @@ class Company(models.Model):
     registration_id = models.CharField(blank=True, max_length=128)
     company_registration_date = models.CharField(blank=True, max_length=128)
     national_id = models.CharField(validators=[company_national_id_validator], unique=True, max_length=11)
-    is_active = models.BooleanField(null=True, blank=True, default=False)
+    is_active = models.BooleanField(null=True, blank=True)
     company_documents = models.OneToOneField(
         to='multimedia.File',
         on_delete=models.PROTECT,
@@ -40,16 +41,19 @@ class Company(models.Model):
         try:
             data = requester.company_information(self.national_id).data
             if data.code == "SUCCESSFUL":
-                self.name = data.title
-                self.address = data.address
+                self.name = clean_persian_name(data.title)
+                self.address = clean_persian_name(data.address)
                 self.postal_code = data.postal_code
                 self.registration_id = data.registration_id
-                self.is_active = data.status == 'فعال'
+                self.is_active = clean_persian_name(data.status) == 'فعال'
                 self.company_registration_date = data.establishment_date
-                self.fetched_data = json.dumps(data, default=lambda o: o.__dict__)
+                self.provider_data = json.dumps(data, default=lambda o: o.__dict__)
                 self.save(
-                    update_fields=['name, address', 'postal_code', 'registration_id', 'fetched_data', 'is_active',
-                                   'company_registration_date',])
+                    update_fields=[
+                        'name', 'address', 'postal_code', 'registration_id', 'provider_data', 'is_active',
+                        'company_registration_date'
+                    ]
+                )
         except (TimeoutError, ServerError):
             if retry == 0:
                 logger.error('company information retrieval timeout')

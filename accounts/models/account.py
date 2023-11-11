@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Union
 
+from django.conf import settings
 from django.db import models
 from django.db.models import UniqueConstraint, Q
 from django.utils import timezone
@@ -62,7 +63,11 @@ class Account(models.Model):
     @classmethod
     def out(cls) -> 'Account':
         return Account.objects.get(type=cls.OUT)
-    
+
+    def is_proxy_trader(self, symbol_name: str):
+        return self.id == settings.OTC_ACCOUNT_ID \
+               or (settings.ZERO_USDT_HEDGE and symbol_name == 'USDTIRT' and self.id == settings.MARKET_MAKER_ACCOUNT_ID)
+
     def get_voucher_wallet(self):
         from ledger.models import Wallet
         from ledger.models import Asset

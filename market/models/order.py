@@ -321,7 +321,7 @@ class Order(models.Model):
 
         maker_side = self.get_opposite_side(self.side)
 
-        matching_orders = Order.open_objects.filter(symbol=symbol, side=maker_side)
+        matching_orders = Order.open_objects.filter(symbol=symbol, side=maker_side).prefetch_related('wallet__account')
         if maker_side == BUY:
             matching_orders = matching_orders.filter(price__gte=self.price).order_by('-price', 'id')
         else:
@@ -355,18 +355,18 @@ class Order(models.Model):
 
         tether_irt = get_last_price(USDT_IRT)
 
-        hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == USDT_IRT
-
-        taker_is_system = self.wallet.account.is_system() or (
-                hedging_usdt and self.account_id == settings.TRADER_ACCOUNT_ID)
-
         oco_orders = [self] if self.oco else []
+
+        total_matched = 0
+
         for maker_order in matching_orders:
             trade_price = maker_order.price
 
             match_amount = min(maker_order.unfilled_amount, unfilled_amount)
             if match_amount <= 0:
                 continue
+
+            total_matched += match_amount
 
             base_irt_price = 1
             base_usdt_price = 1
@@ -376,18 +376,6 @@ class Order(models.Model):
             else:
                 base_usdt_price = 1 / tether_irt
 
-            maker_is_system = maker_order.wallet.account.is_system() or (
-                    hedging_usdt and maker_order.account_id == settings.TRADER_ACCOUNT_ID)
-
-            source_map = {
-                (True, True): Trade.SYSTEM,
-                (True, False): Trade.SYSTEM_MAKER,
-                (False, True): Trade.SYSTEM_TAKER,
-                (False, False): Trade.MARKET,
-            }
-
-            trade_source = source_map[maker_is_system, taker_is_system]
-
             trades_pair = TradesPair.init_pair(
                 taker_order=self,
                 maker_order=maker_order,
@@ -395,22 +383,11 @@ class Order(models.Model):
                 price=trade_price,
                 base_irt_price=base_irt_price,
                 base_usdt_price=base_usdt_price,
-                trade_source=trade_source,
+                trade_source=Trade.MARKET,
                 group_id=uuid4()
             )
 
-            if not taker_is_system:
-                Notification.send(
-                    recipient=self.wallet.account.user,
-                    title='معامله {} انجام شد'.format(symbol),
-                    message='{side} {amount} {coin}'.format(
-                        amount=match_amount,
-                        side=SIDE_VERBOSE[self.side],
-                        coin=symbol.asset.name_fa
-                    )
-                )
-
-            if not maker_is_system:
+            if not maker_order.wallet.account.system():
                 Notification.send(
                     recipient=maker_order.wallet.account.user,
                     title='معامله {} انجام شد'.format(maker_order.symbol),
@@ -449,6 +426,17 @@ class Order(models.Model):
                 self.save(update_fields=['status'])
                 break
 
+        if total_matched > 0 and not self.wallet.account.system():
+            Notification.send(
+                recipient=self.wallet.account.user,
+                title='معامله {} انجام شد'.format(symbol),
+                message='{side} {amount} {coin}'.format(
+                    amount=total_matched,
+                    side=SIDE_VERBOSE[self.side],
+                    coin=symbol.asset.name_fa
+                )
+            )
+
         if (self.fill_type == Order.MARKET or self.time_in_force == self.IOC) and self.status == Order.NEW:
             self.status = Order.CANCELED
             pipeline.release_lock(self.group_id)
@@ -466,44 +454,7 @@ class Order(models.Model):
             for oco_order in oco_orders:
                 oco_order.handle_oco_updates(pipeline)
 
-            trade_revenues = []
-            for maker_trade, taker_trade in trade_pairs:
-                if maker_trade.trade_source in (Trade.SYSTEM_MAKER, Trade.SYSTEM_TAKER):
-                    hedge_key = Trade.get_hedge_key(maker_trade, taker_trade)
-                    account_ids = (maker_trade.account_id, taker_trade.account_id)
-                    ignore_trade_value = settings.OTC_ACCOUNT_ID in account_ids or (
-                            hedging_usdt and settings.MARKET_MAKER_ACCOUNT_ID in account_ids)
-
-                    trade_revenues.append(TradeRevenue.new(
-                        user_trade=taker_trade if maker_trade.trade_source == Trade.SYSTEM_MAKER else maker_trade,
-                        group_id=taker_trade.group_id,
-                        source=TradeRevenue.MAKER if maker_trade.trade_source == Trade.SYSTEM_TAKER else TradeRevenue.TAKER,
-                        hedge_key=hedge_key,
-                        ignore_trade_value=ignore_trade_value
-                    ))
-                elif maker_trade.trade_source == Trade.MARKET:
-                    for t in (maker_trade, taker_trade):
-                        trade_revenues.append(
-                            TradeRevenue.new(
-                                user_trade=t,
-                                group_id=t.group_id,
-                                source=TradeRevenue.USER,
-                                hedge_key='',
-                                ignore_trade_value=(t == maker_trade)
-                            )
-                        )
-                elif taker_trade.account_id != maker_trade.account_id:
-                    hedge_key = Trade.get_hedge_key(maker_trade, taker_trade)
-                    trade_revenues.append(TradeRevenue.new(
-                        user_trade=taker_trade,
-                        group_id=taker_trade.group_id,
-                        source=TradeRevenue.TAKER,
-                        hedge_key=hedge_key,
-                        ignore_trade_value=True
-                    ))
-
-            if trade_revenues:
-                TradeRevenue.objects.bulk_create(trade_revenues)
+            self.create_trade_revenues(trade_pairs)
 
         # updating trade_volume_irt of accounts
         for trade in trades:
@@ -614,3 +565,66 @@ class Order(models.Model):
             total_amount=Sum('unfilled_amount')
         )['total_amount']
         return TopOrder(side=side, price=top_price, amount=unfilled_amount)
+
+    def create_trade_revenues(self, trade_pairs: list):
+        from ledger.utils.price import USDT_IRT
+
+        symbol = self.symbol
+
+        taker_is_proxy = self.wallet.account.is_proxy_trader(symbol.name)
+
+        trade_revenues = []
+        for maker_trade, taker_trade in trade_pairs:
+            maker_is_proxy = maker_trade.account.is_proxy_trader(symbol.name)
+            any_proxy = taker_is_proxy or maker_is_proxy
+
+            if symbol.name == USDT_IRT:
+                if settings.ZERO_USDT_HEDGE:
+                    hedger_account_id = settings.TRADER_ACCOUNT_ID
+                    hedger_prefix = 'tr'
+                else:
+                    hedger_account_id = settings.MARKET_MAKER_ACCOUNT_ID
+                    hedger_prefix = ''
+            else:
+                hedger_account_id = settings.MARKET_MAKER_ACCOUNT_ID
+                hedger_prefix = 'mm'
+
+            trades = sorted(
+                [maker_trade, taker_trade],
+                key=lambda _t: _t.account_id == hedger_account_id,
+                reverse=True
+            )
+
+            if trades[0].account_id != hedger_account_id:
+                for t in trades:
+                    trade_revenues.append(
+                        TradeRevenue.new(
+                            user_trade=t,
+                            group_id=t.group_id,
+                            source=TradeRevenue.USER,
+                            hedge_key='',
+                            ignore_trade_value=any_proxy or (t == maker_trade)
+                        )
+                    )
+
+            elif trades[0].account_id != trades[1].account_id:
+                if hedger_prefix == 'tr':
+                    hedge_key = f'{hedger_prefix}-{trades[0].id}'
+                elif hedger_prefix == 'mm':
+                    taker = trades[1] if trades[0].is_maker else trades[0]
+                    hedge_key = f'{hedger_prefix}-{taker.id}'
+                else:
+                    hedge_key = ''
+
+                trade = trades[1]
+
+                trade_revenues.append(TradeRevenue.new(
+                    user_trade=trade,
+                    group_id=trade.group_id,
+                    source=TradeRevenue.MAKER if trades[0].is_maker else TradeRevenue.TAKER,
+                    hedge_key=hedge_key,
+                    ignore_trade_value=any_proxy
+                ))
+
+        if trade_revenues:
+            TradeRevenue.objects.bulk_create(trade_revenues)

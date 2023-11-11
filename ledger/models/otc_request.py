@@ -12,7 +12,7 @@ from ledger.models import Asset, Wallet
 from ledger.utils.external_price import get_other_side, BUY
 from ledger.utils.fields import get_amount_field
 from ledger.utils.otc import get_trading_pair
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, get_presentation_amount
 from ledger.utils.price import get_depth_price, get_price, USDT_IRT
 from ledger.utils.random import secure_uuid4
 from market.consts import OTC_MIN_HARD_FIAT_VALUE, OTC_MAX_HARD_FIAT_VALUE
@@ -138,7 +138,8 @@ class OTCRequest(BaseTrade):
         return (timezone.now() - self.created).total_seconds() >= self.EXPIRATION_TIME
 
     def __str__(self):
-        return '%s %s in %s' % (self.side, self.amount, self.symbol)
+        return f'{self.side} {get_presentation_amount(self.amount)} {self.symbol.asset} @' \
+               f' {get_presentation_amount(self.price)} {self.symbol.base_asset}'
 
     class Meta:
         constraints = [

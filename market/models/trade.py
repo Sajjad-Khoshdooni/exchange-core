@@ -3,7 +3,6 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.conf import settings
 from django.db import models
 from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
 from django.utils import timezone
@@ -176,18 +175,3 @@ class Trade(BaseTrade):
                         group_id=trx.group_id,
                         scope=Trx.REVERT
                     )
-
-    @staticmethod
-    def get_hedge_key(maker_trade, taker_trade):
-        if settings.ZERO_USDT_HEDGE:
-            hedger_accounts = {settings.TRADER_ACCOUNT_ID} if maker_trade.symbol.name == 'USDTIRT' else \
-                {settings.TRADER_ACCOUNT_ID, settings.MARKET_MAKER_ACCOUNT_ID}
-        else:
-            hedger_accounts = {settings.MARKET_MAKER_ACCOUNT_ID}
-
-        account_ids = {maker_trade.account_id, taker_trade.account_id}
-        intersect = list(hedger_accounts.intersection(account_ids))
-        if len(intersect) == 1:
-            hedger_account_id = intersect[0]
-            return f'tr-{taker_trade.id}' if hedger_account_id == settings.TRADER_ACCOUNT_ID else f'mm-{taker_trade.id}'
-        return ''
