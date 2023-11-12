@@ -66,12 +66,14 @@ class TradeRevenue(models.Model):
 
             source=source,
             hedge_key=hedge_key,
-
             coin_price=coin_price,
-
             base_usdt_price=user_trade.base_usdt_price,
-
         )
+
+        if not hedge_key:
+            revenue.coin_filled_price = revenue.coin_price
+            revenue.filled_amount = revenue.amount
+            revenue.gap_revenue = 0
 
         return revenue
 
