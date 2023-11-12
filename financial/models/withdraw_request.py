@@ -6,10 +6,11 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.template.loader import render_to_string
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
-from accounts.models import Account, EmailNotification
+from accounts.models import Account, EmailNotification, SmsNotification
 from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
 from accounts.utils import email
@@ -185,9 +186,26 @@ class FiatWithdrawRequest(BaseTransfer):
     def refund(self):
         assert self.status == self.DONE
 
+        content = render_to_string('accounts/notif/sms/withdraw_refund.txt', context={
+            'brand': settings.BRAND
+        })
+
         with WalletPipeline() as pipeline:
             for trx in Trx.objects.filter(group_id=self.group_id):
                 trx.revert(pipeline)
+
+            user = self.bank_account.user
+            SmsNotification.objects.create(
+                recipient=user,
+                content=content
+            )
+
+            Notification.send(
+                recipient=user,
+                title='برگشت برداشت ریالی',
+                message=content,
+                level=Notification.WARNING,
+            )
 
             self.status = self.REFUND
             self.save(update_fields=['status'])
