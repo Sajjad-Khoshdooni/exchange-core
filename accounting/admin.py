@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Sum
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
@@ -114,8 +115,8 @@ class GapFilledFilter(SimpleListFilter):
 @admin.register(TradeRevenue)
 class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = (
-        'created', 'symbol', 'source', 'account', 'side', 'amount', 'price', 'value', 'gap_revenue', 'fee_revenue', 'coin_price',
-        'coin_filled_price', 'hedge_key', 'value_is_fake')
+        'created', 'symbol', 'source', 'get_account', 'side', 'amount', 'price', 'value', 'gap_revenue', 'fee_revenue',
+        'coin_price', 'coin_filled_price', 'hedge_key', 'value_is_fake')
 
     search_fields = ('group_id', 'hedge_key', 'symbol__name', )
     list_filter = (GapFilledFilter, 'symbol', 'source',)
@@ -125,6 +126,12 @@ class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     @admin.action(description='Zero Gap Revenue')
     def zero_gap_revenue(self, request, queryset):
         queryset.filter(gap_revenue__isnull=True).update(gap_revenue=0)
+
+    @admin.display(description='account')
+    def get_account(self, trade_revenue: TradeRevenue):
+        return mark_safe(
+            f'<span dir="ltr">{trade_revenue.account}</span>'
+        )
 
 
 @admin.register(ProviderIncome)
