@@ -3,7 +3,7 @@ from decimal import Decimal
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import get_object_or_404
+from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -12,7 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.exceptions import InsufficientBalance
 from ledger.margin.margin_info import MarginInfo
-from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition
+from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, Trx
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
 from ledger.utils.fields import get_serializer_amount_field
@@ -200,3 +200,32 @@ class MarginPositionInfoView(APIView):
             }
         data['max_buy_volume'] = data['max_buy_volume'] * calculation_price
         return Response(data)
+
+
+class MarginInterestTrxSerializer(serializers.ModelSerializer):
+    symbol = serializers.SerializerMethodField()
+
+    def get_symbol(self, instance: Trx):
+        return instance.sender.asset.symbol
+
+    class Meta:
+        model = Trx
+        fields = ('created', 'amount', 'symbol')
+
+
+class MarginPositionInterestHistoryView(ListAPIView):
+    serializers = MarginInterestTrxSerializer
+    pagination_class = LimitOffsetPagination
+
+    def get_queryset(self):
+        position = get_object_or_404(
+            MarginPosition,
+            id=self.kwargs.get('id'),
+            status=MarginPosition.OPEN,
+            account=self.request.user.get_account()
+        )
+        return Trx.objects.filter(
+            scope=Trx.MARGIN_INTEREST,
+            sender__in=[position.base_margin_wallet, position.base_margin_wallet],
+            created__gte=position.created
+        ).prefetch_related('sender__asset').order_by('-created')
