@@ -136,11 +136,6 @@ class LongIsolatedMarginTestCase(TestCase):
 
         self.print_wallets(self.account)
 
-        with WalletPipeline() as pipeline:
-            new_order(pipeline, self.btcusdt, self.account2, side=BUY, amount=loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE)
-
-        self.print_wallets(self.account)
-
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         self.assertEqual(mp.debt_amount, loan_amount / 2 * BTC_USDT_PRICE)
         print('position', mp.debt_amount, mp.liquidation_price)

@@ -124,7 +124,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
             if not position:
                 raise ValidationError('There is no valid position to transfer margin')
 
-            if position.withdrawable_base_asset < Decimal(attrs['amount']):
+            if attrs['type'] == MarginTransfer.POSITION_TO_MARGIN and position.withdrawable_base_asset < Decimal(attrs['amount']):
                 raise ValidationError(f'You can only transfer: {position.withdrawable_base_asset}')
         return attrs
 
@@ -162,24 +162,41 @@ class MarginPositionInfoView(APIView):
         if not symbol:
             return Response({'Error': 'need symbol'}, 400)
 
+        price = request.GET.get('price')
+
+        from market.models import PairSymbol
+        symbol_model = PairSymbol.get_by(symbol)
+        calculation_price = price or symbol_model.last_trade_price
+
         position = MarginPosition.objects.filter(status=MarginPosition.OPEN, account=account, symbol__name=symbol).first()
 
         if not position:
-            from market.models import PairSymbol
-            symbol_model = PairSymbol.get_by(symbol)
             free = symbol_model.base_asset.get_wallet(
                 account, Wallet.MARGIN, None
             ).balance
-            return Response({
+
+            data = {
                 'max_buy_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
-                                                                           price=symbol_model.last_trade_price,
+                                                                           price=calculation_price,
                                                                            side='buy')),
                 'max_sell_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
-                                                                           price=symbol_model.last_trade_price,
+                                                                           price=calculation_price,
                                                                            side='sell')),
-            })
+            }
+        else:
+            data = {
+                'max_buy_volume': max(abs(Wallet.get_margin_position_max_asset(variant=position.variant,
+                                                                               price=calculation_price, side='buy'))
+                                      - position.base_margin_wallet.locked, Decimal('0')),
+                'max_sell_volume': max(abs(Wallet.get_margin_position_max_asset(variant=position.variant,
+                                                                                price=calculation_price, side='sell'))
+                                       - position.asset_margin_wallet.locked, Decimal('0')),
+            }
 
-        return Response({
-            'max_buy_volume': abs(Wallet.get_margin_position_max_asset(variant=position.variant, price=position.symbol.last_trade_price, side='buy')),
-            'max_sell_volume': abs(Wallet.get_margin_position_max_asset(variant=position.variant, price=position.symbol.last_trade_price, side='sell')),
-        })
+        if not price:
+            data = {
+                'max_buy_volume': floor_precision(data['max_buy_volume'] * Decimal('0.99'), symbol_model.step_size),
+                'max_sell_volume': floor_precision(data['max_sell_volume'] * Decimal('0.99'), symbol_model.step_size)
+            }
+        data['max_buy_volume'] = data['max_buy_volume'] * calculation_price
+        return Response(data)

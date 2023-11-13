@@ -75,10 +75,11 @@ class ShortIsolatedMarginTestCase(TestCase):
             'amount': amount,
             'type': type,
             'coin': 'USDT',
-            # 'symbol': 'BTCUSDT'
+            'symbol': 'BTCUSDT'
         })
         print(resp.json())
         self.assertEqual(resp.status_code, check_status)
+        self.get_max()
 
     def get_position_api(self, check_status=200):
         resp = self.client.get('/api/v2/margin/positions/', {
@@ -136,6 +137,21 @@ class ShortIsolatedMarginTestCase(TestCase):
             assertion = self.assertNotEquals
         assertion(balance_sum, Decimal('0'))
         assertion(mp.status, MarginPosition.CLOSED)
+
+    def get_max(self):
+        free = self.btcusdt.base_asset.get_wallet(
+            self.account, Wallet.MARGIN, None
+        ).balance
+        a = {
+            'max_buy_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
+                                                                                 price=BTC_USDT_PRICE,
+                                                                                 side='buy')),
+            'max_sell_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
+                                                                                  price=BTC_USDT_PRICE,
+                                                                                  side='sell')),
+        }
+        print(a)
+        return a
 
     def test_short_sell(self):
         self.transfer_usdt_api(TO_TRANSFER_USDT / 2)
