@@ -68,6 +68,9 @@ class Trx(models.Model):
         constraints = [
             CheckConstraint(check=Q(amount__gt=0), name='check_ledger_trx_amount', ),
         ]
+        indexes = [
+            models.Index(fields=['scope', 'sender', 'created'], name="trx_margin_idx")
+        ]
 
     def save(self, *args, **kwargs):
         assert self.sender.asset == self.receiver.asset
