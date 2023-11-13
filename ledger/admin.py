@@ -190,8 +190,10 @@ class WithdrawFeedbackAdmin(admin.ModelAdmin):
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
     list_display = (
-        'symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'need_memo', 'address_regex')
-    list_editable = ('can_withdraw', 'can_deposit')
+        'symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'need_memo', 'address_regex',
+        'slow_withdraw'
+    )
+    list_editable = ('can_withdraw', 'can_deposit', 'slow_withdraw')
     search_fields = ('symbol',)
     list_filter = ('can_withdraw', 'can_deposit')
     ordering = ('-can_withdraw', '-can_deposit')
