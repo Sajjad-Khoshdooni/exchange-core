@@ -38,7 +38,8 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return get_presentation_amount(network_asset.get_min_deposit())
 
     class Meta:
-        fields = ('asset', 'network', 'network_name', 'withdraw_commission', 'min_withdraw', 'min_deposit')
+        fields = ('asset', 'network', 'network_name', 'withdraw_commission', 'min_withdraw', 'min_deposit',
+                  'slow_withdraw')
         model = NetworkAsset
 
 
