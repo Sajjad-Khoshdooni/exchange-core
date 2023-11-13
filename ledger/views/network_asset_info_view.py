@@ -11,22 +11,14 @@ from ledger.utils.precision import get_presentation_amount
 
 
 class NetworkAssetSerializer(serializers.ModelSerializer):
-    network = serializers.SerializerMethodField()
     asset = AssetSerializerMini()
-    network_name = serializers.SerializerMethodField()
+    network = serializers.CharField(source='network.symbol')
+    network_name = serializers.CharField(source='network.name')
+    slow_withdraw = serializers.CharField(source='network.slow_withdraw')
 
     withdraw_commission = serializers.SerializerMethodField()
     min_withdraw = serializers.SerializerMethodField()
     min_deposit = serializers.SerializerMethodField()
-
-    def get_coin(self, network_asset: NetworkAsset):
-        return network_asset.asset.symbol
-
-    def get_network(self, network_asset: NetworkAsset):
-        return network_asset.network.symbol
-
-    def get_network_name(self, network_asset: NetworkAsset):
-        return network_asset.network.name
 
     def get_min_withdraw(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_min)
