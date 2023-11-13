@@ -18,20 +18,12 @@ from market.pagination import FastLimitOffsetPagination
 from market.serializers.trade_serializer import TradePairSerializer, TradeSerializer, AccountTradeSerializer
 
 
-class TradeFilter(django_filters.FilterSet):
-    symbol = django_filters.CharFilter(field_name='symbol__name', required=True, lookup_expr='iexact')
-
-    class Meta:
-        model = Trade
-        fields = ('symbol',)
-
-
 class AccountTradeFilter(django_filters.FilterSet):
     symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
 
     class Meta:
         model = Trade
-        fields = ('symbol', 'side')
+        fields = ('symbol', 'side', 'order_id')
 
 
 class AccountTradeHistoryView(ListAPIView):
