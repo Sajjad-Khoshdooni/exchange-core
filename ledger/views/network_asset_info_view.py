@@ -12,7 +12,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     asset = AssetSerializerMini()
     network = serializers.CharField(source='network.symbol')
     network_name = serializers.CharField(source='network.name')
-    slow_withdraw = serializers.CharField(source='network.slow_withdraw')
+    slow_withdraw = serializers.BooleanField(source='network.slow_withdraw')
 
     withdraw_commission = serializers.SerializerMethodField()
     min_withdraw = serializers.SerializerMethodField()
