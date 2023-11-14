@@ -25,7 +25,7 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
-    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest
+    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, TokenRebrand
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -934,3 +934,25 @@ class DepositRecoveryRequestAdmin(admin.ModelAdmin):
         for req in qs:
             req.reject()
 
+
+@admin.register(TokenRebrand)
+class TokenRebrandAdmin(admin.ModelAdmin):
+    list_display = ('created', 'old_asset', 'new_asset', 'new_asset_multiplier', 'status')
+    readonly_fields = ('status', 'group_id')
+    actions = ('accept_for_testers', 'accept', 'reject')
+
+    @admin.action(description='Accept', permissions=['change'])
+    def accept(self, request, queryset):
+        for rebrand in queryset.filter(status=PENDING):
+            rebrand.accept()
+
+    @admin.action(description='Test', permissions=['change'])
+    def accept_for_testers(self, request, queryset):
+        for rebrand in queryset.filter(status=PENDING):
+            with WalletPipeline() as pipeline:
+                rebrand.transfer_funds(pipeline, only_testers=True)
+
+    @admin.action(description='Reject', permissions=['change'])
+    def reject(self, request, queryset):
+        for rebrand in queryset.filter(status=PENDING):
+            rebrand.reject()
