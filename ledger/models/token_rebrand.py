@@ -1,11 +1,21 @@
+import dataclasses
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models import Sum
 
 from accounts.models import User, Account, Notification
 from ledger.models import Asset, Wallet, Trx
 from ledger.utils.fields import get_status_field, get_amount_field, CANCELED, DONE, PENDING, get_group_id_field
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_presentation_amount, humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
+
+
+@dataclasses.dataclass
+class RebrandInfo:
+    total_old_amounts: Decimal
+    total_new_amounts: Decimal
 
 
 class TokenRebrand(models.Model):
@@ -52,11 +62,51 @@ class TokenRebrand(models.Model):
             rebrand.status = DONE
             rebrand.save(update_fields=['status'])
 
-    def transfer_funds(self, pipeline: WalletPipeline, only_testers: bool = False):
+    def get_candidate_wallets(self, only_testers: bool = False):
         wallets = Wallet.objects.filter(asset=self.old_asset, market=Wallet.SPOT, balance__gt=0)
 
         if only_testers:
             wallets = wallets.filter(account__user__in=self.testers.all())
+
+        return wallets
+
+    def get_rebrand_info(self) -> RebrandInfo:
+        if self.status == PENDING:
+            total_old = self.get_candidate_wallets().aggregate(
+                s=Sum('balance')
+            )['s'] or 0
+
+            return RebrandInfo(
+                total_old_amounts=humanize_number(total_old),
+                total_new_amounts=humanize_number(total_old * self.new_asset_multiplier)
+            )
+        elif self.status == DONE:
+            old_amounts = Trx.objects.filter(
+                group_id=self.group_id,
+                sender__asset=self.old_asset,
+                scope=Trx.REBRAND,
+            ).aggregate(s=Sum('amount'))['s'] or 0
+
+            new_amounts = Trx.objects.filter(
+                group_id=self.group_id,
+                sender__asset=self.new_asset,
+                scope=Trx.REBRAND,
+            ).aggregate(s=Sum('amount'))['s'] or 0
+
+            return RebrandInfo(
+                total_old_amounts=humanize_number(old_amounts),
+                total_new_amounts=humanize_number(new_amounts),
+            )
+        else:
+            return RebrandInfo(
+                total_new_amounts=Decimal(0),
+                total_old_amounts=Decimal(0),
+            )
+
+    def transfer_funds(self, pipeline: WalletPipeline, only_testers: bool = False):
+        assert self.status == PENDING
+
+        wallets = self.get_candidate_wallets()
 
         system = Account.system()
         system_old_wallet = self.old_asset.get_wallet(system)

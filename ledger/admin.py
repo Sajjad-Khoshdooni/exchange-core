@@ -18,6 +18,7 @@ from accounting.models import ReservedAsset
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
+from accounts.admin_guard.utils.html import get_table_html
 from accounts.models import Account
 from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
@@ -938,7 +939,7 @@ class DepositRecoveryRequestAdmin(admin.ModelAdmin):
 @admin.register(TokenRebrand)
 class TokenRebrandAdmin(admin.ModelAdmin):
     list_display = ('created', 'old_asset', 'new_asset', 'new_asset_multiplier', 'status')
-    readonly_fields = ('status', 'group_id')
+    readonly_fields = ('status', 'group_id', 'get_rebrand_info')
     actions = ('accept_for_testers', 'accept', 'reject')
 
     @admin.action(description='Accept', permissions=['change'])
@@ -956,3 +957,8 @@ class TokenRebrandAdmin(admin.ModelAdmin):
     def reject(self, request, queryset):
         for rebrand in queryset.filter(status=PENDING):
             rebrand.reject()
+
+    @admin.display(description='Rebrand Info')
+    def get_rebrand_info(self, token_rebrand: TokenRebrand):
+        rows = [{'name': k, 'value': v} for (k, v) in token_rebrand.get_rebrand_info().__dict__.items()]
+        return mark_safe(get_table_html(['name', 'value'], rows))
