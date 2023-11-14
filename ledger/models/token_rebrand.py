@@ -63,7 +63,12 @@ class TokenRebrand(models.Model):
             rebrand.save(update_fields=['status'])
 
     def get_candidate_wallets(self, only_testers: bool = False):
-        wallets = Wallet.objects.filter(asset=self.old_asset, market=Wallet.SPOT, balance__gt=0)
+        wallets = Wallet.objects.filter(
+            asset=self.old_asset,
+            market=Wallet.SPOT,
+            balance__gt=0,
+            account__type__isnull=True
+        )
 
         if only_testers:
             wallets = wallets.filter(account__user__in=self.testers.all())
