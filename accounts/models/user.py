@@ -267,6 +267,7 @@ class User(AbstractUser):
 
         permissions = [
             ("can_generate_notification", "Can Generate All Kind Of Notification"),
+            ("manage_users", "Manage Users Info"),
         ]
 
     def change_status(self, status: str, reason: str = ''):
