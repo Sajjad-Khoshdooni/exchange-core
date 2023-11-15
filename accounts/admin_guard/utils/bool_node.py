@@ -1,3 +1,4 @@
+
 class BoolNode:
     AND = 'AND'
     OR = 'OR'
