@@ -783,11 +783,17 @@ class FinotechRequestUserFilter(SimpleListFilter):
 
 @admin.register(FinotechRequest)
 class FinotechRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'url', 'data', 'status_code')
+    list_display = ('created', 'get_username', 'url', 'status_code')
     list_filter = (FinotechRequestUserFilter, 'status_code')
     ordering = ('-created', )
-    readonly_fields = ('user', )
-    search_fields = ('url', )
+    search_fields = ('url', 'data')
+    raw_id_fields = ('user', )
+
+    @admin.display(description='user')
+    def get_username(self, req: FinotechRequest):
+        return mark_safe(
+            f'<span dir="ltr">{req.user}</span>'
+        )
 
 
 @admin.register(Notification)
