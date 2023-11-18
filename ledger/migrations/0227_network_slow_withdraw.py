@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ledger', '0228_remove_asset_margin_enable'),
+        ('ledger', '0226_alter_trx_scope_tokenrebrand'),
     ]
 
     operations = [
