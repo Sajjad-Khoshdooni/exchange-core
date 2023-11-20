@@ -142,7 +142,7 @@ class AssetAdmin(AdvancedAdmin):
 
         return humanize_number(hedge_value_abs)
 
-    @admin.action(description='setup asset', permissions=['view'])
+    @admin.action(description='Setup Asset', permissions=['view'])
     def setup_asset(self, request, queryset):
         from ledger.models import NetworkAsset
         now = timezone.now()
