@@ -40,6 +40,11 @@ from .utils.price import get_last_price
 from .utils.wallet_pipeline import WalletPipeline
 
 
+class CoinCategoryInline(admin.TabularInline):
+    model = CoinCategory.coins.through
+    extra = 1
+
+
 @admin.register(models.Asset)
 class AssetAdmin(AdvancedAdmin):
     default_edit_condition = M.superuser
@@ -53,12 +58,13 @@ class AssetAdmin(AdvancedAdmin):
         'order', 'trend', 'trade_enable', 'hedge',
         'margin_enable', 'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
     )
-    list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
+    list_filter = ('enable', 'trend', 'margin_enable', 'spread_category', 'coincategory', )
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge', 'price_page')
     search_fields = ('symbol',)
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset',)
     readonly_fields = ('distribution_factor',)
+    inlines = (CoinCategoryInline, )
 
     def save_model(self, request, obj, form, change):
         if Asset.objects.filter(order=obj.order).exclude(id=obj.id).exists():
