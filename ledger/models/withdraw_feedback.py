@@ -5,6 +5,7 @@ from accounts.models import User
 
 class FeedbackCategory(models.Model):
     category = models.CharField(max_length=128, unique=True)
+    order = models.PositiveSmallIntegerField(default=0)
 
     def __str__(self):
         return self.category
@@ -12,6 +13,7 @@ class FeedbackCategory(models.Model):
     class Meta:
         verbose_name = 'دسته‌بندی بازخورد برداشت'
         verbose_name_plural = 'دسته‌بندی‌های بازخورد برداشت'
+        ordering = ('order', )
 
 
 class WithdrawFeedback(models.Model):

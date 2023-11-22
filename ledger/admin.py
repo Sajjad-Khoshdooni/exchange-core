@@ -185,7 +185,8 @@ class AssetAdmin(AdvancedAdmin):
 
 @admin.register(FeedbackCategory)
 class FeedbackCategoryAdmin(admin.ModelAdmin):
-    list_display = ('category',)
+    list_display = ('category', 'order')
+    list_editable = ('order', )
 
 
 @admin.register(WithdrawFeedback)
