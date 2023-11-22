@@ -1,6 +1,9 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 from rest_framework import serializers
+from rest_framework.generics import get_object_or_404
+
+from ledger.models import Asset
 
 
 class Network(models.Model):
@@ -47,4 +50,4 @@ class NetworkField(serializers.CharField):
         if not data:
             return
         else:
-            return Network.objects.get(symbol=data)
+            return get_object_or_404(Network, symbol=data)

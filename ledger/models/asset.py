@@ -5,6 +5,7 @@ from uuid import UUID
 from django.conf import settings
 from django.db import models
 from rest_framework import serializers
+from rest_framework.generics import get_object_or_404
 
 from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
 from ledger.models import Wallet
@@ -187,4 +188,4 @@ class CoinField(serializers.CharField):
         if not data:
             return
         else:
-            return Asset.get(symbol=data)
+            return get_object_or_404(Asset, symbol=data)
