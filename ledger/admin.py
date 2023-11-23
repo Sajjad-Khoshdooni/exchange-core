@@ -191,8 +191,10 @@ class FeedbackCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(WithdrawFeedback)
 class WithdrawFeedbackAdmin(admin.ModelAdmin):
-    list_display = ('category', 'description',)
-    readonly_fields = ('created',)
+    list_display = ('user', 'category')
+    readonly_fields = ('user',)
+    search_fields = ('user__phone', )
+    list_filter = ('category', )
 
 
 @admin.register(models.Network)
