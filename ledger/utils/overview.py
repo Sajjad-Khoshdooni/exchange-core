@@ -7,8 +7,6 @@ from accounts.models import Account
 from financial.models import FiatWithdrawRequest
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Wallet, Prize, Asset
-from ledger.requester.internal_assets_requester import InternalAssetsRequester
-from ledger.utils.cache import cache_for
 from ledger.utils.price import USDT_IRT
 from ledger.utils.provider import get_provider_requester, BINANCE
 
