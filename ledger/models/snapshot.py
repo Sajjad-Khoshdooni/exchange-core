@@ -39,3 +39,4 @@ class SystemSnapshot(models.Model):
     prize = get_amount_field()
 
     verified = models.BooleanField(default=False)
+    description = models.TextField(null=True, blank=True)
