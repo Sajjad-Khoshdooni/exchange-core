@@ -14,6 +14,8 @@ from market.models.pair_symbol import DEFAULT_TAKER_FEE
 
 logger = logging.getLogger(__name__)
 
+MARGIN_INSURANCE_ACCOUNT = config('MARGIN_INSURANCE_ACCOUNT', cast=int)
+MARGIN_POOL_ACCOUNT = config('MARGIN_POOL_ACCOUNT', cast=int)
 LIQUIDATION_FEE_RATE = Decimal('0.02')
 
 
