@@ -114,15 +114,6 @@ def _update_trading_positions(trading_positions, pipeline):
                     trade_info.group_id
                 )
 
-            asset_margin_cross_wallet = position.asset_margin_wallet.asset.get_wallet(
-                position.account, market=Wallet.MARGIN, variant=None)
-            remaining_balance = position.asset_margin_wallet.balance + pipeline.get_wallet_free_balance_diff(position.asset_margin_wallet.id)
-            if remaining_balance > Decimal('0'):
-                pipeline.new_trx(
-                    position.asset_margin_wallet, asset_margin_cross_wallet, remaining_balance, Trx.MARGIN_TRANSFER,
-                    trade_info.group_id
-                )
-
     MarginPosition.objects.bulk_update(
         to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status']
     )

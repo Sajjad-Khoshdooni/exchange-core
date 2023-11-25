@@ -39,7 +39,7 @@ class OrderSerializer(serializers.ModelSerializer):
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
     is_oco = serializers.SerializerMethodField()
-    is_open_position = serializers.BooleanField(allow_null=True)
+    is_open_position = serializers.BooleanField(allow_null=True, required=False)
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)

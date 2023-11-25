@@ -287,13 +287,20 @@ class MarginPosition(models.Model):
                 Trx.MARGIN_INSURANCE,
                 group_id,
             )
+            to_close_amount = ceil_precision(to_close_amount, self.symbol.step_size)
+        else:
+            if self.side == LONG:
+                to_close_amount = floor_precision(max(to_close_amount, free_amount), self.symbol.step_size)
+            else:
+                to_close_amount = ceil_precision(to_close_amount, self.symbol.step_size)
+
         liquidation_order = None
         if to_close_amount > Decimal('0'):
             liquidation_order = new_order(
                 pipeline=pipeline,
                 symbol=self.symbol,
                 account=self.account,
-                amount=ceil_precision(to_close_amount, self.symbol.step_size),
+                amount=to_close_amount,
                 fill_type=Order.MARKET,
                 side=side,
                 market=Wallet.MARGIN,
@@ -328,14 +335,6 @@ class MarginPosition(models.Model):
                     group_id
                 )
                 remaining_balance -= insurance_fee_amount
-            if remaining_balance > Decimal(0):
-                pipeline.new_trx(
-                    self.margin_wallet,
-                    margin_cross_wallet,
-                    remaining_balance,
-                    Trx.LIQUID,
-                    group_id
-                )
             else:
                 logger.warning(f"Negative remaining balance for position:{self.id}")
 
