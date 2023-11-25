@@ -99,16 +99,15 @@ def collect_margin_interest():
 
     with WalletPipeline() as pipeline:
         for position in MarginPosition.objects.filter(status=MarginPosition.OPEN):
-            loan_wallet = position.loan_wallet
-            if loan_wallet:
+            if position.debt_amount > Decimal('0'):
                 pipeline.new_trx(
-                    loan_wallet,
-                    MarginPosition.get_margin_pool_wallet(loan_wallet),
-                    abs(position.debt_amount) * MarginPosition.get_interest_rate(loan_wallet),
+                    position.loan_wallet,
+                    position.get_margin_pool_wallet(),
+                    abs(position.debt_amount) * position.get_interest_rate(),
                     Trx.MARGIN_INTEREST,
                     group_id,
                 )
-                position.update_liquidation_price(pipeline)
+                position.update_liquidation_price(pipeline, rebalance=True)
 
     to_liquid_short_positions = MarginPosition.objects.filter(
         side=SHORT,

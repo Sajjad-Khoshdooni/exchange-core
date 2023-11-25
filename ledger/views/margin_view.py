@@ -12,13 +12,15 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.exceptions import InsufficientBalance
 from ledger.margin.margin_info import MarginInfo
-from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, Trx
+from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, Trx, MarginLeverage
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
+from ledger.utils.external_price import BUY, SELL
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_presentation_amount
 from ledger.utils.price import get_last_price, get_last_prices, get_coins_symbols
+from market.utils.trade import get_position_leverage
 
 
 class MarginInfoView(APIView):
@@ -155,50 +157,41 @@ class MarginTransferViewSet(ModelViewSet):
 
 class MarginPositionInfoView(APIView):
     def get(self, request: Request):
-
         account = request.user.get_account()
         symbol = request.GET.get('symbol')
+        side = request.GET.get('side')
 
         if not symbol:
             return Response({'Error': 'need symbol'}, 400)
-
-        price = request.GET.get('price')
+        if not side:
+            return Response({'Error': 'need position side'}, 400)
 
         from market.models import PairSymbol
         symbol_model = PairSymbol.get_by(symbol)
-        calculation_price = price or symbol_model.last_trade_price
 
-        position = MarginPosition.objects.filter(status=MarginPosition.OPEN, account=account, symbol__name=symbol).first()
+        position = MarginPosition.objects.filter(status=MarginPosition.OPEN, account=account, symbol__name=symbol,
+                                                 side=side).first()
 
         if not position:
             free = symbol_model.base_asset.get_wallet(
                 account, Wallet.MARGIN, None
-            ).balance
+            ).get_free()
+            margin_leverage, _ = MarginLeverage.objects.get_or_create(account=account)
 
             data = {
-                'max_buy_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
-                                                                           price=calculation_price,
-                                                                           side='buy')),
-                'max_sell_volume': abs(Wallet.get_margin_position_max_asset_by_wallet(Decimal('0'), free,
-                                                                           price=calculation_price,
-                                                                           side='sell')),
+                'max_buy_volume': free * get_position_leverage(leverage=margin_leverage.leverage, side=BUY, is_open_position=True),
+                'max_sell_volume': free * get_position_leverage(leverage=margin_leverage.leverage, side=SELL, is_open_position=True) / symbol_model.last_trade_price
             }
         else:
+            free = position.base_margin_wallet.get_free()
+
             data = {
-                'max_buy_volume': max(abs(Wallet.get_margin_position_max_asset(variant=position.variant,
-                                                                               price=calculation_price, side='buy'))
-                                      - position.base_margin_wallet.locked, Decimal('0')),
-                'max_sell_volume': max(abs(Wallet.get_margin_position_max_asset(variant=position.variant,
-                                                                                price=calculation_price, side='sell'))
-                                       - position.asset_margin_wallet.locked, Decimal('0')),
+                'max_buy_volume': free * get_position_leverage(leverage=position.leverage, side=BUY, is_open_position=False),
+                'max_sell_volume': free * get_position_leverage(leverage=position.leverage, side=SELL, is_open_position=False) / symbol_model.last_trade_price,
             }
 
-        if not price:
-            data = {
-                'max_buy_volume': floor_precision(data['max_buy_volume'] * Decimal('0.99'), symbol_model.step_size),
-                'max_sell_volume': floor_precision(data['max_sell_volume'] * Decimal('0.99'), symbol_model.step_size)
-            }
-        data['max_buy_volume'] = data['max_buy_volume'] * calculation_price
+        data["max_buy_volume"] = floor_precision(data['max_buy_volume'] * Decimal('0.99'), symbol_model.tick_size)
+        data["max_sell_volume"] = floor_precision(data['max_sell_volume'] * Decimal('0.99'), symbol_model.step_size)
         return Response(data)
 
 
@@ -229,3 +222,32 @@ class MarginPositionInterestHistoryView(ListAPIView):
             sender__in=[position.base_margin_wallet, position.base_margin_wallet],
             created__gte=position.created
         ).prefetch_related('sender__asset').order_by('-created')
+
+
+class LeverageViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MarginLeverage
+        fields = ('leverage',)
+
+
+class MarginLeverageView(APIView):
+    def post(self, request):
+        serializer = LeverageViewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+
+        MarginLeverage.objects.update_or_create(
+            account=request.user.account,
+            defaults={
+                'leverage': data['leverage']
+            }
+        )
+
+        return Response(200)
+
+    def get(self, request):
+        margin_leverage, _ = MarginLeverage.objects.get_or_create(account=request.user.account)
+
+        return Response({
+            "leverage": margin_leverage.leverage
+        }, 200)

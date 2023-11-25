@@ -11,7 +11,7 @@ from .deposit_transfer_request_view import DepositTransferUpdateView
 from .fast_buy_token_view import FastBuyTokenAPI
 from .margin_position_view import MarginPositionViewSet, MarginClosePositionView
 from .margin_view import (MarginInfoView, AssetMarginInfoView, MarginTransferViewSet, MarginPositionInfoView,
-                          MarginPositionInterestHistoryView)
+                          MarginPositionInterestHistoryView, MarginLeverageView)
 from .margin_wallet_view import MarginWalletViewSet, MarginAssetViewSet, MarginBalanceAPIView, \
     MarginTransferBalanceAPIView
 from .network_asset_info_view import NetworkAssetView

@@ -53,7 +53,7 @@ class MarginPositionViewSet(ModelViewSet):
     filter_class = MarginPositionFilter
 
     def get_queryset(self):
-        return MarginPosition.objects.filter(account=self.request.user.get_account())
+        return MarginPosition.objects.filter(account=self.request.user.get_account(), liquidation_price__isnull=False)
 
 
 class MarginClosePositionSerializer(serializers.Serializer):
