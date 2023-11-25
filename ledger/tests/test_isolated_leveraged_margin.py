@@ -133,21 +133,18 @@ class LeveragedIsolatedMarginTestCase(TestCase):
         print(resp.json())
         self.assertEqual(resp.status_code, check_status)
 
-    def assert_liquidation(self, account, symbol, is_liquidate: bool = True):
+    def assert_liquidation(self, account, symbol):
         mp = MarginPosition.objects.filter(account=account, symbol=symbol).first()
 
-        balance_sum = Wallet.objects.filter(
+        negetive_wallets = Wallet.objects.filter(
             account=account,
             market=Wallet.MARGIN,
             variant__isnull=False,
-        ).aggregate(s=Sum('balance'))['s'] or 0
+            balance__lt=Decimal(0)
+        ).count()
 
-        if is_liquidate:
-            assertion = self.assertEqual
-        else:
-            assertion = self.assertNotEquals
-        assertion(balance_sum, Decimal('0'))
-        assertion(mp.status, MarginPosition.CLOSED)
+        self.assertEqual(negetive_wallets, Decimal('0'))
+        self.assertEqual(mp.status, MarginPosition.CLOSED)
 
     def get_max(self):
         free = self.btcusdt.base_asset.get_wallet(
