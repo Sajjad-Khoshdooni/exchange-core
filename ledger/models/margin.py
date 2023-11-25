@@ -55,7 +55,7 @@ class MarginTransfer(models.Model):
             ).first()
             if not position:
                 raise ValueError('No open position found for this symbol')
-            position_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN, position.variant)
+            position_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN, position.group_id)
 
         if self.type == self.SPOT_TO_MARGIN:
             sender, receiver = spot_wallet, margin_wallet
@@ -79,7 +79,7 @@ class MarginTransfer(models.Model):
             super(MarginTransfer, self).save(*args)
             pipeline.new_trx(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
             if position:
-                position.update_liquidation_price(pipeline)
+                position.update_liquidation_price(pipeline, rebalance=False)
 
 
 class MarginLoan(models.Model):

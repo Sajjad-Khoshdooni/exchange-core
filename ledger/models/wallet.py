@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import CheckConstraint, Q, F, UniqueConstraint
 
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
-from ledger.utils.external_price import SELL, BUY
+from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -80,10 +80,12 @@ class Wallet(models.Model):
                     pipeline_balance_diff=Decimal(0)) -> bool:
         assert amount >= 0 and self.market not in Wallet.NEGATIVE_MARKETS
 
+        free_balance = self.get_free() + pipeline_balance_diff
+
         if not check_system_wallets and not self.check_balance:
             can = True
         else:
-            can = self.get_free() + pipeline_balance_diff - amount >= -self.credit
+            can = free_balance - amount >= -self.credit
 
         if raise_exception and not can:
             raise InsufficientBalance()
@@ -101,43 +103,9 @@ class Wallet(models.Model):
             raise NotImplementedError
 
     @staticmethod
-    def get_margin_position_max_asset(variant, price, side):
-        wallets = Wallet.objects.filter(variant=variant)
-        base = Wallet.get_base_from_asset([wallets[0].asset.symbol, wallets[1].asset.symbol])
-
-        if wallets[1].asset.name == base:
-            a, b = wallets[0].balance, wallets[1].balance
-        else:
-            a, b = wallets[1].balance, wallets[0].balance
-
-        return Wallet.get_margin_position_max_asset_by_wallet(a, b, price, side)
-
-    @staticmethod
     def get_margin_position_max_asset_by_wallet(a, b, price, side):
         k = Decimal('0.5') if side == SELL else Decimal('2')
         return Decimal(a * price + k * b) / Decimal((k - 1) * price)
-
-    def has_margin_balance(self, amount: Decimal, side: str, price: Decimal, raise_exception: bool = False, check_system_wallets: bool = False,
-                           pipeline_balance_diff=Decimal(0)) -> bool:
-        assert self.market == self.MARGIN
-        if not check_system_wallets and not self.check_balance:
-            can = True
-
-        else:
-
-            x = Wallet.get_margin_position_max_asset(variant=self.variant, price=price, side=side)
-
-            if side == SELL:
-                max_asset = - x
-            elif side == BUY:
-                max_asset = x * price
-            else:
-                raise NotImplementedError
-            can = max_asset >= amount - pipeline_balance_diff
-
-        if raise_exception and not can:
-            raise InsufficientBalance()
-        return can
 
     def has_debt(self, amount: Decimal, raise_exception: bool = False) -> bool:
         assert amount <= 0 and self.market in Wallet.NEGATIVE_MARKETS

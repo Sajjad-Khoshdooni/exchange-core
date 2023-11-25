@@ -1,6 +1,4 @@
 from django.urls import path
-from ledger import views
-from django.urls import path
 
 from ledger import views
 
@@ -53,18 +51,10 @@ urlpatterns = [
     path('v1/trade/otc/info/', views.OTCInfoView.as_view()),
     path('v1/trade/otc/myTrades/', views.OTCHistoryView.as_view()),
 
-    # path('v1/margin/info/', views.MarginInfoView.as_view()),
-    # path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
     path('v1/margin/transfer/', views.MarginTransferViewSet.as_view({
         'get': 'list',
         'post': 'create'
     })),
-
-    # path('v1/margin/wallets/', views.MarginWalletViewSet.as_view({'get': 'list'})),
-    # path('v1/margin/loan/', views.MarginLoanViewSet.as_view({
-    #     'get': 'list',
-    #     'post': 'create'
-    # })),
 
     path('v2/margin/wallets/', views.MarginAssetViewSet.as_view({'get': 'list'})),
     path('v2/margin/balance/', views.MarginBalanceAPIView.as_view()),
@@ -74,6 +64,7 @@ urlpatterns = [
     path('v2/margin/info/', views.MarginInfoView.as_view()),
     path('v2/margin/position/info/', views.MarginPositionInfoView.as_view()),
     path('v2/margin/position/<int:id>/interest/', views.MarginPositionInterestHistoryView.as_view()),
+    path('v2/margin/leverage/', views.MarginLeverageView.as_view()),
 
     path('v1/addressbook/<int:pk>/', views.AddressBookView.as_view({
         'get': 'retrieve',

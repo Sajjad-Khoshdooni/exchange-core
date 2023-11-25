@@ -13,7 +13,7 @@ from accounts.models import LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet, Asset
-from ledger.utils.external_price import IRT
+from ledger.utils.external_price import IRT, BUY
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
@@ -39,6 +39,7 @@ class OrderSerializer(serializers.ModelSerializer):
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
     is_oco = serializers.SerializerMethodField()
+    is_open_position = serializers.BooleanField(allow_null=True)
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -81,7 +82,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol,
                      'login_activity': login_activity}
                 )
-                matched_trades = created_order.submit(pipeline)
+                matched_trades = created_order.submit(pipeline, is_open_position=validated_data.get('is_open_position'))
 
                 extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
                 pipeline.add_market_cache_data(
@@ -119,15 +120,15 @@ class OrderSerializer(serializers.ModelSerializer):
 
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
 
-        position = types.SimpleNamespace(variant=None)
+        position = types.SimpleNamespace(group_id=None)
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
             check_margin_view_permission(self.context['account'], symbol)
-            position = symbol.get_margin_position(self.context['account'],
-                                                  validated_data['amount'] * validated_data['price'],
-                                                  side=validated_data['side'])
+            position = symbol.get_margin_position(self.context['account'], order_side=validated_data['side'],
+                                                is_open_position=validated_data['is_open_position'])
+
         wallet = symbol.asset.get_wallet(
-            self.context['account'], market=market, variant=position.variant or self.context['variant']
+            self.context['account'], market=market, variant=position.group_id or self.context['variant']
         )
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
         self.validate_order_size(
@@ -179,8 +180,17 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 {'price': _('price is mandatory in limit order.')}
             )
-        if attrs['wallet']['market'] == Wallet.MARGIN and not self.context['request'].user.show_margin:
-            raise ValidationError('Dont Have allow to place Margin Order')
+        if attrs['wallet']['market'] == Wallet.MARGIN:
+            if attrs.get('is_open_position') is None:
+                raise ValidationError('Cant place margin order without is_open_position')
+
+            if attrs.get('is_open_position') and attrs['side'] == BUY:
+                from ledger.models import MarginLeverage
+                margin_leverage, _ = MarginLeverage.objects.get_or_create(account=self.context['request'].user.account)
+
+                if margin_leverage.leverage == Decimal('1'):
+                    raise ValidationError('Cant place Long Buy margin order with Leverage 1')
+
         return attrs
 
     def get_filled_amount(self, order: Order):
@@ -218,7 +228,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
                   'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel', 'is_oco',
-                  'time_in_force', 'client_order_id')
+                  'time_in_force', 'client_order_id', 'is_open_position')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
