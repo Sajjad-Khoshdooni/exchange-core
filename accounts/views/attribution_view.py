@@ -15,9 +15,7 @@ class AttributionAPIView(APIView):
 
     def get(self, request):
         params = request.query_params
-        logger.info('New attribution', extra={
-            'params': params
-        })
+        logger.info(f'New attribution {params}')
 
         clicked_at = None
         if params.get('clicked_at'):
