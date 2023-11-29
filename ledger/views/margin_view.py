@@ -225,6 +225,13 @@ class MarginPositionInterestHistoryView(ListAPIView):
 
 
 class LeverageViewSerializer(serializers.ModelSerializer):
+
+    def validate(self, attrs):
+        if not 1 <= Decimal(attrs.get('leveraga')) <= 5 and Decimal(attrs.get('leveraga')) - int(attrs.get('leveraga')) != Decimal('0'):
+            raise ValidationError('اهرم باید عددی صحیحی بین ۱ و ۵ باشد.')
+
+        return attrs
+
     class Meta:
         model = MarginLeverage
         fields = ('leverage',)
