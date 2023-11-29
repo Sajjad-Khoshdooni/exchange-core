@@ -124,7 +124,7 @@ class LeveragedIsolatedMarginTestCase(TestCase):
         self.assertEqual(resp.status_code, check_status)
 
     def set_leverage(self, leverage: Decimal, check_status=200):
-        resp = self.client.post('/api/v2/margin/leverage/', {
+        resp = self.client.post('/api/v2/margin/leverage/', data={
             'leverage': leverage,
         })
         print(resp.json())
