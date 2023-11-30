@@ -20,10 +20,11 @@ class MarginPositionSerializer(AssetSerializerMini):
     balance = serializers.SerializerMethodField()
     base_debt = serializers.SerializerMethodField()
     asset_debt = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
 
     def get_margin_ratio(self, instance: MarginPosition):
         ratio = instance.base_total_balance / instance.base_debt_amount
-        return floor_precision(ratio, 2)
+        return floor_precision(abs(ratio), 2)
 
     def get_balance(self, instance):
         return instance.equity
@@ -33,6 +34,9 @@ class MarginPositionSerializer(AssetSerializerMini):
 
     def get_asset_debt(self, instance):
         return instance.loan_wallet.balance
+
+    def get_amount(self, instance):
+        return abs(instance.asset_wallet)
 
     class Meta:
         model = MarginPosition
