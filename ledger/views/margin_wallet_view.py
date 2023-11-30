@@ -185,7 +185,7 @@ class MarginAssetViewSet(ModelViewSet):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
         account = self.request.user.get_account()
-        wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN)
+        wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN, asset__symbol__in=[Asset.IRT, Asset.USDT])
         loans = Wallet.objects.filter(account=account, market=Wallet.LOAN)
         ctx['asset_to_wallet'] = {
             asset_id: wallets.filter(asset_id=asset_id).annotate(
