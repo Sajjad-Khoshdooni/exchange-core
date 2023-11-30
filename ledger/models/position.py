@@ -386,7 +386,7 @@ class MarginLeverage(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     account = models.ForeignKey('accounts.Account', on_delete=models.CASCADE)
-    leverage = get_amount_field(default=Decimal('1'), validators=(MinValueValidator(2),))
+    leverage = get_amount_field(default=Decimal('1'), validators=(MinValueValidator(1),))
 
     def __str__(self):
         return f'{self.account}-{self.leverage}'
