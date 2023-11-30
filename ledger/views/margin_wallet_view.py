@@ -180,15 +180,16 @@ class MarginAssetSerializer(AssetSerializerMini):
 
 class MarginAssetViewSet(ModelViewSet):
     serializer_class = MarginAssetSerializer
-    queryset = Asset.live_objects.filter(Q(pair__margin_enable=True) | Q(trading_pair__margin_enable=True)).distinct()
+    queryset = Asset.live_objects.filter(Q(pair__margin_enable=True) | Q(trading_pair__margin_enable=True),
+                                         symbol__in=[Asset.IRT, Asset.USDT]).distinct()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
         account = self.request.user.get_account()
         wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN, asset__symbol__in=[Asset.IRT, Asset.USDT])
-        loans = Wallet.objects.filter(account=account, market=Wallet.LOAN)
+        loans = Wallet.objects.filter(account=account, market=Wallet.LOAN, asset__symbol__in=[Asset.IRT, Asset.USDT])
         ctx['asset_to_wallet'] = {
-            asset_id: wallets.filter(asset_id=asset_id).annotate(
+            asset_id: wallets.filter(asset_id=asset_id, asset__symbol__in=[Asset.IRT, Asset.USDT]).annotate(
                 balance_diff=F('balance') - F('locked')
             ).aggregate(balance=Sum('balance'), free=Sum('balance_diff')) for asset_id in
             wallets.values_list('asset_id', flat=True).distinct()
