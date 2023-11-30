@@ -91,6 +91,15 @@ class MarginPosition(models.Model):
             raise NotImplementedError
 
     @property
+    def base_total_balance(self):
+        if self.side == SHORT:
+            return self.base_margin_wallet.balance
+        elif self.side == LONG:
+            return self.asset_margin_wallet.balance * self.symbol.last_trade_price
+        else:
+            raise NotImplementedError
+
+    @property
     def debt_amount(self):
         return -self.loan_wallet.balance
 
