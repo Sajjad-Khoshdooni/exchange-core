@@ -170,7 +170,7 @@ class MarginPositionInfoView(APIView):
         symbol_model = PairSymbol.get_by(symbol)
 
         position = MarginPosition.objects.filter(status=MarginPosition.OPEN, account=account, symbol__name=symbol,
-                                                 side=side).first()
+                                                 side=side, liquidation_price__isnull=False).first()
 
         if not position:
             free = symbol_model.base_asset.get_wallet(
