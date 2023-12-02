@@ -7,7 +7,7 @@ from django.http import HttpResponse, HttpResponseForbidden, HttpResponseBadRequ
 from django.shortcuts import render
 from openpyxl import Workbook
 
-from accounts.models import TrafficSource
+from accounts.models import TrafficSource, User
 from analytics.models import ReportPermission
 
 
@@ -73,20 +73,26 @@ def queryset_to_workbook(queryset, sheet_name='Sheet1'):
     sheet = workbook.active
     sheet.title = sheet_name
 
-    headers = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'users', 'depositors']
+    headers = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'users', 'verified', 'depositors']
 
     # write headers
     for col_num, header in enumerate(headers, 1):
         cell = sheet.cell(row=1, column=col_num)
         cell.value = header
 
-    groups = queryset.values('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term')\
+    groups = queryset.values('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term') \
         .annotate(
         user_count=Count('user__id', distinct=True),
-        depositor_count=Count('user__id', distinct=True,
-                              filter=Q(user__first_fiat_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1))) |
-                                     Q(user__first_crypto_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1))))
-    ).values_list('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'user_count', 'depositor_count')
+        verified_count=Count('user__id', distinct=True, filter=Q(level__gte=User.LEVEL2)),
+        depositor_count=Count(
+            'user__id', distinct=True,
+            filter=Q(user__first_fiat_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1))) |
+                   Q(user__first_crypto_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1)))
+        )
+    ).values_list(
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'user_count', 'verified_count',
+        'depositor_count',
+    )
 
     # write data
     for row_num, row in enumerate(groups, 1):
