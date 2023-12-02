@@ -106,8 +106,8 @@ class MarginWalletViewSet(ModelViewSet):
 
 
 class MarginAssetSerializer(AssetSerializerMini):
-    margin_position = serializers.ModelSerializer()
-    available_margin = serializers.ModelSerializer()
+    margin_position = serializers.SerializerMethodField()
+    available_margin = serializers.SerializerMethodField()
     equity = serializers.SerializerMethodField()
 
     def get_asset(self, asset: Asset):
