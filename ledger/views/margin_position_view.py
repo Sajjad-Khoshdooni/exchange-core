@@ -38,7 +38,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         return instance.loan_wallet.balance
 
     def get_amount(self, instance):
-        return abs(instance.asset_wallet)
+        return abs(instance.base_total_balance + instance.base_debt_amount)
 
     class Meta:
         model = MarginPosition
