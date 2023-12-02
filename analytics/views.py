@@ -73,7 +73,8 @@ def queryset_to_workbook(queryset, sheet_name='Sheet1'):
     sheet = workbook.active
     sheet.title = sheet_name
 
-    headers = ['date', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'users', 'verified', 'depositors']
+    headers = ['date', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'users', 'verified',
+               'depositors']
 
     # write headers
     for col_num, header in enumerate(headers, 1):
@@ -83,7 +84,11 @@ def queryset_to_workbook(queryset, sheet_name='Sheet1'):
     groups = queryset.values('created__date', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term') \
         .annotate(
         user_count=Count('user__id', distinct=True),
-        verified_count=Count('user__id', distinct=True, filter=Q(level__gte=User.LEVEL2)),
+        verified_count=Count(
+            'user__id',
+            distinct=True,
+            filter=Q(user__level_2_verify_datetime__lte=F('user__date_joined') + Value(timedelta(days=1)))
+        ),
         depositor_count=Count(
             'user__id', distinct=True,
             filter=Q(user__first_fiat_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1))) |
