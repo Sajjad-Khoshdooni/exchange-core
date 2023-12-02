@@ -13,6 +13,10 @@ from analytics.models import ReportPermission
 
 @login_required
 def request_source_analytics(request):
+    report_permissions = ReportPermission.objects.filter(user=request.user)
+    if not report_permissions:
+        return HttpResponseForbidden('No permission!')
+
     correct_url = settings.HOST_URL + '/analytics/marketing/reports/download/'
     context = {
         'redirect_url': correct_url
@@ -36,7 +40,7 @@ def get_source_analytics(request):
         q = Q()
         report_permissions = ReportPermission.objects.filter(user=request.user)
         if not report_permissions:
-            return HttpResponseForbidden('You do not have permission to view this content')
+            return HttpResponseForbidden('No permission!')
 
         for permission in report_permissions:
             q = q | permission.q
