@@ -184,6 +184,7 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
     for order, trade in ((pair.maker_order, pair.maker_trade), (pair.taker_order, pair.taker_trade)):
         if order.wallet.market == Wallet.MARGIN:
             position = order.symbol.get_margin_position(order.account, order.side, order.is_open_position)
+            position.update_net_amount(amount=order.filled_amount, price=order.price, side=order.side)
             if position.side == LONG:
                 from ledger.utils.external_price import get_other_side
                 order_side = get_other_side(order_side)
