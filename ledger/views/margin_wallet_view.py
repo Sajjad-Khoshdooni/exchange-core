@@ -157,7 +157,7 @@ class MarginAssetViewSet(ModelViewSet):
         ctx[Asset.USDT] = {
             'equity': positions.filter(base_wallet__asset__symbol=Asset.USDT).annotate(
                 position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('asset_wallet__balance')
-            ).aggregate(s=Sum('position_amount')),
+            ).aggregate(s=Sum('position_amount'))['s'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.USDT).first()
         }
 
@@ -171,7 +171,7 @@ class MarginBalanceAPIView(APIView):
     def get(self, request: Request):
         account = request.user.account
         symbol_name = request.query_params.get('symbol')
-        symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, asset__margin_enable=True).first()
+        symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, margin_enable=True).first()
 
         if not symbol:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol_name))
@@ -213,7 +213,7 @@ class MarginTransferBalanceAPIView(APIView):
 
         elif transfer_type == MarginTransfer.POSITION_TO_MARGIN:
             symbol_name = request.query_params.get('symbol')
-            symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, asset__margin_enable=True).first()
+            symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, margin_enable=True).first()
 
             if not symbol:
                 raise ValidationError(_('{symbol} is not enable').format(symbol=symbol_name))
@@ -243,19 +243,3 @@ class MarginTransferBalanceAPIView(APIView):
                         })
         else:
             return Response({'Error': 'Invalid type'}, status=400)
-
-#
-# class MarginWalletView(APIView):
-#
-#     def get(self, request):
-#         account = request.user.get_account()
-#         positions = MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN)
-#
-#         irt_base_sum = positions.filter(base_wallet__asset__symbol=Asset.IRT).annotate(
-#             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('asset_wallet__balance')
-#         ).aggregate(s=Sum('position_amount'))['s'] or Decimal('0')
-#
-#         usdt_base = positions.filter(base_wallet__asset__symbol=Asset.USDT).annotate(
-#             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('asset_wallet__balance')
-#         ).aggregate(s=Sum('position_amount'))
-
