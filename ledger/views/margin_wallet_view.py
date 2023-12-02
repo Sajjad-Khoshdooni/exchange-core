@@ -106,75 +106,32 @@ class MarginWalletViewSet(ModelViewSet):
 
 
 class MarginAssetSerializer(AssetSerializerMini):
-    balance = serializers.SerializerMethodField()
-    balance_usdt = serializers.SerializerMethodField()
-    free = serializers.SerializerMethodField()
-    borrowed = serializers.SerializerMethodField()
+    margin_position = serializers.ModelSerializer()
+    available_margin = serializers.ModelSerializer()
     equity = serializers.SerializerMethodField()
 
-    def get_wallet(self, asset: Asset):
-        return self.context['asset_to_wallet'].get(asset.id)
+    def get_asset(self, asset: Asset):
+        return self.context.get(asset.symbol)
 
-    def get_loan_wallet(self, asset: Asset):
-        return self.context['asset_to_loan'].get(asset.id)
+    def get_margin_position(self, asset: Asset):
+        asset = self.get_asset(asset)
 
-    def get_balance(self, asset: Asset):
-        wallet = self.get_wallet(asset)
+        return asset.get('equity', Decimal('0'))
 
-        if not wallet:
-            return '0'
+    def get_available_margin(self, asset: Asset):
+        cross_wallet = self.get_asset(asset).get('cross_wallet')
 
-        return wallet['balance']
+        if not cross_wallet:
+            return Decimal('0')
 
-    def get_balance_usdt(self, asset: Asset):
-        wallet = self.get_wallet(asset)
-
-        if not wallet:
-            return '0'
-
-        if asset.symbol == Asset.USDT:
-            price = Decimal(1)
-        else:
-            # TODO: use bulk symbols prices
-            price = get_last_price(asset.symbol + Asset.USDT)
-        amount = wallet['balance'] * price
-        return get_symbol_presentation_price(asset.symbol + 'USDT', amount)
-
-    def get_free(self, asset: Asset):
-        wallet = self.get_wallet(asset)
-
-        if not wallet:
-            return '0'
-
-        return wallet['free']
-
-    def get_borrowed(self, asset: Asset):
-        loan = self.get_loan_wallet(asset)
-
-        if not loan:
-            return '0'
-
-        return -loan['balance']
+        return cross_wallet.get_free()
 
     def get_equity(self, asset: Asset):
-        wallet = self.get_wallet(asset)
-        loan = self.get_loan_wallet(asset)
-
-        if wallet:
-            wallet_value = wallet['balance']
-        else:
-            wallet_value = 0
-
-        if loan:
-            loan_value = loan['balance']
-        else:
-            loan_value = 0
-
-        return loan_value + wallet_value
+        return self.get_available_margin(asset) + self.get_margin_position(asset)
 
     class Meta:
         model = Asset
-        fields = (*AssetSerializerMini.Meta.fields, 'free', 'balance', 'balance_usdt', 'borrowed', 'equity')
+        fields = (*AssetSerializerMini.Meta.fields, 'equity', 'margin_position', 'available_margin')
         ref_name = 'margin assets'
 
 
@@ -186,17 +143,22 @@ class MarginAssetViewSet(ModelViewSet):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
         account = self.request.user.get_account()
-        wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN, asset__symbol__in=[Asset.IRT, Asset.USDT])
-        loans = Wallet.objects.filter(account=account, market=Wallet.LOAN, asset__symbol__in=[Asset.IRT, Asset.USDT])
-        ctx['asset_to_wallet'] = {
-            asset_id: wallets.filter(asset_id=asset_id, asset__symbol__in=[Asset.IRT, Asset.USDT]).annotate(
-                balance_diff=F('balance') - F('locked')
-            ).aggregate(balance=Sum('balance'), free=Sum('balance_diff')) for asset_id in
-            wallets.values_list('asset_id', flat=True).distinct()
+        cross_wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN, variant__isnull=True)
+
+        positions = MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN)
+
+        ctx[Asset.IRT] = {
+            'equity': positions.filter(base_wallet__asset__symbol=Asset.IRT).annotate(
+                position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('asset_wallet__balance')
+            ).aggregate(s=Sum('position_amount'))['s'] or Decimal('0'),
+            'cross_wallet': cross_wallets.filter(asset__symbol=Asset.IRT).first()
         }
-        ctx['asset_to_loan'] = {
-            asset_id: loans.filter(asset_id=asset_id).aggregate(balance=Sum('balance')) for asset_id in
-            loans.values_list('asset_id', flat=True).distinct()
+
+        ctx[Asset.USDT] = {
+            'equity': positions.filter(base_wallet__asset__symbol=Asset.USDT).annotate(
+                position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('asset_wallet__balance')
+            ).aggregate(s=Sum('position_amount')),
+            'cross_wallet': cross_wallets.filter(asset__symbol=Asset.USDT).first()
         }
 
         return ctx
@@ -281,3 +243,19 @@ class MarginTransferBalanceAPIView(APIView):
                         })
         else:
             return Response({'Error': 'Invalid type'}, status=400)
+
+#
+# class MarginWalletView(APIView):
+#
+#     def get(self, request):
+#         account = request.user.get_account()
+#         positions = MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN)
+#
+#         irt_base_sum = positions.filter(base_wallet__asset__symbol=Asset.IRT).annotate(
+#             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('asset_wallet__balance')
+#         ).aggregate(s=Sum('position_amount'))['s'] or Decimal('0')
+#
+#         usdt_base = positions.filter(base_wallet__asset__symbol=Asset.USDT).annotate(
+#             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('asset_wallet__balance')
+#         ).aggregate(s=Sum('position_amount'))
+
