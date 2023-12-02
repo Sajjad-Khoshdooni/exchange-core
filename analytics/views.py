@@ -31,8 +31,8 @@ def get_source_analytics(request):
 
     if start_date_str and end_date_str:
 
-        start_datetime = datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M').astimezone()
-        end_datetime = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M').astimezone()
+        start_datetime = datetime.strptime(start_date_str, '%Y-%m-%d').astimezone()
+        end_datetime = datetime.strptime(end_date_str, '%Y-%m-%d').astimezone()
 
         if start_datetime < end_datetime - timedelta(days=30):
             return HttpResponseBadRequest('Report time filter threshold must be less than 30 days')
