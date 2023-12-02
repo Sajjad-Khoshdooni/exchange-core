@@ -49,11 +49,9 @@ class MarginInfoView(APIView):
         prices = get_last_prices(get_coins_symbols(coins))
 
         total_asset = self.aggregate_wallets_values(user_margin_wallets.filter(balance__gt=Decimal('0')), prices)
-        total_debt = self.aggregate_wallets_values(user_margin_wallets.filter(balance__lt=Decimal('0')), prices)
 
         return Response({
             'total_assets': total_asset,
-            'total_debt': total_debt,
             'total_equity': {
                 'IRT': get_presentation_amount(Decimal(total_asset['IRT']) + Decimal(total_debt['IRT'])),
                 'USDT': get_presentation_amount(Decimal(total_asset['USDT']) + Decimal(total_debt['USDT'])),
