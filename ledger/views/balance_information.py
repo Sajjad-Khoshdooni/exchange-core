@@ -15,7 +15,6 @@ class BalanceInfoView(ListAPIView):
     serializer_class = WalletSerializer
 
     def get_queryset(self):
-        print(self.request.user.get_account())
         return Wallet.objects.filter(
             account=self.request.user.get_account(),
             market=Wallet.SPOT,

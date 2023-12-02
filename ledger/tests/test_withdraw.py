@@ -2,6 +2,7 @@ from django.test import Client
 from django.test import TestCase
 
 from accounts.models import User
+from accounts.utils.login import set_login_activity
 from ledger.models import Asset
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.test import new_account, new_address_book, generate_otp_code, new_network, new_network_asset
@@ -24,6 +25,9 @@ class WithdrawTestCase(TestCase):
 
         self.usdt.get_wallet(self.user.get_account()).airdrop(100000)
 
+        setattr(self.client, 'META', {'REMOTE_ADDR': '127.0.0.1'})
+        set_login_activity(self.client, self.user, client_info={})  # to enable address book withdrawing
+
     def test_withdraw_without_addressbook(self):
         amount = '50'
         resp = self.client.post('/api/v1/withdraw/', {
@@ -33,6 +37,7 @@ class WithdrawTestCase(TestCase):
             'network': 'BSC',
             'code': generate_otp_code(self.user, 'withdraw')
         })
+        self.assertEqual(resp.status_code, 201)
         self.assertEqual((get_presentation_amount(resp.data['amount'])), amount)
 
     def test_withdraw_with_addressbook(self):

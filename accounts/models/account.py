@@ -1,11 +1,13 @@
 from decimal import Decimal
 from typing import Union
 
+from django.conf import settings
 from django.db import models
 from django.db.models import UniqueConstraint, Q
 from django.utils import timezone
 
-from ledger.utils.external_price import BUY, get_external_price
+from ledger.utils.external_price import BUY
+from ledger.utils.fields import get_amount_field
 
 
 class Account(models.Model):
@@ -44,6 +46,9 @@ class Account(models.Model):
 
     owned = models.BooleanField(default=False)
 
+    custom_maker_fee = get_amount_field(null=True)
+    custom_taker_fee = get_amount_field(null=True)
+
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
 
@@ -58,7 +63,11 @@ class Account(models.Model):
     @classmethod
     def out(cls) -> 'Account':
         return Account.objects.get(type=cls.OUT)
-    
+
+    def is_proxy_trader(self, symbol_name: str):
+        return self.id == settings.OTC_ACCOUNT_ID \
+               or (settings.ZERO_USDT_HEDGE and symbol_name == 'USDTIRT' and self.id == settings.MARKET_MAKER_ACCOUNT_ID)
+
     def get_voucher_wallet(self):
         from ledger.models import Wallet
         from ledger.models import Asset
@@ -87,13 +96,14 @@ class Account(models.Model):
 
     def get_total_balance_usdt(self, market: str, side: str):
         from ledger.models import Wallet, Asset
+        from ledger.utils.price import get_last_price
 
         wallets = Wallet.objects.filter(account=self, market=market).exclude(asset__symbol=Asset.IRT).prefetch_related('asset')
 
         total = Decimal('0')
 
         for wallet in wallets:
-            price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.USDT, side=side, allow_stale=True) or 0
+            price = get_last_price(wallet.asset.symbol + Asset.USDT) or 0
             balance = wallet.balance * price
 
             if balance:
@@ -103,6 +113,7 @@ class Account(models.Model):
 
     def get_total_balance_irt(self, market: str = None, side: str = BUY):
         from ledger.models import Wallet, Asset
+        from ledger.utils.price import get_last_price
 
         wallets = Wallet.objects.filter(account=self).prefetch_related('asset')
 
@@ -117,7 +128,7 @@ class Account(models.Model):
             if wallet.balance == 0:
                 continue
 
-            price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.IRT, side=side, allow_stale=True) or 0
+            price = get_last_price(wallet.asset.symbol + Asset.IRT) or 0
             balance = wallet.balance * price
 
             if balance:

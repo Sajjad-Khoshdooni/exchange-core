@@ -1,15 +1,21 @@
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from django.conf import settings
+from django.db.models import F, Sum
+from django.utils import timezone
 
 from accounts.models import Referral
 from ledger.models import Wallet, Trx, Asset
+from ledger.utils.cache import cache_for
 from ledger.utils.external_price import BUY, SELL
+from ledger.utils.precision import floor_precision, get_symbol_presentation_price
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, Trade, BaseTrade
+from market.models import Order, Trade, BaseTrade, PairSymbol
 from market.models import ReferralTrx
+from market.utils.price import get_symbol_prices
 
 
 @dataclass
@@ -34,7 +40,6 @@ class TradesPair:
     @classmethod
     def init_pair(cls, maker_order: Order, taker_order: Order, amount: Decimal, price: Decimal, trade_source: str,
                   base_irt_price: Decimal, base_usdt_price: Decimal, group_id: UUID):
-
         assert maker_order.symbol == taker_order.symbol
 
         maker_trade = Trade(
@@ -50,6 +55,7 @@ class TradesPair:
             base_usdt_price=base_usdt_price,
             group_id=group_id,
             market=maker_order.wallet.market,
+            login_activity=maker_order.login_activity,
         )
 
         taker_trade = Trade(
@@ -65,6 +71,7 @@ class TradesPair:
             base_usdt_price=base_usdt_price,
             group_id=group_id,
             market=taker_order.wallet.market,
+            login_activity=taker_order.login_activity,
         )
         maker_trade.client_order_id = maker_order.client_order_id
         taker_trade.client_order_id = taker_order.client_order_id
@@ -77,9 +84,41 @@ class TradesPair:
         )
 
 
-def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade: bool = False):
+def _update_trading_positions(trading_positions, pipeline):
+    from ledger.models import MarginLoan
+    from ledger.models import MarginPosition
+    to_update_positions = {}
+    for trade_info in trading_positions:
+        position = to_update_positions.get(trade_info.position.id, trade_info.position)
+        short_amount = trade_info.trade_amount if trade_info.loan_type == MarginLoan.BORROW else -trade_info.trade_amount
+        previous_amount, previous_price = position.amount, position.average_price
+        position.amount += short_amount
+        if short_amount > 0:
+            position.average_price = (previous_amount * previous_price +
+                                      short_amount * trade_info.trade_price) / position.amount
+        position.update_liquidation_price(pipeline)
+        to_update_positions[position.id] = position
+        if position.amount == 0:
+            position.status = MarginPosition.CLOSED
+            margin_cross_wallet = position.margin_base_wallet.asset.get_wallet(
+                position.account, market=Wallet.MARGIN, variant=None)
+            remaining_balance = position.margin_base_wallet.balance + pipeline.get_wallet_balance_diff(
+                position.margin_base_wallet.id)
+            if remaining_balance:
+                pipeline.new_trx(
+                    position.margin_base_wallet, margin_cross_wallet, remaining_balance, Trx.MARGIN_TRANSFER,
+                    trade_info.group_id
+                )
 
+    MarginPosition.objects.bulk_update(
+        to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status']
+    )
+
+
+def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade: bool = False):
+    trading_positions = []
     if not fake_trade:
+        trading_positions = _register_borrow_transaction(pipeline, pair=pair)
         _register_trade_transaction(pipeline, pair=pair)
         _register_trade_base_transaction(pipeline, pair=pair)
 
@@ -107,9 +146,12 @@ def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade
     pair.maker_trade.fee_usdt_value = maker_fee.trader_fee_amount
     pair.maker_trade.fee_revenue = maker_fee.fee_revenue
 
+    if not fake_trade:
+        trading_positions.extend(_register_repay_transaction(pipeline, pair=pair))
+        _update_trading_positions(trading_positions, pipeline)
+
 
 def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
-
     if pair.maker_order.side == BUY:
         sender, receiver = pair.taker_order.wallet, pair.maker_order.wallet
     else:
@@ -122,6 +164,73 @@ def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
         group_id=pair.maker_trade.group_id,
         scope=Trx.TRADE
     )
+
+
+def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loan_type: str):
+    from ledger.models import MarginLoan
+    if loan_type == MarginLoan.BORROW:
+        order_side = SELL
+    elif loan_type == MarginLoan.REPAY:
+        order_side = BUY
+    else:
+        raise ValueError
+
+    trade_price = pair.maker_trade.price
+    trading_positions = []
+    for order, trade in ((pair.maker_order, pair.maker_trade), (pair.taker_order, pair.taker_trade)):
+        if order.side == order_side and order.wallet.market == Wallet.MARGIN:
+            trade_amount = trade.amount - trade.fee_amount if order_side == BUY else trade.amount
+            from ledger.models import MarginLoan
+            position = order.symbol.get_margin_position(order.account)
+            if loan_type == MarginLoan.REPAY:
+                trade_amount = min(position.amount, trade_amount)
+            if not trade_amount:
+                continue
+            trade_value = trade_price * trade_amount
+            if not position.has_enough_margin(trade_value):
+                margin_cross_wallet = order.base_wallet.asset.get_wallet(
+                    order.base_wallet.account, market=order.base_wallet.market, variant=None
+                )
+                margin_cross_wallet.has_balance(trade_value, raise_exception=True)
+                pipeline.new_trx(
+                    group_id=uuid4(),
+                    sender=margin_cross_wallet,
+                    receiver=order.base_wallet,
+                    amount=trade_value,
+                    scope=Trx.MARGIN_TRANSFER
+                )
+            MarginLoan.new_loan(
+                account=order.account,
+                asset=order.symbol.asset,
+                amount=trade_amount,
+                loan_type=loan_type,
+                pipeline=pipeline,
+                variant=order.wallet.variant
+            )
+            fee_amount = floor_precision(trade.fee_amount,
+                                         Trade.fee_amount.field.decimal_places) if trade.fee_amount else Decimal(0)
+            trade_amount = trade.amount - fee_amount if order_side == BUY else trade.amount
+            if loan_type == MarginLoan.REPAY:
+                trade_amount = min(position.amount, trade_amount)
+            from ledger.models.position import MarginPositionTradeInfo
+            trading_positions.append(MarginPositionTradeInfo(
+                loan_type=loan_type,
+                position=position,
+                trade_amount=trade_amount,
+                trade_price=trade_price,
+                group_id=order.group_id
+            ))
+    return trading_positions
+
+
+def _register_borrow_transaction(pipeline: WalletPipeline, pair: TradesPair):
+    from ledger.models import MarginLoan
+    return _register_margin_transaction(pipeline, pair, MarginLoan.BORROW)
+
+
+def _register_repay_transaction(pipeline: WalletPipeline, pair: TradesPair):
+    from ledger.models import MarginLoan
+    return _register_margin_transaction(pipeline, pair, MarginLoan.REPAY)
 
 
 def _register_trade_base_transaction(pipeline: WalletPipeline, pair: TradesPair):
@@ -171,7 +280,6 @@ def get_fee_info(trade: BaseTrade) -> FeeInfo:
 
 def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet: Wallet, base_wallet: Wallet,
                               group_id: UUID) -> FeeInfo:
-
     account = trade.account
     referrer = account.referred_by
     fee_info = get_fee_info(trade)
@@ -203,3 +311,75 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
     )
 
     return fee_info
+
+
+def get_markets_price_info(base: str):
+    prices = get_symbol_prices()
+    recent_prices = prices['last']
+    yesterday_prices = prices['yesterday']
+    change_percents = {}
+
+    symbol_id_map = {pair_symbol_id: [base_asset_name, coin, coin_name_fa]
+                     for pair_symbol_id, base_asset_name, coin, coin_name_fa in
+                     PairSymbol.objects.all().values_list('id', 'base_asset__symbol', 'asset__symbol', 'asset__name_fa')
+                     }
+
+    for pair_symbol_id in recent_prices.keys() & yesterday_prices.keys():
+        if (recent_prices[pair_symbol_id] and yesterday_prices[pair_symbol_id]
+                and symbol_id_map[pair_symbol_id][0] == base):
+
+            yesterday_price = yesterday_prices[pair_symbol_id]
+            recent_price = recent_prices[pair_symbol_id]
+            change_24h = 100 * (recent_price - yesterday_price) // yesterday_price
+            coin = symbol_id_map[pair_symbol_id][1]
+            coin_name_fa = symbol_id_map[pair_symbol_id][2]
+
+            change_percents[coin] = [coin_name_fa, recent_price, change_24h]
+
+    return change_percents
+
+
+def get_markets_size_ratio(base: str):
+    markets_info = list(Trade.objects.filter(
+        created__gte=timezone.now() - timedelta(days=1),
+        symbol__base_asset__symbol=base
+    ).values('symbol__asset__symbol')
+                        .annotate(value=Sum(F('amount') * F('price'))).values_list('symbol__asset__symbol', 'value'))
+
+    total_size = 0
+    for coin, value in markets_info:
+        total_size += value
+
+    if total_size == Decimal(0):
+        return {}
+
+    for i in range(len(markets_info)):
+        markets_info[i] = (markets_info[i][0], round(100 * markets_info[i][1] / total_size, 2))
+
+    return markets_info
+
+
+@cache_for(60 * 5)
+def get_markets_info(base: str):
+    markets_price_info = get_markets_price_info(base)
+
+    market_ratios = get_markets_size_ratio(base)
+    market_details = []
+
+    for coin, ratio in market_ratios:
+        if coin and ratio and markets_price_info.get(coin):
+            name_fa = markets_price_info[coin][0]
+            price = get_symbol_presentation_price(symbol=coin, amount=markets_price_info[coin][1])
+            change_24h = markets_price_info[coin][2]
+
+            market_details.append(
+                {
+                    'coin': coin,
+                    'name_fa': name_fa,
+                    'price': price,
+                    'change_24h': change_24h,
+                    'ratio': ratio,
+                }
+            )
+
+    return market_details

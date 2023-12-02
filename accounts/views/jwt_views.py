@@ -2,23 +2,42 @@ import logging
 
 from decouple import config
 from django.utils.translation import activate
+from datetime import timedelta
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer, \
+    TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
 
 from accounts.authentication import CustomTokenAuthentication
-from accounts.models import Account
-from accounts.utils.validation import set_login_activity
+from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
+from accounts.models import User
+from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
+from accounts.utils.login import set_login_activity
 
 logger = logging.getLogger(__name__)
+
+
+class JWTTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        refresh = RefreshToken(attrs['refresh'])
+
+        return {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh)
+        }
+
+
+class JWTTokenRefreshView(TokenViewBase):
+    serializer_class = JWTTokenRefreshSerializer
 
 
 def user_has_delegate_permission(user):
@@ -31,7 +50,7 @@ class DelegatedAccountMixin:
         if request.auth and request.user and user_has_delegate_permission(request.user) and \
                 getattr(request.auth, 'token_type', None) == 'access' and \
                 hasattr(request.auth, 'payload') and request.auth.payload.get('account_id'):
-            activate('en-US')
+            # activate('en-US')
 
             return Account.objects.get(id=request.auth.payload.get('account_id')), request.auth.payload.get('variant')
 
@@ -115,12 +134,21 @@ class ClientInfoSerializer(serializers.Serializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
 
         account = Account.objects.get(user_id=user.pk)
         token['account_id'] = account.id
+
+        refresh_token_model, _ = RefreshTokenModel.objects.get_or_create(token=str(token))
+
+        token['refresh_id'] = refresh_token_model.id
+
+        refresh_token_model.token = str(token)
+        refresh_token_model.save(update_fields=['token'])
 
         return token
 
@@ -137,26 +165,48 @@ class SessionTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-
         try:
             serializer.is_valid(raise_exception=True)
-
             client_info_serializer = ClientInfoSerializer(data=request.data.get('client_info'))
 
             client_info = None
 
             if client_info_serializer.is_valid():
                 client_info = client_info_serializer.validated_data
+            user = serializer.user
+            totp = serializer.initial_data.get('totp')
+            # todo: send unsuccessful login message
+            if not user.is_2fa_valid(totp):
+                return Response({'msg': 'totp required', 'code': -2}, status=status.HTTP_401_UNAUTHORIZED)
 
-            set_login_activity(request, user=serializer.user, client_info=client_info, native_app=True)
+            login_activity = set_login_activity(
+                request,
+                user=serializer.user,
+                client_info=client_info,
+                refresh_token=serializer.validated_data['refresh']
+            )
 
-        except TokenError as e:
-            raise InvalidToken(e.args[0])
+            if (not login_activity.is_sign_up and
+                    LoginActivity.objects.filter(user=user, device=login_activity.device).count() == 1):
 
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+                user.suspend(timedelta(hours=1), 'ورود از دستگاه جدید')
+            if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
+                                            ip=login_activity.ip).count() == 1:
+                LoginActivity.send_successful_login_message(login_activity)
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+        except AuthenticationFailed as e:
+            recipient = User.objects.filter(phone=serializer.initial_data.get('phone')).first()
+            if recipient:
+                LoginActivity.send_unsuccessful_login_message(recipient)
+            if e is TokenError:
+                return Response({'error': e.args[0]}, status=401)
+            else:
+                raise e
 
 
 class SessionTokenObtainPairView(TokenObtainPairView):
@@ -178,9 +228,19 @@ class TokenLogoutView(APIView):
     def post(self, request):
         try:
             refresh_token = request.data["refresh"]
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+            login_activity = LoginActivity.objects.filter(refresh_token__token=refresh_token).first()
+
+            if login_activity:
+                login_activity.destroy()
+            else:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
 
             return Response(status=status.HTTP_205_RESET_CONTENT)
+        except TokenError as e:
+            if str(e) == 'Token is blacklisted':
+                return Response(status=status.HTTP_205_RESET_CONTENT)
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(status=status.HTTP_400_BAD_REQUEST)

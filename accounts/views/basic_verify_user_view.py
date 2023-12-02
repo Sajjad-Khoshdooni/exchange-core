@@ -3,9 +3,9 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
-from decouple import config
 
 from accounts.models import User, FinotechRequest
+from accounts.tasks import basic_verify_user
 from accounts.utils.similarity import clean_persian_name
 from financial.models.bank_card import BankCard, BankCardSerializer
 from financial.validators import bank_card_pan_validator
@@ -81,30 +81,33 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         card_pan = validated_data.pop('card_pan')
         bank_card = self.get_kyc_bank_card(user, card_pan)
 
-        # if bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
-        #     raise ValidationError('شماره کارت‌تان تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
-
         if not bank_card.verified:
             bank_card.verified = None
             bank_card.save()
 
+        to_update_user_fields = []
+
         if not user.national_code_verified:
             user.national_code = validated_data['national_code']
             user.national_code_verified = None
+            to_update_user_fields.extend(['national_code', 'national_code_verified'])
 
-        if not user.first_name_verified:
+        if not user.first_name_verified and validated_data.get('first_name'):
             user.first_name = clean_persian_name(validated_data['first_name'])
             user.first_name_verified = None
+            to_update_user_fields.extend(['first_name', 'first_name_verified'])
 
-        if not user.last_name_verified:
+        if not user.last_name_verified and validated_data.get('last_name'):
             user.last_name = clean_persian_name(validated_data['last_name'])
             user.last_name_verified = None
+            to_update_user_fields.extend(['last_name', 'last_name_verified'])
 
         if not user.birth_date_verified:
             user.birth_date = validated_data['birth_date']
             user.birth_date_verified = None
+            to_update_user_fields.extend(['birth_date', 'birth_date_verified'])
 
-        user.save()
+        user.save(update_fields=to_update_user_fields)
         user.change_status(User.PENDING)
 
         if User.objects.filter(level__gte=User.LEVEL2, national_code=user.national_code).exclude(id=user.id):
@@ -113,8 +116,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
 
             raise ValidationError('کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
-
-        from accounts.tasks import basic_verify_user
 
         if not settings.DEBUG_OR_TESTING_OR_STAGING:
             basic_verify_user.s(user.id).apply_async(countdown=60)
@@ -132,8 +133,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             'first_name_verified', 'last_name_verified', 'birth_date_verified'
         )
         extra_kwargs = {
-            'first_name': {'required': True},
-            'last_name': {'required': True},
+            'first_name': {'required': False},
+            'last_name': {'required': False},
             'national_code': {'required': True},
             'birth_date': {'required': True},
         }

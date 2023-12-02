@@ -1,3 +1,5 @@
+import logging
+
 import requests
 from django.conf import settings
 from django.urls import reverse
@@ -6,6 +8,8 @@ from financial.models import Gateway, BankCard, PaymentRequest, Payment
 from financial.models.gateway import GatewayFailed
 from ledger.utils.fields import DONE, CANCELED
 from ledger.utils.wallet_pipeline import WalletPipeline
+
+logger = logging.getLogger(__name__)
 
 
 class ZibalGateway(Gateway):
@@ -25,13 +29,16 @@ class ZibalGateway(Gateway):
         )
 
         if resp.json()['result'] != 100:
+            logger.info('zibal gateway connection error %s' % resp.json())
             raise GatewayFailed
 
         authority = resp.json()['trackId']
+        fee = self.get_ipg_fee(amount)
 
         return PaymentRequest.objects.create(
             bank_card=bank_card,
-            amount=amount,
+            amount=amount - fee,
+            fee=fee,
             gateway=self,
             authority=authority,
             source=source,
@@ -42,7 +49,7 @@ class ZibalGateway(Gateway):
         return 'https://gateway.zibal.ir/start/{}'.format(authority)
 
     def _verify(self, payment: Payment):
-        payment_request = payment.payment_request
+        payment_request = payment.paymentrequest
 
         resp = requests.post(
             self.BASE_URL + '/v1/verify',
@@ -59,12 +66,9 @@ class ZibalGateway(Gateway):
 
         if data['result'] in (100, 201):
             with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.ref_id = data.get('refNumber', 0)
-                payment.ref_status = data.get('status', 0)
-                payment.save()
+                ref_id = data.get('refNumber', 0)
 
-                payment.accept(pipeline)
+                payment.accept(pipeline, ref_id)
 
         else:
             payment.status = CANCELED

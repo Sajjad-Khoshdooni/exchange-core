@@ -1,6 +1,7 @@
 import logging
 
 from celery import shared_task
+from django.utils import timezone
 
 from ledger.models import NetworkAsset
 from ledger.utils.provider import get_provider_requester
@@ -15,6 +16,8 @@ def update_network_fees():
         can_withdraw=True,
     )
 
+    now = timezone.now()
+
     for ns in network_assets:
         info = get_provider_requester().get_network_info(ns.asset.symbol, ns.network.symbol)
         if not info:
@@ -23,4 +26,4 @@ def update_network_fees():
 
         info = info[0]
 
-        ns.update_with_provider(info)
+        ns.update_with_provider(info, now)

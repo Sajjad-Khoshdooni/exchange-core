@@ -1,6 +1,11 @@
 import uuid
+from decimal import Decimal
+from typing import Union
 from uuid import uuid4
+from datetime import timedelta
+from enum import Enum
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
 from django.db.models import Q, UniqueConstraint, Sum
@@ -9,14 +14,17 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from accounts.event.producer import get_kafka_producer
+from accounts.models.user_feature_perm import UserFeaturePerm
+from analytics.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.dto import UserEvent
+from analytics.utils.dto import UserEvent
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator, telephone_number_validator
+from accounts.utils.mask import get_masked_phone
 
 
 class CustomUserManager(UserManager):
@@ -24,14 +32,20 @@ class CustomUserManager(UserManager):
         return super(CustomUserManager, self).create_superuser(extra_fields['phone'], email, password, **extra_fields)
 
 
+class UserType(Enum):
+    CORPORATION = 'corporation'
+    PERSONAL = 'personal'
+
+
 class User(AbstractUser):
     LEVEL1 = 1
     LEVEL2 = 2
     LEVEL3 = 3
+    LEVEL4 = 4
 
     INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
-    SHIB, VOUCHER = 'true', 'voucher'
+    PROMOTIONS = SHIB, VOUCHER, PEPE = 'true', 'voucher', 'pepe'
 
     USERNAME_FIELD = 'phone'
 
@@ -57,8 +71,8 @@ class User(AbstractUser):
         }
     )
 
-    first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
-    last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
+    first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام', )
+    last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی', )
 
     national_code = models.CharField(
         max_length=10,
@@ -67,11 +81,12 @@ class User(AbstractUser):
         db_index=True,
         validators=[national_card_code_validator],
     )
-    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
-    national_code_phone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی و موبایل (شاهکار)',)
+    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی', )
+    national_code_phone_verified = models.BooleanField(null=True, blank=True,
+                                                       verbose_name='تاییدیه کد ملی و موبایل (شاهکار)', )
 
-    birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
-    birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
+    birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد', )
+    birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد', )
 
     level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح ۲')
     level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح 3')
@@ -79,8 +94,7 @@ class User(AbstractUser):
     level = models.PositiveSmallIntegerField(
         default=LEVEL1,
         choices=(
-            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3')
-
+            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3'), (LEVEL4, 'level 4'),
         ),
         verbose_name='سطح',
     )
@@ -95,7 +109,7 @@ class User(AbstractUser):
     reject_reason = models.CharField(
         max_length=32,
         blank=True,
-        choices=((NATIONAL_CODE_DUPLICATED, NATIONAL_CODE_DUPLICATED), )
+        choices=((NATIONAL_CODE_DUPLICATED, NATIONAL_CODE_DUPLICATED),)
     )
 
     first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز ریالی')
@@ -134,16 +148,11 @@ class User(AbstractUser):
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
     show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
-    show_strategy_bot = models.BooleanField(default=False, verbose_name='امکان مشاهده ربات')
+    show_strategy_bot = models.BooleanField(default=True, verbose_name='امکان مشاهده ربات')
     show_community = models.BooleanField(default=False, verbose_name='امکان مشاهده کامیونیتی')
     show_staking = models.BooleanField(default=True, verbose_name='امکان مشاهده سرمایه‌گذاری')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
-
-    withdraw_before_48h_option = models.BooleanField(
-        default=False,
-        verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
-    )
 
     can_withdraw = models.BooleanField(default=True)
     can_withdraw_crypto = models.BooleanField(default=True)
@@ -155,9 +164,40 @@ class User(AbstractUser):
         choices=((1, 1), (2, 2), (3, 3), (5, 5), (10, 10), (20, 20), (40, 40))
     )
 
-    promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
+    promotion = models.CharField(max_length=256, blank=True, choices=[(p, p) for p in PROMOTIONS])
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
+    custom_fiat_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
+
+    is_price_notif_on = models.BooleanField(default=False)
+
+    suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
+    suspension_reason = models.CharField(max_length=128, blank=True, null=True)
+
+    def __str__(self):
+        name = get_masked_phone(self.username)
+
+        if self.get_full_name():
+            name += ' ' + self.get_full_name()
+
+        return name
+
+    @property
+    def registration_type(self):
+        if self.company is None:
+            return UserType.PERSONAL
+        else:
+            return UserType.CORPORATION
+
+    def is_2fa_active(self):
+        return TOTPDevice.objects.filter(user=self, confirmed=True).exists()
+
+    def is_2fa_valid(self, totp: str):
+        if not self.is_2fa_active():
+            return True
+
+        device = TOTPDevice.objects.filter(user=self, confirmed=True).first()
+        return device.verify_token(totp)
 
     def get_account(self) -> Account:
         if not self.id or self.is_anonymous:
@@ -165,6 +205,42 @@ class User(AbstractUser):
 
         account, _ = Account.objects.get_or_create(user=self)
         return account
+
+    def suspend(self, duration: timedelta, reason: str = None):
+        suspended_until = duration + timezone.now()
+        past_suspension = self.suspended_until
+        if not past_suspension:
+            self.suspended_until = suspended_until
+        else:
+            self.suspended_until = max(past_suspension, suspended_until)
+
+        if reason and past_suspension != self.suspended_until:
+            self.suspension_reason = reason
+            self.save(update_fields=['suspended_until', 'suspension_reason'])
+            self.send_suspension_message(reason, duration)
+
+    def send_suspension_message(self, reason: str, duration: timedelta):
+        from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
+        from django.template import loader
+        duration = 'یک‌ روز' if duration == timedelta(days=1) else 'یک‌ ساعت'
+        context = {
+            'reason': reason,
+            'brand': settings.BRAND,
+            'duration': duration
+        }
+        content = loader.render_to_string('accounts/notif/sms/user_suspended_message.txt', context=context)
+        Notification.send(
+            recipient=self,
+            title='محدودیت برداشت',
+            message=f'برداشت‌های رمزارزی شما به دلیل {reason} تا {duration} آینده محدود شده است.',
+        )
+        send_kavenegar_exclusive_sms(self.phone, content=content)
+
+    @property
+    def is_suspended(self):
+        if not self.suspended_until:
+            return False
+        return timezone.now() <= self.suspended_until
 
     @property
     def kyc_bank_card(self):
@@ -181,16 +257,17 @@ class User(AbstractUser):
         verbose_name = _('user')
         verbose_name_plural = _('users')
 
-        constraints = [
-            UniqueConstraint(
-                fields=["national_code"],
-                name="unique_verified_national_code",
-                condition=Q(level__gt=1),
-            )
-        ]
+        # constraints = [
+        #     UniqueConstraint(
+        #         fields=["national_code"],
+        #         name="unique_verified_national_code",
+        #         condition=Q(level__gt=1),
+        #     )
+        # ]
 
         permissions = [
             ("can_generate_notification", "Can Generate All Kind Of Notification"),
+            ("manage_users", "Manage Users Info"),
         ]
 
     def change_status(self, status: str, reason: str = ''):
@@ -202,7 +279,7 @@ class User(AbstractUser):
             if self.level == User.LEVEL1:
                 if User.objects.filter(level__gte=User.LEVEL2, national_code=self.national_code).exclude(id=self.id):
                     self.national_code_verified = False
-                    self.save(update_fields=['national_code_verified'])
+                    self.save(update_fields=['verify_status', 'national_code_verified'])
                     return self.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
 
             self.level += 1
@@ -214,7 +291,8 @@ class User(AbstractUser):
                     self.level_3_verify_datetime = timezone.now()
 
                 self.archived = False
-                self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime', 'archived'])
+                self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime',
+                                         'archived'])
 
             if self.level == User.LEVEL2:
                 from gamify.utils import check_prize_achievements, Task
@@ -244,7 +322,7 @@ class User(AbstractUser):
     @property
     def primary_data_verified(self) -> bool:
         return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified \
-               and self.birth_date and self.birth_date_verified
+            and self.birth_date and self.birth_date_verified
 
     def get_level2_verify_fields(self):
         from financial.models import BankCard
@@ -292,6 +370,12 @@ class User(AbstractUser):
         old = self.id and User.objects.get(id=self.id)
         super(User, self).save(*args, **kwargs)
 
+        from accounts.models import LoginActivity
+        if old and old.password != self.password:
+            for login_Activity in (LoginActivity.objects.filter(user=self)
+                    .exclude(refresh_token__isnull=True, session__isnull=True)):
+                login_Activity.destroy()
+
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
             if self.national_code_phone_verified and self.selfie_image_verified:
                 self.change_status(self.VERIFIED)
@@ -316,9 +400,31 @@ class User(AbstractUser):
             self.selfie_image_discard_text = ''
             super(User, self).save(*args, **kwargs)
 
+    def has_feature_perm(self, feature: str):
+        return self.userfeatureperm_set.filter(feature=feature).exists()
+
+    def get_feature_limit(self, name: str) -> Union[Decimal, None]:
+        user_feature = self.userfeatureperm_set.filter(feature=name).first()
+
+        if user_feature:
+            return user_feature.limit
+        else:
+            return UserFeaturePerm.DEFAULT_LIMITS.get(name)
+
+    def get_legal_name(self):
+        company = getattr(self, 'company', None)
+
+        if company:
+            return company.name
+        else:
+            return self.get_full_name()
+
 
 @receiver(post_save, sender=User)
 def handle_user_save(sender, instance, created, **kwargs):
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
+        return
+
     producer = get_kafka_producer()
     account = instance.get_account()
 
@@ -354,3 +460,36 @@ def handle_user_save(sender, instance, created, **kwargs):
     )
     producer.produce(event)
 
+
+class LevelGrants(models.Model):
+    LEVEL1 = 1
+    LEVEL2 = 2
+    LEVEL3 = 3
+    LEVEL4 = 4
+
+    level = models.PositiveSmallIntegerField(
+        unique=True,
+        default=LEVEL1,
+        choices=(
+            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3'),
+            (LEVEL4, 'level 4'),
+        ),
+        verbose_name='سطح',
+    )
+
+    max_daily_crypto_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
+    max_daily_fiat_withdraw = models.PositiveBigIntegerField(null=True, blank=True, default=0)
+
+    max_daily_fiat_deposit = models.PositiveBigIntegerField(null=True, blank=True, default=None)
+
+    @classmethod
+    def get_level_grants(cls, level: int) -> 'LevelGrants':
+        return LevelGrants.objects.filter(level=level).last() or LevelGrants()
+
+    @classmethod
+    def get_max_daily_crypto_withdraw(cls, user: 'User'):
+        return user.custom_crypto_withdraw_ceil or LevelGrants.get_level_grants(user.level).max_daily_crypto_withdraw
+
+    @classmethod
+    def get_max_daily_fiat_withdraw(cls, user: 'User'):
+        return user.custom_fiat_withdraw_ceil or LevelGrants.get_level_grants(user.level).max_daily_fiat_withdraw

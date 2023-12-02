@@ -1,18 +1,13 @@
-import uuid
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db import models
 from django.db.models import Sum
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.utils import timezone
 
-from accounts.event.producer import get_kafka_producer
-from accounts.models import Account
+from accounts.models import Account, User, EmailNotification
 from accounts.tasks import send_message_by_kavenegar
-from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.dto import StakeRequestEvent
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
 from ledger.utils.fields import get_group_id_field, get_amount_field
@@ -46,6 +41,13 @@ class StakeRequest(models.Model):
     cancel_pending_at = models.DateTimeField(null=True, blank=True)
     end_at = models.DateTimeField(null=True, blank=True)
 
+    @property
+    def remaining_date(self):
+        if self.status in (StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.DONE):
+            return (self.created + timedelta(days=90)) - timezone.now()
+
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
+
     def __str__(self):
         return str(self.stake_option) + ' ' + str(self.account_id)
 
@@ -55,21 +57,17 @@ class StakeRequest(models.Model):
 
         return self.amount + locked_revenue
 
-    def send_email_for_staking(self, user_email: str, template: str):
-        if user_email:
-            email.send_email_by_template(
-                recipient=user_email,
-                template=template,
-                context={'asset': self.stake_option.asset.name_fa, 'amount': self.amount},
-            )
-        else:
-            return
+    def send_email_for_staking(self, user: User, template: str):
+        EmailNotification.send_by_template(
+            recipient=user,
+            template=template,
+            context={'coin': self.stake_option.asset.name_fa, 'amount': self.amount},
+        )
 
     def change_status(self, new_status: str):
         old_status = self.status
         account = self.account
         asset = self.stake_option.asset
-        user_email = account.user.email
 
         valid_change_status = [
             (self.PROCESS, self.PENDING), (self.PROCESS, self.DONE), (self.PROCESS, self.CANCEL_COMPLETE),
@@ -83,14 +81,15 @@ class StakeRequest(models.Model):
         assert (old_status, new_status) in valid_change_status, 'invalid change_status'
 
         updating_datetime_field_mapping = {
-            self.PENDING: 'start_at',
             self.CANCEL_PROCESS: 'cancel_request_at',
             self.CANCEL_PENDING: 'cancel_pending_at',
             self.CANCEL_COMPLETE: 'end_at',
-            self.DONE: 'end_at',
+            self.DONE: 'start_at',
             self.FINISHED: 'end_at'
         }
-        setattr(self, updating_datetime_field_mapping[new_status], timezone.now())
+        updating_field = updating_datetime_field_mapping.get(new_status)
+        if updating_field:
+            setattr(self, updating_field, timezone.now())
 
         if new_status == self.CANCEL_COMPLETE and \
                 old_status in [self.PROCESS, self.CANCEL_PROCESS, self.CANCEL_PENDING]:
@@ -123,7 +122,7 @@ class StakeRequest(models.Model):
                 self.status = new_status
                 self.save()
 
-            self.send_email_for_staking(user_email=user_email, template=email.SCOPE_CANCEL_STAKE)
+            self.send_email_for_staking(account.user, template='staking_canceled')
 
         elif (old_status, new_status) == (self.DONE, self.FINISHED):
             spot_wallet = asset.get_wallet(account)
@@ -152,7 +151,7 @@ class StakeRequest(models.Model):
         elif (old_status, new_status) in [(self.PROCESS, self.DONE), (self.PENDING, self.DONE)]:
             self.status = new_status
             self.save()
-            self.send_email_for_staking(user_email=user_email, template=email.SCOPE_DONE_STAKE)
+            self.send_email_for_staking(account.user, template='staking_activated')
 
             send_message_by_kavenegar(
                 phone=account.user.phone,
@@ -173,20 +172,3 @@ class StakeRequest(models.Model):
         else:
             self.status = new_status
             self.save()
-
-
-@receiver(post_save, sender=StakeRequest)
-def handle_stake_request_save(sender, instance, created, **kwargs):
-    producer = get_kafka_producer()
-    event = StakeRequestEvent(
-        created=instance.created,
-        user_id=instance.account.user_id,
-        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + StakeRequestEvent.type),
-        stake_request_id=instance.id,
-        stake_option_id=instance.stake_option.id,
-        amount=instance.amount,
-        status=instance.status,
-        coin=instance.stake_option.asset.symbol,
-        apr=instance.stake_option.apr
-    )
-    producer.produce(event)

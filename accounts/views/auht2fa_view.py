@@ -1,98 +1,176 @@
-import os
-import uuid
-
-from django.conf import settings
+from django.contrib.auth import authenticate
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from accounts.models import Notification, VerificationCode
-from accounts.models.auth2fa import Auth2Fa
-from accounts.utils import email
-from accounts.utils.auth2fa import create_qr_code, code_2fa_verifier, is_2fa_active_for_user
-from accounts.utils.email import SCOPE_2FA_ACTIVATE
+from rest_framework.generics import CreateAPIView
+from rest_framework.serializers import ModelSerializer
+
+from django.core.exceptions import ValidationError
+from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
+
+from datetime import timedelta
+
+from accounts.utils.validation import get_jalali_now
+from multimedia.fields import ImageField
+from accounts.models import Forget2FA, EmailNotification
+from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
+from accounts.models.phone_verification import VerificationCode
+
+ACTIVATE = 'activate'
+DEACTIVATE = 'deactivate'
 
 
-class Verify2FaSerializer(serializers.Serializer):
-    code_2fa = serializers.CharField(write_only=True)
-    otp = serializers.CharField(write_only=True)
+class TOTPSerializer(serializers.Serializer):
+    token = serializers.CharField(write_only=True)
+    sms_code = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        user = self.context['request'].user
+        token = data.get('token')
+        sms_code = data.get('sms_code')
+        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
+        if not sms_verification_code:
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
+        device = TOTPDevice.objects.filter(user=user).first()
+        if device is None:
+            raise ValidationError({'device': 'ابتدا بارکد را دریافت کنید.'})
+        if not device.verify_token(token):
+            raise ValidationError({'token': 'شناسه ‌دوعاملی صحیح نمی‌باشد.'})
+        sms_verification_code.set_code_used()
+        return data
+
+
+class TOTPView(APIView):
+
+    def post(self, request):
+        user = request.user
+        device = TOTPDevice.objects.filter(user=user).first()
+        scope = request.data.get('scope', ACTIVATE if device is None or device.confirmed is False else DEACTIVATE)
+        VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA, user=user)
+        response_data = {}
+
+        if scope == ACTIVATE:
+            if device is None:
+                device = TOTPDevice.objects.create(user=user, confirmed=False, name='main')
+            if device.confirmed is False:
+                device.key = default_key()
+                device.save(update_fields=['key'])
+                response_data['config'] = device.config_url
+
+        return Response(response_data)
+
+    def put(self, request):
+        user = request.user
+        totp_verify_serializer = TOTPSerializer(
+            data=request.data,
+            context={
+                'request': request
+            }
+        )
+        totp_verify_serializer.is_valid(raise_exception=True)
+        device = TOTPDevice.objects.filter(user=user).first()
+        if not device.confirmed:
+            device.confirmed = True
+            device.save(update_fields=['confirmed'])
+
+            EmailNotification.send_by_template(
+                recipient=user,
+                template='2fa_activation',
+                check_spam=True,
+                context={
+                    'now': get_jalali_now(),
+                }
+            )
+
+            return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری فعال شد.'})
+        else:
+            return Response({'msg': 'ورود دو مرحله‌ای فعال می باشد.'})
+
+    def delete(self, request):
+        user = request.user
+        totp_de_active_serializer = TOTPSerializer(
+            data=request.data,
+            context={
+                'request': request
+            }
+        )
+        totp_de_active_serializer.is_valid(raise_exception=True)
+        device = TOTPDevice.objects.filter(user=user).first()
+
+        if device.confirmed:
+            device.confirmed = False
+            device.save(update_fields=['confirmed'])
+
+            EmailNotification.send_by_template(
+                recipient=user,
+                template='2fa_deactivation',
+                check_spam=True,
+                context={
+                    'now': get_jalali_now(),
+                }
+            )
+
+            user.suspend(duration=timedelta(days=1), reason='غیرفعال کردن شناسه ‌دوعاملی')
+            return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
+        else:
+            return Response({'msg': 'ورود دومرحله‌ای غیرفعال است.'})
+
+
+class CustomLoginSerializer(serializers.Serializer):
+    login = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True)
 
     def validate(self, attrs):
-        user = self.instance
-        code_2fa = attrs['code_2fa']
-        otp = attrs['otp']
-        code_2fa_verifier(user_token=str(user.auth2fa.token), code_2fa=code_2fa)
-        otp_code = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_2FA_ACTIVATE)
+        login = attrs['login'].lower()
+        password = attrs['password']
+        user = authenticate(login=login, password=password)
 
-        if not otp_code:
-            raise ValidationError({'code': 'کد نامعتبر است'})
-        otp_code.set_code_used()
-        return attrs
+        if not user:
+            raise ValidationError({'user': 'نام کاربری یا رمز عبور نادرست است.'})
+
+        if not user.is_2fa_active():
+            raise ValidationError({'totp': 'شناسه دوعاملی غیرفعال می‌باشد.'})
+
+        return user
 
     def save(self, **kwargs):
-        user = self.instance
-        auth2fa = user.auth2fa
-        qr_path = settings.MEDIA_ROOT + auth2fa.qrcode
-        if os.path.isfile(qr_path):
-            os.remove(qr_path)
-        auth2fa.qrcode = ''
-        auth2fa.verified = True
-        auth2fa.save()
+        user = self.validated_data
+        VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_FORGET_2FA, user=user)
 
 
-class Create2FaQrCodeAPIView(APIView):
+class Forget2FAInitView(CreateAPIView):
+    serializer_class = CustomLoginSerializer
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+    permission_classes = []
 
     def post(self, request, *args, **kwargs):
-        user = request.user
+        if request.user.is_authenticated:
+            return Response({'msg': 'user is already authenticated'})
 
-        if getattr(user, 'auth2fa', None):
-            raise ValidationError('این کاربر قبلا qrcode ساخته است')
-
-        qrcode_address = create_qr_code(str(token))
-        Auth2Fa.objects.create(
-            user=user,
-            token=token,
-            qrcode=qrcode_address
-        )
-        return Response({'qrcode_link': settings.MINIO_STORAGE_MEDIA_URL + qrcode_address})
-
-    def delete(self, request, *args, **kwargs):
-        user = request.user
-        if not is_2fa_active_for_user(user):
-            raise ValidationError('رمز دوعاملی برای شما فعال نیست.')
-
-        verify_2fa_serializer = Verify2FaSerializer(data=request.data, instance=user)
-        verify_2fa_serializer.is_valid(raise_exception=True)
-
-        user.auth2fa.delete()
-        return Response({'msg': 'رمز دو عاملی شما حذف شد.'})
+        return self.create(request, *args, **kwargs)
 
 
-class Verify2FaVerificationAPIView(APIView):
+class Forget2FASerializer(ModelSerializer):
+    token = serializers.CharField(write_only=True)
+    selfie_image = ImageField(write_only=True)
 
-    def post(self, request, *args, **kwargs):
-        user = self.request.user
-        if not getattr(user, 'auth2fa', None):
-            raise ValidationError('این کاربر قبلا qrcode نساخته است')
+    def validate(self, attrs):
+        token = attrs.pop('token')
+        verification_code = VerificationCode.get_by_token(token=token, scope=VerificationCode.SCOPE_FORGET_2FA)
+        if not verification_code:
+            raise ValidationError({'token': 'توکن نامعتبر است.'})
+        attrs['user'] = verification_code.user
+        return attrs
 
-        verify_2fa_serializer = Verify2FaSerializer(data=request.data, instance=user)
-        verify_2fa_serializer.is_valid(raise_exception=True)
+    class Meta:
+        model = Forget2FA
+        fields = ('token', 'selfie_image',)
 
-        verify_2fa_serializer.save()
-        try:
-            Notification.send(
-                recipient=user,
-                title='فعال کردن رمز دوعاملی',
-                level=Notification.SUCCESS,
-                message='رمز دوعاملی شما با موفقیت فعال شد.',
-            )
-            if user.email:
-                email.send_email_by_template(
-                    recipient=user.email,
-                    template=SCOPE_2FA_ACTIVATE,
-                )
 
-        except:
-            pass
+class Forget2FAView(CreateAPIView):
+    serializer_class = Forget2FASerializer
+    permission_classes = []
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
-        return Response({'msg': 'رمز دوعاملی برای شما فعال شد.'})
+    class Meta:
+        model = Forget2FA

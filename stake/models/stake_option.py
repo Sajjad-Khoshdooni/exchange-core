@@ -10,6 +10,7 @@ from accounts.models import User
 class StakeOption(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     apr = models.DecimalField(max_digits=6, decimal_places=3, blank=True)
+    is_bot = models.BooleanField(default=False)
 
     user_max_amount = get_amount_field()
     user_min_amount = get_amount_field()
@@ -22,7 +23,7 @@ class StakeOption(models.Model):
 
     precision = models.IntegerField(default=0)
 
-    fee = get_amount_field()
+    fee = get_amount_field(default=0)
 
     def __str__(self):
         return self.asset.symbol + ' ' + str(self.apr)
@@ -54,6 +55,9 @@ class StakeOption(models.Model):
         return max(min((self.user_max_amount - total_stake_amount), self.get_free_cap_amount()), 0)
 
     def clean(self):
+        if None in (self.user_min_amount, self.user_max_amount, self.fee):
+            return
+
         if self.user_min_amount > self.user_max_amount:
             raise ValidationError('مقدار وارد شده برای حداقل مقدار بیشتر از حداکثر مقدار است.')
 

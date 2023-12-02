@@ -1,5 +1,7 @@
 from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 
@@ -9,21 +11,14 @@ from ledger.utils.precision import get_presentation_amount
 
 
 class NetworkAssetSerializer(serializers.ModelSerializer):
-    network = serializers.SerializerMethodField()
     asset = AssetSerializerMini()
-    network_name = serializers.SerializerMethodField()
+    network = serializers.CharField(source='network.symbol')
+    network_name = serializers.CharField(source='network.name')
+    slow_withdraw = serializers.BooleanField(source='network.slow_withdraw')
 
     withdraw_commission = serializers.SerializerMethodField()
     min_withdraw = serializers.SerializerMethodField()
-
-    def get_coin(self, network_asset: NetworkAsset):
-        return network_asset.asset.symbol
-
-    def get_network(self, network_asset: NetworkAsset):
-        return network_asset.network.symbol
-
-    def get_network_name(self, network_asset: NetworkAsset):
-        return network_asset.network.name
+    min_deposit = serializers.SerializerMethodField()
 
     def get_min_withdraw(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_min)
@@ -31,8 +26,12 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     def get_withdraw_commission(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_fee)
 
+    def get_min_deposit(self, network_asset: NetworkAsset):
+        return get_presentation_amount(network_asset.get_min_deposit())
+
     class Meta:
-        fields = ('asset', 'network', 'network_name', 'withdraw_commission', 'min_withdraw')
+        fields = ('asset', 'network', 'network_name', 'withdraw_commission', 'min_withdraw', 'min_deposit',
+                  'slow_withdraw')
         model = NetworkAsset
 
 
@@ -40,8 +39,9 @@ class NetworkAssetView(ListAPIView):
     authentication_classes = []
     permission_classes = []
     pagination_class = LimitOffsetPagination
-
+    search_fields = ['asset__symbol', 'asset__name', 'asset__name_fa', 'network__symbol', 'network__name']
     serializer_class = NetworkAssetSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
 
     queryset = NetworkAsset.objects.filter(
         Q(can_deposit=True, network__can_deposit=True) | Q(network__can_withdraw=True, can_withdraw=True),

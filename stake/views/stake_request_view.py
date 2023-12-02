@@ -5,6 +5,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.models import LoginActivity
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
@@ -19,7 +20,14 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     stake_option_id = serializers.CharField(write_only=True)
     stake_option = StakeOptionSerializer(read_only=True)
     total_revenue = serializers.SerializerMethodField()
+    remaining_date = serializers.SerializerMethodField()
     presentation_amount = serializers.SerializerMethodField()
+
+    def get_remaining_date(self, stake_request: StakeRequest):
+        if stake_request.remaining_date:
+            remaining_seconds = stake_request.remaining_date.total_seconds()
+            round_to = 86400  # total seconds in a day
+            return str(int((remaining_seconds + round_to / 2) // round_to))
 
     def get_presentation_amount(self, stake_request: StakeRequest):
         return get_presentation_amount(stake_request.amount)
@@ -63,9 +71,6 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         amount = validated_data['amount']
         user = validated_data['user']
 
-        if not user.show_staking:
-            raise ValidationError('امکان سرمایه‌گذاری وجود ندارد.')
-
         account = user.get_account()
         asset = stake_option.asset
 
@@ -76,7 +81,8 @@ class StakeRequestSerializer(serializers.ModelSerializer):
             stake_object = StakeRequest.objects.create(
                 stake_option=stake_option,
                 amount=amount,
-                account=user.get_account()
+                account=user.get_account(),
+                login_activity=LoginActivity.from_request(self.context['request']),
             )
             pipeline.new_trx(
                 group_id=stake_object.group_id,
@@ -95,14 +101,19 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = StakeRequest
         fields = ('id', 'created', 'status', 'stake_option', 'amount', 'presentation_amount',
-                  'stake_option_id', 'total_revenue')
+                  'stake_option_id', 'total_revenue', 'remaining_date')
 
 
 class StakeRequestAPIView(ModelViewSet):
     serializer_class = StakeRequestSerializer
 
     def get_queryset(self):
-        return StakeRequest.objects.filter(account=self.request.user.get_account()).order_by('-created')
+        is_bot = self.request.query_params.get('bot', '0') == '1'
+
+        return StakeRequest.objects.filter(
+            account=self.request.user.get_account(),
+            stake_option__is_bot=is_bot
+        ).order_by('-created')
 
     def destroy(self, request, *args, **kwargs):
 

@@ -1,26 +1,21 @@
-from django.db.models import Min, Max
+from decimal import Decimal
+
 import django_filters
+from django.db.models import Min, Max
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.permissions import IsAuthenticated
-from accounts.authentication import CustomTokenAuthentication
 
+from accounts.authentication import CustomTokenAuthentication
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
+from ledger.models.wallet import ReserveWallet
 from market.models import Trade, PairSymbol, Order
 from market.pagination import FastLimitOffsetPagination
 from market.serializers.trade_serializer import TradePairSerializer, TradeSerializer, AccountTradeSerializer
-
-
-class TradeFilter(django_filters.FilterSet):
-    symbol = django_filters.CharFilter(field_name='symbol__name', required=True, lookup_expr='iexact')
-
-    class Meta:
-        model = Trade
-        fields = ('symbol',)
 
 
 class AccountTradeFilter(django_filters.FilterSet):
@@ -28,7 +23,7 @@ class AccountTradeFilter(django_filters.FilterSet):
 
     class Meta:
         model = Trade
-        fields = ('symbol', 'side')
+        fields = ('symbol', 'side', 'order_id')
 
 
 class AccountTradeHistoryView(ListAPIView):
@@ -44,6 +39,24 @@ class AccountTradeHistoryView(ListAPIView):
             account=self.request.user.get_account(),
             status=Trade.DONE,
         )
+
+        strategy = self.request.query_params.get('strategy')
+        agent = self.request.query_params.get('agent')
+
+        if agent and strategy:
+            reserve_wallet = get_object_or_404(
+                ReserveWallet,
+                request_id=f'strategy:{strategy}:{agent}'
+            )
+
+            orders = set(
+                Order.objects.filter(
+                    wallet__variant=reserve_wallet and reserve_wallet.group_id,
+                    filled_amount__gt=Decimal('0')
+                ).values_list('id', flat=True)
+            )
+
+            trades = trades.filter(order_id__in=orders)
 
         market = self.request.query_params.get('market')
         if market:

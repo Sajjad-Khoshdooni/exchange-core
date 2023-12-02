@@ -12,10 +12,8 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from accounts.models import VerificationCode
+from accounts.models import VerificationCode, LoginActivity
 from accounts.permissions import IsBasicVerified
-from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
-from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest, Gateway
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
@@ -27,14 +25,14 @@ from ledger.utils.withdraw_verify import can_withdraw
 
 logger = logging.getLogger(__name__)
 
-MIN_WITHDRAW = 100_000
+MIN_WITHDRAW = 20_000
 MAX_WITHDRAW = 100_000_000
 
 
 class WithdrawRequestSerializer(serializers.ModelSerializer):
     iban = serializers.CharField(write_only=True)
     code = serializers.CharField(write_only=True)
-    code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    totp = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     def create(self, validated_data):
         request = self.context['request']
@@ -50,14 +48,10 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         amount = validated_data['amount']
         iban = validated_data['iban']
         code = validated_data['code']
-
+        totp = validated_data.get('totp', None)
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user, verified=True, deleted=False)
 
         assert account.is_ordinary_user()
-
-        if not is_48h_rule_passed(user):
-            logger.info('FiatRequest rejected due to 48h rule. user=%s' % user.id)
-            raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
         if not bank_account.verified:
             logger.info('FiatRequest rejected due to unverified bank account. user=%s' % user.id)
@@ -66,11 +60,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_FIAT_WITHDRAW)
 
         if not otp_code:
-            raise ValidationError({'code': 'کد نامعتبر است'})
-
-        if is_2fa_active_for_user(user):
-            code_2fa = validated_data.get('code_2fa') or ''
-            code_2fa_verifier(user_token=user.auth2fa.token, code_2fa=code_2fa)
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
+        if not user.is_2fa_valid(totp):
+            raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
 
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
@@ -98,11 +90,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             logger.info('FiatRequest rejected due to max withdraw limit reached. user=%s' % user.id)
             raise ValidationError({'amount': 'شما به سقف برداشت ریالی خود رسیده اید.'})
 
-        # fee_amount = min(4000, int(amount * 0.01))
-        fee_amount = 5000
-        withdraw_amount = amount - fee_amount
-
         gateway = Gateway.get_active_withdraw()
+        fee_amount = gateway.get_withdraw_fee(amount=amount)
+        withdraw_amount = amount - fee_amount
 
         try:
             with WalletPipeline() as pipeline:  # type: WalletPipeline
@@ -112,6 +102,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     fee_amount=fee_amount,
                     bank_account=bank_account,
                     gateway=gateway,
+                    login_activity=LoginActivity.from_request(request=request)
                 )
 
                 pipeline.new_lock(
@@ -129,14 +120,12 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if auto_verify_fiat_withdraw(withdraw_request) and not settings.DEBUG_OR_TESTING_OR_STAGING:
             withdraw_request.change_status(FiatWithdrawRequest.PROCESSING)
-            from financial.tasks import process_withdraw
-            process_withdraw.s(withdraw_request.id).apply_async(countdown=FiatWithdrawRequest.FREEZE_TIME)
 
         return withdraw_request
 
     class Meta:
         model = FiatWithdrawRequest
-        fields = ('iban', 'amount', 'code', 'code_2fa')
+        fields = ('iban', 'amount', 'code', 'totp')
 
 
 class WithdrawRequestView(ModelViewSet):

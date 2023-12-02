@@ -1,14 +1,14 @@
 import logging
 from datetime import timedelta
 
+from decouple import config
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
-from decouple import config
 
 from accounts.models import User
-from accounts.utils.email import send_email_by_template
+from accounts.utils.email import load_email_template, send_email
 from accounts.utils.validation import generate_random_code, fifteen_minutes_later_datetime, MINUTES
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class EmailVerificationCode(models.Model):
 
     TEMPLATES = {
         # SCOPE_FORGET_PASSWORD: 'accounts/email/forget_password',
-        SCOPE_VERIFY_EMAIL: 'verify_email',
+        SCOPE_VERIFY_EMAIL: 'otp',
     }
 
     created = models.DateTimeField(auto_now_add=True)
@@ -77,8 +77,9 @@ class EmailVerificationCode(models.Model):
 
         any_recent_code = EmailVerificationCode.objects.filter(
             email=email,
-            created__gte=timezone.now() - timedelta(minutes=2),
-        ).exists()
+            scope=scope,
+            created__gte=timezone.now() - timedelta(minutes=1),
+        ).count() >= 4
 
         if any_recent_code:
             logger.info('[OTP] Ignored sending email otp because of recent')
@@ -99,16 +100,14 @@ class EmailVerificationCode(models.Model):
 
         template = EmailVerificationCode.TEMPLATES[scope]
 
-        send_email_by_template(
-            recipient=email,
-            template=template,
-            context={
-                'otp_code': otp_code.code,
-                'brand': settings.BRAND,
-                'panel_url': settings.PANEL_URL,
-                'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-            }
-        )
+        email_info = load_email_template(template, context={
+            'otp_code': otp_code.code,
+            'brand': settings.BRAND,
+            'panel_url': settings.PANEL_URL,
+            'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
+        })
+
+        send_email(email, email_info)
 
     def set_code_used(self):
         self.code_used = True

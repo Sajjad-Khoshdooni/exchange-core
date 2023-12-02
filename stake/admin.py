@@ -5,7 +5,6 @@ from django.utils.safestring import mark_safe
 
 from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
-from ledger.models import Trx
 from ledger.utils.precision import get_presentation_amount
 from .models import StakeRequest, StakeRevenue, StakeOption
 
@@ -55,7 +54,8 @@ class StakeRequestAdmin(admin.ModelAdmin):
                     'start_at', 'cancel_request_at', 'cancel_pending_at', 'end_at', 'get_stake_revenue']
     actions = ('stake_request_processing', 'stake_request_done',
                'stake_request_cancel_processing', 'stake_request_cancel_done',)
-    readonly_fields = ('get_stake_option_asset', 'account', 'status', 'stake_option', 'get_amount', 'amount', 'get_user')
+    readonly_fields = ('get_stake_option_asset', 'account', 'status', 'stake_option', 'get_amount', 'amount',
+                       'get_user', 'login_activity')
     list_filter = ('status', StakeStatusFilter)
     search_fields = ('account__user__phone', 'stake_option__asset__symbol')
 
@@ -78,7 +78,7 @@ class StakeRequestAdmin(admin.ModelAdmin):
     def get_user(self, stake_request: StakeRequest):
         user = stake_request.account.user
         link = url_to_admin_list(User) + '{}/change'.format(user.id)
-        return mark_safe("<a href='%s'>%s</a>" % (link, user))
+        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, user))
     get_user.short_description = 'user'
 
     @admin.action(description='بردن به حالت در انتظار', permissions=['view'])
@@ -118,7 +118,7 @@ class StakeRevenueAdmin(admin.ModelAdmin):
     def get_user(self, stake_revenue: StakeRevenue):
         user = stake_revenue.stake_request.account.user
         link = url_to_admin_list(User) + '{}/change'.format(user.id)
-        return mark_safe("<a href='%s'>%s</a>" % (link, user))
+        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, user))
     get_user.short_description = 'user'
 
     def get_stake_option_apr(self, stake_revenue: StakeRevenue):

@@ -1,23 +1,21 @@
 import logging
-import uuid
+from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Sum
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
 from _base.settings import OTC_ACCOUNT_ID
 from accounting.models import TradeRevenue
-from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
-from accounts.utils.dto import TradeEvent
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_system_message
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet, Asset
-from ledger.utils.external_price import SELL
+from ledger.utils.external_price import SELL, BUY
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, get_symbol_presentation_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
 from market.models import Trade, PairSymbol
@@ -49,6 +47,8 @@ class OTCTrade(models.Model):
 
     gap_revenue = get_amount_field(default=0)
     order_id = models.PositiveIntegerField(null=True, blank=True)
+    to_buy_amount = get_amount_field(default=0, validators=())
+    hedged = models.BooleanField(default=False, db_index=True)
 
     def change_status(self, status: str):
         self.status = status
@@ -97,13 +97,21 @@ class OTCTrade(models.Model):
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
                 execution_type=OTCTrade.MARKET,
+                to_buy_amount=otc_request.amount if otc_request.side == BUY else -otc_request.amount,
+                hedged=True
             )
 
             fok_success = otc_trade.try_fok_fill(pipeline)
 
             if not fok_success:
+                if otc_trade.otc_request.symbol.enable:
+                    logger.warning('Hedge otc from market failed', extra={
+                        'otc_request_id': otc_request.id
+                    })
+                    raise HedgeError
                 otc_trade.execution_type = OTCTrade.PROVIDER
-                otc_trade.save(update_fields=['execution_type'])
+                otc_trade.hedged = False
+                otc_trade.save(update_fields=['execution_type', 'hedged'])
                 pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount,
                                   reason=WalletPipeline.TRADE)
 
@@ -127,7 +135,8 @@ class OTCTrade(models.Model):
                 price=self.otc_request.price,
                 side=self.otc_request.side,
                 time_in_force=Order.FOK,
-                pass_min_notional=True
+                pass_min_notional=True,
+                client_order_id=self.group_id
             )
 
             self.order_id = fok_order.id
@@ -197,6 +206,28 @@ class OTCTrade(models.Model):
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(account, Task.TRADE)
 
+        req = self.otc_request
+
+        if not req.symbol.asset.hedge and req.symbol.asset.symbol != Asset.USDT:
+            amount_present = get_symbol_presentation_price(req.symbol.name, req.amount, trunc_zero=True)
+
+            send_system_message(
+                message=f"New unhedged trade: {req.side} {amount_present} {req.symbol.asset} ({round(req.usdt_value, 1)}$)",
+                link=url_to_edit_object(self)
+            )
+
+    def get_pending_hedge_trades(self):
+        return OTCTrade.objects.filter(
+            otc_request__symbol__asset=self.otc_request.symbol.asset,
+            hedged=False,
+            status=OTCTrade.DONE,
+        )
+
+    def get_pending_to_buy_amount(self):
+        return self.get_pending_hedge_trades().aggregate(
+            to_buy=Sum('to_buy_amount')
+        )['to_buy'] or Decimal(0)
+
     def hedge_with_provider(self, hedge: bool = True):
         assert self.execution_type == self.PROVIDER
 
@@ -212,8 +243,7 @@ class OTCTrade(models.Model):
                 hedged = get_provider_requester().try_hedge_new_order(
                     request_id=_key,
                     asset=req.symbol.asset,
-                    side=req.side,
-                    amount=req.amount,
+                    buy_amount=self.get_pending_to_buy_amount(),
                     scope=TRADE
                 )
 
@@ -221,7 +251,7 @@ class OTCTrade(models.Model):
                     from market.models import Order
                     usdt_irt = PairSymbol.objects.get(name='USDTIRT')
 
-                    amount = floor_precision(req.usdt_value, usdt_irt.tick_size)
+                    amount = floor_precision(req.usdt_value, usdt_irt.step_size)
 
                     order = new_order(
                         pipeline=pipeline,
@@ -232,9 +262,18 @@ class OTCTrade(models.Model):
                         fill_type=Order.MARKET,
                         raise_exception=False
                     )
+                    if order and order.trades:
+                        filled_amount = sum(map(lambda t: t.amount, order.trades))
+                        if filled_amount:
+                            filled_value = sum(map(lambda t: t.amount * t.price, order.trades))
+                            filled_price = filled_value / filled_amount
+                            self.otc_request.base_usdt_price = 1 / filled_price
 
                 if hedged:
                     hedge_key = _key
+
+                if hedged or not req.symbol.asset.hedge:
+                    self.get_pending_hedge_trades().update(hedged=True)
 
             from accounting.models.revenue import TradeRevenue
             TradeRevenue.new(
@@ -272,33 +311,3 @@ class OTCTrade(models.Model):
 
     def __str__(self):
         return '%s [%s]' % (self.otc_request, self.status)
-
-
-@receiver(post_save, sender=OTCTrade)
-def handle_OTC_trade_save(sender, instance, created, **kwargs):
-    from ledger.models import FastBuyToken
-
-    user = instance.otc_request.account.user
-    if not user or instance.otc_request.account.type == Account.SYSTEM or instance.status != OTCTrade.DONE:
-        return
-
-    producer = get_kafka_producer()
-    trade_type = 'otc'
-    if FastBuyToken.objects.filter(otc_request=instance.otc_request).exists():
-        trade_type = 'fast_buy'
-
-    event = TradeEvent(
-        id=instance.id,
-        user_id=user.id,
-        amount=instance.otc_request.amount,
-        price=instance.otc_request.price,
-        symbol=instance.otc_request.symbol.name,
-        trade_type=trade_type,
-        market=instance.otc_request.market,
-        created=instance.created,
-        value_usdt=instance.otc_request.usdt_value,
-        value_irt=instance.otc_request.irt_value,
-        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TradeEvent.type)
-    )
-
-    producer.produce(event)

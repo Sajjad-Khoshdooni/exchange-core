@@ -1,6 +1,7 @@
 import logging
-import random
 
+from decouple import config, Csv
+from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -10,20 +11,13 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from decouple import config
 
-from accounts.models import User, TrafficSource, Referral
+from accounts.models import User, Company, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
-from accounts.utils.validation import set_login_activity
-from accounts.validators import mobile_number_validator, password_validator
-from experiment.models.experiment import Experiment
-from experiment.models.link import Link
-from experiment.models.variant import Variant
-from experiment.models.variant_user import VariantUser
-from experiment.utils.exceptions import TokenCreationError
-
+from accounts.utils.login import set_login_activity
+from accounts.validators import mobile_number_validator, password_validator, company_national_id_validator
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +31,11 @@ class InitiateSignupView(APIView):
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
-        print('signup/init app ip: %s' % get_client_ip(request))
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
+            req_origin = request.META.get('HTTP_ORIGIN')
+            print('HTTP_ORIGIN: {}'.format(req_origin))
+            if req_origin in config('SIGNUP_CLOSED_DOMAINS', cast=Csv(), default=''):
+                raise ValidationError('امکان ثبت‌نام وجود ندارد.')
 
         if request.user.is_authenticated:
             return Response({'msg': 'already logged in', 'code': 1})
@@ -60,6 +58,8 @@ class SignupSerializer(serializers.Serializer):
     referral_code = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     promotion = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     source = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
+    company_national_id = serializers.CharField(allow_null=True, allow_blank=True, write_only=True,
+                                                required=False, validators=[company_national_id_validator])
 
     @staticmethod
     def validate_referral_code(code):
@@ -71,11 +71,13 @@ class SignupSerializer(serializers.Serializer):
         token = validated_data.pop('token')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_VERIFY_PHONE)
         password = validated_data.pop('password')
+        company_national_id = validated_data.get('company_national_id') or None
 
         if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
 
-        if User.objects.filter(phone=otp_code.phone).exists():
+        if (User.objects.filter(phone=otp_code.phone).exists() or
+                (company_national_id and Company.objects.filter(national_id=company_national_id).exists())):
             raise ValidationError({'phone': 'شما قبلا در سیستم ثبت‌نام کرده‌اید. لطفا از قسمت ورود، وارد شوید.'})
 
         validate_password(password=password)
@@ -83,13 +85,17 @@ class SignupSerializer(serializers.Serializer):
         phone = otp_code.phone
         promotion = validated_data.get('promotion') or ''
 
-        user = User.objects.create_user(
-            username=phone,
-            phone=phone,
-            promotion=promotion
-        )
-
         with transaction.atomic():
+
+            user = User.objects.create_user(
+                username=phone,
+                phone=phone,
+                promotion=promotion
+            )
+
+            if company_national_id:
+                Company.objects.create(national_id=company_national_id, user=user)
+
             if not config('ENABLE_MARGIN_SHOW_TO_ALL', cast=bool, default=True):
                 user.show_margin = False
 
@@ -113,16 +119,7 @@ class SignupSerializer(serializers.Serializer):
 
         self.create_traffic_source(user, utm)
 
-        try:
-            self.user_experiment_assign(user)
-        except Exception as e:
-            logger.exception(
-                'Experiment assigning failed',
-                extra={
-                    'exp': e,
-                    'user': user
-                }
-            )
+        self.set_missions_to_user(user)
 
         return user
 
@@ -171,30 +168,22 @@ class SignupSerializer(serializers.Serializer):
             user_agent=self.context['request'].META['HTTP_USER_AGENT'][:256],
         )
 
-    @classmethod
-    def user_experiment_assign(cls, user):
-        for experiment in Experiment.objects.filter(active=True):
-            variant_list = Variant.objects.filter(experiment=experiment).order_by('id')
-            variant = variant_list[random.randint(0, 1)]  # todo :: generalize
+    def set_missions_to_user(self, user):
+        from gamify.models import MissionJourney, MissionTemplate, UserMission
 
-            if variant is None:
-                return
+        try:
+            account = user.get_account()
+            journey = MissionJourney.get_journey(account)
 
-            link = None
-            if variant.type == Variant.SMS_NOTIF:
-                try:
-                    link = Link.create(user=user)
-                except TokenCreationError:
-                    logger.info('TokenCreationError', extra={
-                        'user': user.id
-                    })
-                    return
+            missions = []
+            for mission_template in MissionTemplate.objects.filter(journey=journey, active=True):
+                missions.append(UserMission(user=user, mission=mission_template))
 
-            VariantUser.objects.create(
-                variant=variant,
-                user=user,
-                link=link
-            )
+            if missions:
+                UserMission.objects.bulk_create(missions)
+
+        except Exception as e:
+            logger.warning(f'Failed to set missions to user={user.id} due to={str(e)}')
 
 
 class SignupView(CreateAPIView):
@@ -209,5 +198,4 @@ class SignupView(CreateAPIView):
             request=self.request,
             user=user,
             is_sign_up=True,
-            native_app=serializer.validated_data.get('source') == 'app'
         )

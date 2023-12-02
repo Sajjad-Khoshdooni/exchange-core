@@ -7,11 +7,13 @@ from market.views import *
 router = routers.DefaultRouter()
 router.register(r'^orders', OrderViewSet, basename='order')
 router.register(r'^stop-loss-orders', StopLossViewSet, basename='stop_loss')
+router.register(r'^oco-orders', OCOViewSet, basename='oco')
 
 urlpatterns = [
     path('irt/info/', cache_page(60)(MarketInfoView.as_view())),
     path('depth/<str:symbol>/', OrderBookAPIView.as_view()),
     path('orders/cancel/', CancelOrderAPIView.as_view()),
+    path('symbols/spreads/', SymbolSpreadListView.as_view()),
     path('symbols/<str:name>/', cache_page(300)(SymbolDetailedStatsAPIView.as_view())),
     path('symbols/', SymbolListAPIView.as_view()),
     path('myTrades/', AccountTradeHistoryView.as_view()),
@@ -21,4 +23,5 @@ urlpatterns = [
     path('open-orders/', OpenOrderListAPIView.as_view()),
     path('', include(router.urls)),
     path('bookmark/', BookmarkSymbolAPIView.as_view()),
+    path('discover/', MarketDiscoverView.as_view())
 ]

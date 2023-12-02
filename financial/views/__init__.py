@@ -8,3 +8,4 @@ from .zibal_callback_view import ZibalCallbackView
 from .proxy_redirect_view import ProxyPaymentRedirectView
 from .jibit_callback_view import JibitCallbackView, JibitPaymentIdCallbackView
 from .gateway_info_view import GatewayInfoView
+from .payment_id_view import PaymentIdViewsSet

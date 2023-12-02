@@ -2,10 +2,9 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from ledger.models import Asset
 from ledger.utils.external_price import BUY
-from ledger.utils.precision import floor_precision, decimal_to_str
-from market.models import Trade, BaseTrade
+from ledger.utils.precision import get_presentation_amount
+from market.models import Trade
 
 
 class AccountTradeSerializer(serializers.ModelSerializer):
@@ -18,26 +17,20 @@ class AccountTradeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, trade: Trade):
         data = super(AccountTradeSerializer, self).to_representation(trade)
-        amount = floor_precision(Decimal(data['amount']), trade.symbol.step_size)
-        if not amount:
-            amount = floor_precision(trade.symbol.min_trade_quantity, trade.symbol.step_size)
-        data['amount'] = str(amount)
-        data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
-        data['base_amount'] = decimal_to_str(floor_precision(Decimal(data['base_amount']), trade.symbol.tick_size))
+        data['amount'] = get_presentation_amount(data['amount'])
+        data['price'] = get_presentation_amount(data['price'])
+        data['base_amount'] = get_presentation_amount(data['base_amount'])
 
         if 'fee_amount' in data:
-            if data['side'] == BUY:
-                data['fee_amount'] = trade.symbol.asset.get_presentation_amount(data['fee_amount'])
-            elif trade.symbol.base_asset.symbol == Asset.IRT:
-                data['fee_amount'] = trade.symbol.asset.get_presentation_price_irt(data['fee_amount'])
-            elif trade.symbol.base_asset.symbol == Asset.USDT:
-                data['fee_amount'] = trade.symbol.asset.get_presentation_price_usdt(data['fee_amount'])
+            data['fee_amount'] = get_presentation_amount(data['fee_amount'])
+
             data['fee_asset'] = data['asset'] if data['side'] == BUY else data['base_asset']
         return data
 
     class Meta:
         model = Trade
-        fields = ('created', 'asset', 'base_asset', 'side', 'amount', 'price', 'base_amount', 'fee_amount', 'market')
+        fields = ('id', 'created', 'asset', 'base_asset', 'side', 'amount', 'price', 'base_amount', 'fee_amount',
+                  'market')
 
 
 class TradeSerializer(serializers.ModelSerializer):
@@ -54,13 +47,13 @@ class TradeSerializer(serializers.ModelSerializer):
     def to_representation(self, trade: Trade):
         data = super().to_representation(trade)
 
-        amount = floor_precision(Decimal(data['amount']), trade.symbol.step_size)
+        amount = get_presentation_amount(Decimal(data['amount']), trade.symbol.step_size)
 
         if not amount:
-            amount = floor_precision(trade.symbol.min_trade_quantity, trade.symbol.step_size)
+            amount = get_presentation_amount(trade.symbol.min_trade_quantity, trade.symbol.step_size)
 
         data['amount'] = str(amount)
-        data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
+        data['price'] = get_presentation_amount(Decimal(data['price']), trade.symbol.tick_size, trunc_zero=False)
 
         return data
 

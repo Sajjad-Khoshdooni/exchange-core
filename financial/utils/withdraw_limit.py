@@ -1,26 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db.models import Sum
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import User, LevelGrants
 from ledger.models import Transfer, Asset
-from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import CANCELED
-
-MILLION = 10 ** 6
-
-FIAT_WITHDRAW_LIMIT = {
-    User.LEVEL1: 0,
-    User.LEVEL2: 100 * MILLION,
-    User.LEVEL3: 200 * MILLION
-}
-
-CRYPTO_WITHDRAW_LIMIT = {
-    User.LEVEL1: 0,
-    User.LEVEL2: 100 * MILLION,
-    User.LEVEL3: 200 * MILLION
-}
+from ledger.utils.price import get_last_price
 
 
 def get_start_of_day() -> datetime:
@@ -45,12 +31,10 @@ def get_fiat_withdraw_irt_value(user: User):
 
 
 def get_crypto_withdraw_irt_value(user: User):
-    start_of_day = get_start_of_day()
-
     crypto_withdraws = Transfer.objects.filter(
         deposit=False,
         wallet__account__user=user,
-        created__gte=start_of_day
+        created__gte=timezone.now() - timedelta(days=1)
     ).exclude(
         status=Transfer.CANCELED
     ).values('wallet__asset__symbol').annotate(
@@ -62,23 +46,20 @@ def get_crypto_withdraw_irt_value(user: User):
     crypto_amount = 0
 
     for symbol, amount in crypto_withdraws.items():
-        price = get_external_price(
-            coin=symbol,
-            base_coin=Asset.IRT,
-            side=BUY,
-            allow_stale=True
-        )
+        price = get_last_price(symbol + Asset.IRT)
         crypto_amount += price * amount
 
     return crypto_amount
 
 
 def user_reached_fiat_withdraw_limit(user: User, irt_value) -> bool:
-    return get_fiat_withdraw_irt_value(user) + irt_value > FIAT_WITHDRAW_LIMIT[user.level]
+    today_user_fiat_withdraw = get_fiat_withdraw_irt_value(user)
+    max_daily_fiat_withdraw = LevelGrants.get_max_daily_fiat_withdraw(user)
+    return today_user_fiat_withdraw + irt_value > max_daily_fiat_withdraw
 
 
 def user_reached_crypto_withdraw_limit(user: User, irt_value) -> bool:
-    ceil = user.custom_crypto_withdraw_ceil or CRYPTO_WITHDRAW_LIMIT[user.level]
+    ceil = LevelGrants.get_max_daily_crypto_withdraw(user)
     return get_crypto_withdraw_irt_value(user) + irt_value > ceil
 
 

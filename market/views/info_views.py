@@ -1,11 +1,10 @@
-from django.db.models import Max, Min
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 
 from ledger.models.asset import Asset
-from ledger.utils.external_price import get_external_price, SELL, BUY
-
-from market.models import Order
+from ledger.utils.external_price import SELL, BUY
+from ledger.utils.precision import get_symbol_presentation_price
+from ledger.utils.price import get_prices
 
 
 class AssetListSerializer(serializers.ModelSerializer):
@@ -13,22 +12,14 @@ class AssetListSerializer(serializers.ModelSerializer):
     bid = serializers.SerializerMethodField()
 
     def get_ask(self, asset: Asset):
+        symbol = asset.symbol + Asset.IRT
         asks = self.context['asks']
-        price = asks.get(asset.symbol)
-
-        if not price:
-            price = get_external_price(asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True)
-
-        return asset.get_presentation_price_irt(price)
+        return get_symbol_presentation_price(symbol, asks.get(symbol))
 
     def get_bid(self, asset: Asset):
+        symbol = asset.symbol + Asset.IRT
         bids = self.context['bids']
-        price = bids.get(asset.symbol)
-
-        if not price:
-            price = get_external_price(asset.symbol, base_coin=Asset.IRT, side=BUY, allow_stale=True)
-
-        return asset.get_presentation_price_irt(price)
+        return get_symbol_presentation_price(symbol, bids.get(symbol))
 
     class Meta:
         model = Asset
@@ -45,17 +36,10 @@ class MarketInfoView(ListAPIView):
     def get_serializer_context(self):
         ctx = super(MarketInfoView, self).get_serializer_context()
 
-        bids = dict(Order.open_objects.filter(
-            side=BUY,
-            symbol__base_asset__symbol=Asset.IRT,
-            symbol__enable=True,
-        ).values('symbol__asset__symbol').annotate(price=Max('price')).values_list('symbol__asset__symbol', 'price'))
+        coins = list(self.get_queryset().values_list('symbol', flat=True))
 
-        asks = dict(Order.open_objects.filter(
-            side=SELL,
-            symbol__base_asset__symbol=Asset.IRT,
-            symbol__enable=True,
-        ).values('symbol__asset__symbol').annotate(price=Min('price')).values_list('symbol__asset__symbol', 'price'))
+        bids = get_prices([coin + Asset.IRT for coin in coins], side=BUY, allow_stale=True)
+        asks = get_prices([coin + Asset.IRT for coin in coins], side=SELL, allow_stale=True)
 
         return {
             **ctx,

@@ -13,12 +13,13 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
-from accounts.authentication import CustomTokenAuthentication
+from accounts.authentication import TradeTokenAuthentication, CustomTokenAuthentication
 from accounts.views.jwt_views import DelegatedAccountMixin, user_has_delegate_permission
 from ledger.models.wallet import ReserveWallet
-from market.models import Order, CancelRequest, PairSymbol
+from market.models import Order, CancelRequest, PairSymbol, OCO
 from market.models import StopLoss, Trade
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
+from market.serializers.oco_serializer import OCOSerializer
 from market.serializers.order_serializer import OrderIDSerializer, OrderSerializer
 from market.serializers.order_stoploss_serializer import OrderStopLossSerializer
 from market.serializers.stop_loss_serializer import StopLossSerializer
@@ -49,7 +50,7 @@ class OrderViewSet(mixins.CreateModelMixin,
                    mixins.ListModelMixin,
                    GenericViewSet,
                    DelegatedAccountMixin):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
+    authentication_classes = (SessionAuthentication, TradeTokenAuthentication, JWTAuthentication)
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
@@ -74,6 +75,8 @@ class OrderViewSet(mixins.CreateModelMixin,
             ).first()
             if reserve_wallet:
                 filters = {'wallet__variant': reserve_wallet.group_id}
+            else:
+                return Order.objects.none()
 
         return Order.objects.filter(account=account, **filters).select_related(
             'symbol', 'wallet', 'stop_loss').order_by('-created')
@@ -88,7 +91,14 @@ class OrderViewSet(mixins.CreateModelMixin,
         if self.request.query_params.get('only_id') == '1' or self.request.method != 'GET':
             return context
         else:
-            context['trades'] = Trade.get_account_orders_filled_price(account)
+            order_filter = {}
+            client_order_id = self.request.query_params.get('client_order_id')
+            order_id = self.request.query_params.get('id')
+            if client_order_id:
+                order_filter = {'client_order_id': client_order_id}
+            elif order_id:
+                order_filter = {'id': order_id}
+            context['trades'] = Trade.get_account_orders_filled_price(account, order_filter)
             return context
 
 
@@ -99,28 +109,41 @@ class OpenOrderListAPIView(APIView):
     def get(self, request, *args, **kwargs):
         account = self.request.user.get_account()
 
-        context = {
-            'trades': Trade.get_account_orders_filled_price(account),
-        }
         filters = {}
+        exclude_filters = {}
         symbol_filter = self.request.query_params.get('symbol')
         side_filter = self.request.query_params.get('side')
         bot_filter = self.request.query_params.get('bot')
+        oco_filter = self.request.query_params.get('oco')
         if symbol_filter:
             symbol = get_object_or_404(PairSymbol, name=symbol_filter.upper())
             filters['symbol'] = symbol
         if side_filter:
             filters['side'] = side_filter
+        if oco_filter:
+            filters['oco__isnull'] = not (str(oco_filter) == '1')
         if bot_filter:
-            filters['wallet__variant__isnull'] = not (str(bot_filter) == 'true')
+            reserved_variants = ReserveWallet.objects.filter(sender__account=account).values_list('group_id', flat=True)
+            if str(bot_filter) == '1':
+                filters['wallet__variant__in'] = reserved_variants
+            else:
+                exclude_filters['wallet__variant__in'] = reserved_variants
 
         open_orders = Order.open_objects.filter(
             wallet__account=account, stop_loss__isnull=True, **filters
-        ).select_related('symbol', 'wallet', )
+        ).exclude(**exclude_filters).select_related('symbol', 'wallet', )
 
         open_stop_losses = StopLoss.open_objects.filter(
             wallet__account=account, **filters
-        ).select_related('symbol', 'wallet')
+        ).exclude(**exclude_filters).select_related('symbol', 'wallet')
+
+        order_filter = {
+            'id__in': list(open_orders.values_list('id', flat=True)) + list(
+                open_stop_losses.exclude(order__isnull=True).values_list('order', flat=True))
+        }
+        context = {
+            'trades': Trade.get_account_orders_filled_price(account, order_filter=order_filter),
+        }
 
         serialized_orders = OrderStopLossSerializer(open_orders, many=True, context=context)
         serialized_stop_losses = OrderStopLossSerializer(open_stop_losses, many=True, context=context)
@@ -135,7 +158,7 @@ class OpenOrderListAPIView(APIView):
 
 
 class CancelOrderAPIView(CreateAPIView, DelegatedAccountMixin):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
+    authentication_classes = (SessionAuthentication, TradeTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
     serializer_class = CancelRequestSerializer
@@ -166,6 +189,28 @@ class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):
         account, variant = self.get_account_variant(self.request)
         return {
             **super(StopLossViewSet, self).get_serializer_context(),
+            'account': account,
+            'variant': variant,
+        }
+
+
+class OCOViewSet(ModelViewSet, DelegatedAccountMixin):
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
+    permission_classes = (IsAuthenticated,)
+    pagination_class = LimitOffsetPagination
+
+    serializer_class = OCOSerializer
+
+    filter_backends = [DjangoFilterBackend]
+    # filter_class = StopLossFilter
+
+    def get_queryset(self):
+        return OCO.objects.filter(wallet__account=self.get_account_variant(self.request)[0]).order_by('-created')
+
+    def get_serializer_context(self):
+        account, variant = self.get_account_variant(self.request)
+        return {
+            **super(OCOViewSet, self).get_serializer_context(),
             'account': account,
             'variant': variant,
         }

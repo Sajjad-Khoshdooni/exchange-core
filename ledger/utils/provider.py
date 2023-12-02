@@ -1,28 +1,27 @@
 import logging
 import math
-from collections import defaultdict
-from dataclasses import dataclass
+import time
 from datetime import datetime
 from decimal import Decimal
 from json import JSONDecodeError
 from math import log10
-from typing import List, Dict, Union
+from typing import List, Union
 
 import requests
 from decouple import config
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Sum
-from pydantic.decorator import validate_arguments
 from urllib3.exceptions import ReadTimeoutError
 
 from accounts.verifiers.jibit import Response
 from ledger.exceptions import HedgeError
-from ledger.models import Asset, Wallet, Transfer
+from ledger.models import Asset, Transfer
 from ledger.utils.cache import get_cache_func_key
-from ledger.utils.external_price import SELL, BUY, get_external_price
+from ledger.utils.dto import MarketInfo, NetworkInfo, WithdrawStatus, CoinInfo
+from ledger.utils.external_price import SELL, BUY
 from ledger.utils.fields import DONE
 from ledger.utils.precision import floor_precision
+from ledger.utils.price import get_price
 
 TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE, PROVIDE_BASE, FAKE = \
     'trade', 'borrow', 'liquid', 'withdraw', 'hedge', 'prv-base', 'fake'
@@ -33,70 +32,9 @@ SPOT, FUTURES = 'spot', 'futures'
 BINANCE, KUCOIN, MEXC = 'binance', 'kucoin', 'mexc'
 
 
-@validate_arguments
-@dataclass
-class MarketInfo:
-    coin: str
-    base_coin: str
-    exchange: str
-
-    type: str  # spot | futures
-
-    step_size: Decimal
-    min_quantity: Decimal
-    max_quantity: Decimal
-
-    min_notional: Decimal
-
-
-@validate_arguments
-@dataclass
-class CoinOrders:
-    coin: str
-    buy: Decimal
-    sell: Decimal
-
-
-@validate_arguments
-@dataclass
-class NetworkInfo:
-    coin: str
-    network: str
-
-    withdraw_min: Decimal
-    withdraw_max: Decimal
-    withdraw_fee: Decimal
-    withdraw_enable: bool
-    deposit_enable: bool
-    address_regex: str
-
-
-@validate_arguments
-@dataclass
-class WithdrawStatus:
-    status: str
-    tx_id: str
-
-
-@validate_arguments
-@dataclass
-class CoinInfo:
-    coin: str = ''
-    price: float = 0
-    change_24h: float = 0
-    volume_24h: float = 0
-    change_7d: float = 0
-    high_24h: float = 0
-    low_24h: float = 0
-    change_1h: float = 0
-    cmc_rank: int = 0
-    market_cap: float = 0
-    circulating_supply: float = 0
-    weekly_trend_url: str = ''
-
-
 class ProviderRequester:
-    def collect_api(self, path: str, method: str = 'GET', data: dict = None, cache_timeout: int = None) -> Response:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, cache_timeout: int = None,
+                    timeout: float = 10) -> Response:
         cache_key = None
         if cache_timeout:
             cache_key = 'provider:' + get_cache_func_key(self.__class__, path, method, data)
@@ -104,14 +42,14 @@ class ProviderRequester:
             if cached_result is not None:
                 return Response(data=cached_result)
 
-        result = self._collect_api(path, method, data)
+        result = self._collect_api(path, method, data, timeout=timeout)
 
         if cache_timeout and result.success:
             cache.set(cache_key, result.data, cache_timeout)
 
         return result
 
-    def _collect_api(self, path: str, method: str = 'GET', data: dict = None) -> Response:
+    def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 10) -> Response:
         if data is None:
             data = {}
 
@@ -119,7 +57,7 @@ class ProviderRequester:
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            'timeout': timeout,
             'headers': {'Authorization': config('PROVIDER_TOKEN')},
         }
 
@@ -137,67 +75,7 @@ class ProviderRequester:
         except JSONDecodeError:
             resp_json = None
 
-        if not resp.ok:
-            logger.info('PROVIDER', path, method, data, resp_json)
-
         return Response(data=resp_json, success=resp.ok, status_code=resp.status_code)
-
-    def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
-        if asset:
-            data = {'coin': asset.symbol}
-        else:
-            data = {}
-
-        resp = self.collect_api('/api/v1/orders/total/', data=data)
-        assert resp.success
-
-        coin_orders_data_map = defaultdict(dict)
-        for order_data in resp.data:
-            coin = order_data['coin']
-            side = order_data['side']
-            amount = Decimal(order_data['amount'])
-
-            coin_orders_data_map[coin][side] = amount
-
-        orders = []
-
-        for coin, orders_data in coin_orders_data_map.items():
-            orders.append(CoinOrders(
-                coin=coin,
-                buy=Decimal(orders_data.get('buy', 0)),
-                sell=Decimal(orders_data.get('sell', 0)),
-            ))
-
-        return orders
-
-    def get_hedge_amount(self, asset: Asset, coin_order: CoinOrders = None) -> Decimal:
-        """
-        how much assets we have more!
-
-        out = -internal - binance transfer deposit
-        hedge = all assets - users = (internal + binance manual deposit + binance withdraw + binance trades)
-                + system + out = system + binance trades + binance manual deposit
-
-        given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
-        """
-        from accounts.models import Account
-
-        system_balance = Wallet.objects.filter(
-            account__type=Account.SYSTEM,
-            asset=asset
-        ).aggregate(
-            sum=Sum('balance')
-        )['sum'] or 0
-
-        if not coin_order:
-            coin_order = next(iter(self.get_total_orders_amount_sum(asset)), None)
-
-        orders_diff = 0
-
-        if coin_order:
-            orders_diff = coin_order.buy - coin_order.sell
-
-        return system_balance + orders_diff
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
         resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol}, cache_timeout=300)
@@ -210,7 +88,7 @@ class ProviderRequester:
         return resp.data
 
     def get_futures_info(self, exchange: str) -> dict:
-        resp = self.collect_api('/api/v1/futures/', data={'exchange': exchange})
+        resp = self.collect_api('/api/v1/futures/', timeout=30, data={'exchange': exchange})
         return resp.data
 
     def get_network_info(self, coin: str, network: str = None) -> List[NetworkInfo]:
@@ -220,18 +98,14 @@ class ProviderRequester:
         if network:
             params['network'] = network
 
-        resp = self.collect_api('/api/v1/networks/', data=params, cache_timeout=300)
+        resp = self.collect_api('/api/v1/networks/', timeout=30, data=params)
         if resp.success:
             for data in resp.data:
                 info.append(NetworkInfo(**data))
 
         return info
 
-    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
-        assert amount >= 0
-        if amount > 0:
-            assert side
-
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0):
         if settings.DEBUG_OR_TESTING_OR_STAGING:
             logger.info('ignored due to debug')
             return
@@ -240,34 +114,30 @@ class ProviderRequester:
             logger.info('ignored due to no hedge method')
             return
 
-        to_buy = amount if side == BUY else -amount
-        hedge_amount = self.get_hedge_amount(asset) - to_buy
-
         market_info = self.get_market_info(asset)
 
         step_size = market_info.step_size
 
         # Hedge strategy: don't sell assets ASAP and hold them!
 
-        if hedge_amount < 0:
+        if buy_amount > 0:
             threshold = step_size / 2
         else:
             threshold = step_size * 2
 
-        if abs(hedge_amount) > threshold:
-            side = SELL
+        if abs(buy_amount) > threshold:
+            side = BUY
 
-            if hedge_amount < 0:
-                hedge_amount = -hedge_amount
-                side = BUY
+            if buy_amount < 0:
+                buy_amount = -buy_amount
+                side = SELL
 
             round_digits = -int(log10(step_size))
 
-            order_amount = round(hedge_amount, round_digits)
+            order_amount = round(buy_amount, round_digits)
 
-            price = get_external_price(
-                coin=asset.symbol,
-                base_coin=Asset.USDT,
+            price = get_price(
+                asset.symbol + Asset.USDT,
                 side=BUY
             )
             min_notional = market_info.min_notional * Decimal('1.1')
@@ -326,7 +196,7 @@ class ProviderRequester:
             'scope': scope,
             'amount': str(amount),
             'side': side
-        })
+        }, timeout=15)
         return resp.success
 
     def new_withdraw(self, transfer: Transfer) -> Response:
@@ -363,26 +233,19 @@ class ProviderRequester:
     def get_order(self, request_id: str):
         return self.collect_api('/api/v1/orders/details/', method='GET', data={
             'request_id': request_id,
-        }).data
+        }, timeout=30).data
 
-    # todo: add caching
-    def get_coins_info(self, coins: List[str]) -> Dict[str, CoinInfo]:
+    def get_coins_info(self, coins: List[str] = None) -> List[dict]:
         data = {}
         if coins:
             data['coins'] = ','.join(coins)
 
-        resp = self.collect_api('/api/v1/coins/info/', data=data, cache_timeout=300)
+        resp = self.collect_api('/api/v1/coins/info/', data=data, timeout=30, cache_timeout=300)
 
         if not resp.success:
-            return {}
+            return []
 
-        coins_info = {}
-
-        for info_data in resp.data:
-            info = CoinInfo(**info_data)
-            coins_info[info.coin] = info
-
-        return coins_info
+        return resp.data
 
     def get_price(self, symbol: str, side: str, delay: int = 300, when: datetime = None) -> Decimal:
         resp = self.collect_api('/api/v1/market/price/history/', data={
@@ -414,7 +277,10 @@ class ProviderRequester:
         return resp.data
 
     def get_balances(self, profile_id: int, market: str) -> Union[dict, None]:
-        resp = self.collect_api('/api/v1/profiles/{}/{}/balances/'.format(profile_id, market))
+        resp = self.collect_api(
+            path='/api/v1/profiles/{}/{}/balances/'.format(profile_id, market),
+            timeout=60
+        )
 
         if not resp.success:
             return
@@ -432,13 +298,14 @@ class ProviderRequester:
 
 
 class MockProviderRequester(ProviderRequester):
-    def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
-        return []
-
-    def get_hedge_amount(self, asset: Asset, coin_orders: CoinOrders = None) -> Decimal:
-        return Decimal(0)
+    def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 10):
+        if config('IRAN_ACCESS_TIMEOUT_MODE', default=None):
+            time.sleep(60)
+            raise requests.exceptions.Timeout
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
+        self._collect_api('/')
+
         return MarketInfo(
             coin=asset.symbol,
             base_coin=Asset.USDT,
@@ -451,12 +318,19 @@ class MockProviderRequester(ProviderRequester):
         )
 
     def get_spot_balance_map(self, exchange: str, market: str = 'trade') -> dict:
+        self._collect_api('/')
         return {}
 
     def get_futures_info(self, exchange: str) -> dict:
+        self._collect_api('/')
         return {}
 
     def get_network_info(self, asset: str, network: str = None) -> List[NetworkInfo]:
+        self._collect_api('/')
+
+        if not network:
+            network = 'TRX'
+
         return [
             NetworkInfo(
                 coin=asset,
@@ -466,46 +340,56 @@ class MockProviderRequester(ProviderRequester):
                 withdraw_fee=Decimal(1),
                 withdraw_enable=True,
                 deposit_enable=True,
-                address_regex='\w+'
+                address_regex=r'\w+'
             )
         ]
 
-    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
-        pass
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0):
+        self._collect_api('/')
 
     def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
+        self._collect_api('/')
         return True
 
     def new_withdraw(self, transfer: Transfer):
+        self._collect_api('/')
         return True
 
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
+        self._collect_api('/')
         return WithdrawStatus(status=DONE, tx_id='tx')
 
-    def get_coins_info(self, coins: List[str]) -> Dict[str, CoinInfo]:
-        data = {}
-        for c in coins:
-            data[c] = CoinInfo(
-                coin=c,
-                weekly_trend_url='https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/825.svg?v=463140',
-                volume_24h=5
+    def get_coins_info(self, coins: List[str] = None) -> List[dict]:
+        self._collect_api('/')
+        data = []
+        for c in Asset.objects.filter(enable=True):
+            data.append(
+                CoinInfo(
+                    coin=c.symbol,
+                    weekly_trend_url='https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/825.svg?v=463140',
+                    volume_24h=5
+                ).__dict__
             )
 
         return data
 
     def get_price(self, symbol: str, side: str, delay: int = 300, when: datetime = None) -> Decimal:
+        self._collect_api('/')
         return Decimal(30000)
 
     def get_avg_trade_price(self, symbol: str, start: datetime, end: datetime) -> Decimal:
+        self._collect_api('/')
         return Decimal(30000)
 
     def get_order(self, request_id: str):
+        self._collect_api('/')
         return {
             'filled_price': Decimal(1),
             'filled_amount': Decimal(1),
         }
 
     def get_income_history(self, profile_id: int, start: datetime, end: datetime) -> list:
+        self._collect_api('/')
         return [
             {
                 "symbol": "BTCUSDT",

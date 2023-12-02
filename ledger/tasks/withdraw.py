@@ -1,7 +1,9 @@
 import logging
+from datetime import timedelta
 
 from celery import shared_task
-from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
 
 from ledger.models import Transfer
 from ledger.utils.provider import get_provider_requester
@@ -49,75 +51,78 @@ def update_provider_withdraw():
 
 @shared_task(queue='transfer')
 def create_withdraw(transfer_id: int):
-    # if settings.DEBUG_OR_TESTING_OR_STAGING:
-    #     return
 
-    transfer = Transfer.objects.get(id=transfer_id)
+    with transaction.atomic():
+        transfer = Transfer.objects.select_for_update().get(id=transfer_id)
 
-    if transfer.source != Transfer.SELF:
-        logger.info('ignored because non self source')
-        return
+        if transfer.in_freeze_time():
+            return
 
-    if transfer.status != Transfer.PROCESSING:
-        logger.info('ignored due to invalid status')
-        return
+        if transfer.source != Transfer.SELF:
+            logger.info('ignored because non self source')
+            return
 
-    from ledger.requester.withdraw_requester import RequestWithdraw
+        if transfer.status != Transfer.PROCESSING:
+            logger.info('ignored due to invalid status')
+            return
 
-    asset = transfer.wallet.asset
-    coin_mult = asset.get_coin_multiplier()
+        from ledger.requester.withdraw_requester import RequestWithdraw
 
-    assert coin_mult == 1 or (asset.symbol != asset.original_symbol and asset.original_symbol)
+        asset = transfer.wallet.asset
+        coin_mult = asset.get_coin_multiplier()
 
-    response = RequestWithdraw().withdraw_from_hot_wallet(
-        receiver_address=transfer.out_address,
-        amount=transfer.amount * coin_mult,
-        network=transfer.network.symbol,
-        asset=asset.get_original_symbol(),
-        transfer_id=transfer.id
-    )
+        assert coin_mult == 1 or (asset.symbol != asset.original_symbol and asset.original_symbol)
 
-    resp_data = response.json()
+        response = RequestWithdraw().withdraw_from_hot_wallet(
+            receiver_address=transfer.out_address,
+            amount=transfer.amount * coin_mult,
+            network=transfer.network.symbol,
+            asset=asset.get_original_symbol(),
+            transfer_id=transfer.id,
+            memo=transfer.memo
+        )
 
-    if response.ok:
-        transfer.status = Transfer.PENDING
-        transfer.save(update_fields=['status'])
+        resp_data = response.json()
 
-    elif response.status_code == 400 and resp_data.get('type') == 'Invalid':
-        logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
+        if response.ok:
+            transfer.status = Transfer.PENDING
+            transfer.save(update_fields=['status'])
 
-        transfer.reject()
+        elif response.status_code == 400 and resp_data.get('type') == 'Invalid':
+            logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
 
-        if resp_data.get('reason') == 'InvalidReceiverAddress':
-            user = transfer.wallet.account.user
-            from accounts.models import Notification
-            Notification.send(
-                recipient=user,
-                title='برداشت ناموفق',
-                level=Notification.ERROR,
-                message='آدرس مقصد وارد شده نامعتبر است'
-            )
+            transfer.reject()
 
-    elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
-        logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
+            if resp_data.get('reason') == 'InvalidReceiverAddress':
+                user = transfer.wallet.account.user
+                from accounts.models import Notification
+                Notification.send(
+                    recipient=user,
+                    title='برداشت ناموفق',
+                    level=Notification.ERROR,
+                    message='آدرس مقصد وارد شده نامعتبر است'
+                )
 
-        if transfer.network_asset.allow_provider_withdraw:
-            transfer.source = Transfer.PROVIDER
-            transfer.save(update_fields=['source'])
-            create_provider_withdraw(transfer_id=transfer.id)
-        else:
+        elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
+            logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
+
+            # if transfer.network_asset.allow_provider_withdraw:
+            #     transfer.source = Transfer.PROVIDER
+            #     transfer.save(update_fields=['source'])
+            #     create_provider_withdraw(transfer_id=transfer.id)
+            # else:
             change_to_manual(transfer)
 
-    else:
-        logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
+        else:
+            logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
 
-        transfer.status = Transfer.PENDING
-        transfer.save(update_fields=['status'])
+            transfer.status = Transfer.PENDING
+            transfer.save(update_fields=['status'])
 
-        logger.warning('Error sending withdraw to blocklink', extra={
-            'transfer_id': transfer_id,
-            'resp': resp_data
-        })
+            logger.warning('Error sending withdraw to blocklink', extra={
+                'transfer_id': transfer_id,
+                'resp': resp_data
+            })
 
 
 @shared_task(queue='transfer')
@@ -126,6 +131,7 @@ def update_withdraws():
         deposit=False,
         source=Transfer.SELF,
         status=Transfer.PROCESSING,
+        created__lte=timezone.now() - timedelta(seconds=Transfer.FREEZE_SECONDS),
     )
 
     for transfer in re_handle_transfers:

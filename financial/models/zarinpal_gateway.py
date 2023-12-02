@@ -29,10 +29,12 @@ class ZarinpalGateway(Gateway):
             raise GatewayFailed
 
         authority = resp.json()['data']['authority']
+        fee = self.get_ipg_fee(amount)
 
         return PaymentRequest.objects.create(
             bank_card=bank_card,
-            amount=amount,
+            amount=amount - fee,
+            fee=fee,
             gateway=self,
             authority=authority,
             source=source,
@@ -43,7 +45,7 @@ class ZarinpalGateway(Gateway):
         return 'https://www.zarinpal.com/pg/StartPay/{}'.format(authority)
 
     def _verify(self, payment: Payment):
-        payment_request = payment.payment_request
+        payment_request = payment.paymentrequest
 
         resp = requests.post(
             self.BASE_URL + '/pg/v4/payment/verify.json',
@@ -62,12 +64,9 @@ class ZarinpalGateway(Gateway):
 
         if data['code'] in (100, 101):
             with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.ref_id = data.get('ref_id')
-                payment.ref_status = data['code']
-                payment.save()
+                ref_id = data.get('ref_id')
 
-                payment.accept(pipeline)
+                payment.accept(pipeline, ref_id)
 
         else:
             payment.status = CANCELED

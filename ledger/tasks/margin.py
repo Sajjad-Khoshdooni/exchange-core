@@ -3,11 +3,9 @@ from decimal import Decimal
 
 from celery import shared_task
 
-from accounts.models import Account, Notification
+from accounts.models import Account, Notification, EmailNotification
 from accounts.tasks import send_message_by_kavenegar
-from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.email import SCOPE_MARGIN_LIQUIDATION_FINISHED
 from accounts.utils.telegram import send_support_message
 from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
     MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD, get_bulk_margin_info
@@ -83,7 +81,7 @@ def alert_liquidation(account: Account):
         link='/wallet/margin'
     )
 
-    email.send_email_by_template(
-        recipient=user.email,
-        template=SCOPE_MARGIN_LIQUIDATION_FINISHED,
+    EmailNotification.send_by_template(
+        recipient=user,
+        template='margin_liquidated'
     )

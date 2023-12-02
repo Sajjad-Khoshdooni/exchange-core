@@ -3,23 +3,22 @@ from decimal import Decimal
 
 from decouple import config
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 
-from accounts.event.producer import get_kafka_producer
-from accounts.models import Account
+from accounts.models import Account, EmailNotification
 from accounts.models import Notification
-from accounts.utils import email
-from accounts.utils.dto import TransferEvent
+from analytics.event.producer import get_kafka_producer
+from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
-from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import DONE
 from ledger.utils.fields import get_group_id_field, get_status_field
 from ledger.utils.precision import humanize_number, get_presentation_amount
+from ledger.utils.price import get_last_price, USDT_IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -32,17 +31,34 @@ class PaymentRequest(models.Model):
     gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
     bank_card = models.ForeignKey('financial.BankCard', on_delete=models.PROTECT)
     amount = models.PositiveIntegerField()
+    fee = models.PositiveIntegerField()
 
     source = models.CharField(max_length=16, choices=((APP, APP), (DESKTOP, DESKTOP)), default=DESKTOP)
 
     authority = models.CharField(max_length=64, blank=True, db_index=True, null=True)
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
-    @property
-    def rial_amount(self):
-        return 10 * self.amount
+    group_id = get_group_id_field()
+    payment = models.OneToOneField('financial.Payment', null=True, blank=True, on_delete=models.SET_NULL)
 
     def get_gateway(self):
         return self.gateway.get_concrete_gateway()
+
+    def get_or_create_payment(self):
+        with transaction.atomic():
+            payment, created = Payment.objects.get_or_create(
+                group_id=self.group_id,
+                defaults={
+                    'user': self.bank_card.user,
+                    'amount': self.amount,
+                    'fee': self.fee
+                }
+            )
+            if created:
+                self.payment = payment
+                self.save(update_fields=['payment'])
+
+        return payment
 
     class Meta:
         unique_together = [('authority', 'gateway')]
@@ -54,28 +70,35 @@ class PaymentRequest(models.Model):
 class Payment(models.Model):
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
-    SUCCESS_PAYMENT_FAIL_FAST_bUY = '/checkout/fail_trade'
+    SUCCESS_PAYMENT_FAIL_FAST_BUY = '/checkout/fail_trade'
+
+    DESCRIPTION_SIZE = 256
 
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     modified = models.DateTimeField(auto_now=True)
 
-    PENDING, SUCCESS, FAIL = 'pending', 'success', 'fail'
+    group_id = get_group_id_field(default=None, unique=True)
 
-    group_id = get_group_id_field()
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
 
-    payment_request = models.OneToOneField(PaymentRequest, on_delete=models.PROTECT)
+    amount = models.PositiveBigIntegerField()
+    fee = models.PositiveIntegerField()
 
     status = get_status_field()
 
-    ref_id = models.PositiveBigIntegerField(null=True, blank=True)
+    ref_id = models.CharField(null=True, blank=True, max_length=256)
     ref_status = models.SmallIntegerField(null=True, blank=True)
 
+    description = models.CharField(max_length=DESCRIPTION_SIZE, blank=True)
+
+    def __str__(self):
+        return f'{self.amount} IRT to {self.user}'
+
     def alert_payment(self):
-        user = self.payment_request.bank_card.user
-        user_email = user.email
+        user = self.user
         title = 'واریز وجه با موفقیت انجام شد'
-        payment_amont = humanize_number(get_presentation_amount(Decimal(self.payment_request.amount)))
-        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
+        payment_amount = humanize_number(get_presentation_amount(Decimal(self.amount)))
+        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amount)
 
         Notification.send(
             recipient=user,
@@ -84,34 +107,37 @@ class Payment(models.Model):
             level=Notification.SUCCESS
         )
 
-        if user_email:
-            email.send_email_by_template(
-                recipient=user_email,
-                template=email.SCOPE_PAYMENT,
-                context={
-                    'payment_amount': payment_amont,
-                    'brand': settings.BRAND,
-                    'panel_url': settings.PANEL_URL,
-                    'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                }
-            )
+        EmailNotification.send_by_template(
+            recipient=user,
+            template='fiat_deposit_successful',
+            context={
+                'payment_amount': payment_amount,
+                'brand': settings.BRAND,
+                'panel_url': settings.PANEL_URL,
+                'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
+            }
+        )
 
-    def accept(self, pipeline: WalletPipeline):
+    def accept(self, pipeline: WalletPipeline, ref_id: int = None):
         asset = Asset.get(Asset.IRT)
-        user = self.payment_request.bank_card.user
+        user = self.user
         account = user.get_account()
 
         pipeline.new_trx(
             sender=asset.get_wallet(Account.out()),
             receiver=asset.get_wallet(account),
-            amount=self.payment_request.amount,
+            amount=self.amount,
             scope=Trx.TRANSFER,
             group_id=self.group_id,
         )
 
+        self.status = DONE
+        self.ref_id = ref_id
+        self.save(update_fields=['status', 'ref_id'])
+
         if not user.first_fiat_deposit_date:
             user.first_fiat_deposit_date = timezone.now()
-            user.save()
+            user.save(update_fields=['first_fiat_deposit_date'])
 
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(account, Task.DEPOSIT)
@@ -121,14 +147,14 @@ class Payment(models.Model):
     def get_redirect_url(self) -> str:
         from ledger.models import FastBuyToken
 
-        source = self.payment_request.source
+        source = self.paymentrequest.source
         desktop = PaymentRequest.DESKTOP
-        fast_by_token = FastBuyToken.objects.filter(payment_request=self.payment_request).last()
+        fast_by_token = FastBuyToken.objects.filter(payment_request=self.paymentrequest).last()
 
         if source == desktop:
             if self.status == DONE:
                 if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
-                    return settings.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_bUY
+                    return settings.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_BUY
                 else:
                     return settings.PANEL_URL + self.SUCCESS_URL
             else:
@@ -152,27 +178,29 @@ class Payment(models.Model):
             response['Location'] = url
             return response
 
+    class Meta:
+        constraints = [
+        ]
+
 
 @receiver(post_save, sender=Payment)
 def handle_payment_save(sender, instance, created, **kwargs):
-    producer = get_kafka_producer()
-
-    if instance.status != 'done':
+    if instance.status != DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
-    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+    usdt_price = get_last_price(USDT_IRT)
 
     event = TransferEvent(
         id=instance.id,
-        user_id=instance.payment_request.bank_card.user_id,
-        amount=instance.payment_request.amount,
+        user_id=instance.user.id,
+        amount=instance.amount,
         coin='IRT',
         network='IRT',
         is_deposit=True,
-        value_usdt=float(instance.payment_request.amount) / float(usdt_price),
-        value_irt=instance.payment_request.amount,
+        value_usdt=float(instance.amount) / float(usdt_price),
+        value_irt=instance.amount,
         created=instance.created,
-        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type)
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type + 'fiat_deposit')
     )
 
-    producer.produce(event)
+    get_kafka_producer().produce(event)

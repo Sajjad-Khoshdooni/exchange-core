@@ -5,7 +5,7 @@ from typing import Union
 from rest_framework import serializers
 
 from ledger.models import Wallet
-from ledger.utils.external_price import BUY
+from ledger.utils.external_price import BUY, SELL
 from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import Order, StopLoss
 
@@ -20,6 +20,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     filled_price = serializers.SerializerMethodField()
     trigger_price = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    is_oco = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
 
@@ -37,7 +38,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         return str(instance.id)
 
     def get_allow_cancel(self, instance: Union[Order, StopLoss]):
-        if instance.wallet.variant:
+        if instance.wallet.is_for_strategy:
             return False
         return True
 
@@ -49,6 +50,9 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
                 return StopLoss.FILLED if instance.filled_amount == instance.amount else StopLoss.TRIGGERED
         return instance.status
 
+    def get_is_oco(self, instance: Union[Order, StopLoss]):
+        return bool(instance.oco)
+
     def get_filled_amount(self, instance: Union[Order, StopLoss]):
         return decimal_to_str(floor_precision(instance.filled_amount, instance.symbol.step_size))
 
@@ -58,23 +62,27 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     def get_trigger_price(self, instance: Union[Order, StopLoss]):
         if isinstance(instance, Order):
             return None
+
         price = decimal_to_str(floor_precision(instance.trigger_price, instance.symbol.tick_size))
-        operator = '≥' if instance.side == BUY else '≤'
-        return f'آخرین قیمت {operator} {price}'
+        operator = '≥' if instance.side == SELL else '≤'
+        return f'{price} {operator} آخرین قیمت'
 
     def get_filled_price(self, instance: Union[Order, StopLoss]):
-        order = instance if isinstance(instance, Order) else instance.order_set.first()
+        order = instance if isinstance(instance, Order) else instance.order_set.all().first()
+
         if not order:
-            return None
+            return
+
         fills_amount, fills_value = self.context['trades'].get(order.id, (0, 0))
         amount = Decimal((fills_amount or 0))
+
         if not amount:
-            return None
+            return
+
         price = Decimal((fills_value or 0)) / amount
         return decimal_to_str(floor_precision(price, order.symbol.tick_size))
 
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'trigger_price', 'side', 'fill_type', 'status', 'market', 'allow_cancel')
-
+                  'filled_price', 'trigger_price', 'side', 'fill_type', 'status', 'market', 'allow_cancel', 'is_oco')

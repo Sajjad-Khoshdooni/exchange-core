@@ -1,12 +1,13 @@
-import uuid
+from typing import Union
 
+from django.conf import settings
 from django.contrib.sessions.models import Session
-from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+from django.db import models, transaction
+from django.utils import timezone
+from rest_framework_simplejwt.tokens import AccessToken
 
-from accounts.event.producer import get_kafka_producer
-from accounts.utils.dto import LoginEvent
+from accounts.models import EmailNotification
+from accounts.utils.validation import get_jalali_now
 
 
 class LoginActivity(models.Model):
@@ -15,6 +16,7 @@ class LoginActivity(models.Model):
 
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
+    logout_at = models.DateTimeField(null=True, blank=True)
     ip = models.GenericIPAddressField()
 
     is_sign_up = models.BooleanField(default=False)
@@ -25,35 +27,86 @@ class LoginActivity(models.Model):
     location = models.CharField(blank=True, max_length=200)
     os = models.CharField(blank=True, max_length=200)
     browser = models.CharField(blank=True, max_length=200)
-    session = models.ForeignKey(Session, null=True, blank=True, on_delete=models.SET_NULL)
     city = models.CharField(blank=True, max_length=256)
     country = models.CharField(blank=True, max_length=256)
     ip_data = models.JSONField(null=True, blank=True)
 
     native_app = models.BooleanField(default=False)
 
+    session = models.OneToOneField(Session, null=True, blank=True, on_delete=models.SET_NULL)
+    refresh_token = models.OneToOneField('accounts.RefreshToken', null=True, blank=True, on_delete=models.SET_NULL)
+
+    @transaction.atomic
+    def destroy(self):
+        destroyed = False
+
+        if self.session:
+            self.session.delete()
+            self.session = None
+            destroyed = True
+
+        if self.refresh_token:
+            self.refresh_token.log_out()
+            self.refresh_token.delete()
+            self.refresh_token = None
+            destroyed = True
+
+        if not destroyed:
+            return
+
+        self.logout_at = timezone.now()
+        self.save(update_fields=['logout_at', 'session', 'refresh_token'])
+
+    @classmethod
+    def from_request(cls,  request) -> Union['LoginActivity', None]:
+        session = Session.objects.filter(session_key=request.session.session_key).first()
+
+        if session:
+            return cls.objects.filter(session=session).first()
+
+        try:
+            access_token = request.META.get('HTTP_AUTHORIZATION', " ").split(' ')[1]
+            token = AccessToken(access_token)
+            return LoginActivity.objects.filter(refresh_token_id=token.payload['refresh_id']).first()
+        except Exception:
+            pass
+
+        return None
+
+    @staticmethod
+    def send_successful_login_message(login_activity):
+        EmailNotification.send_by_template(
+            recipient=login_activity.user,
+            template='login_new_device',
+            context={
+                'now': get_jalali_now(),
+                'country': login_activity.country,
+                'city': login_activity.city,
+                'ip': login_activity.ip,
+                'brand': settings.BRAND,
+                'site_url': settings.PANEL_URL
+            }
+        )
+
+    @staticmethod
+    def send_unsuccessful_login_message(user):
+        EmailNotification.send_by_template(
+            recipient=user,
+            template='login_unsuccessful',
+            check_spam=True,
+            context={
+                'now': get_jalali_now(),
+                'brand': settings.BRAND,
+                'site_url': settings.PANEL_URL
+            }
+        )
+
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"
+        indexes = [
+            models.Index(fields=['user', 'ip', 'browser', 'os'], name="login_activity_idx"),
+            models.Index(fields=['user', 'device'], name='login_suspension_idx')
+        ]
 
-
-@receiver(post_save, sender=LoginActivity)
-def handle_log_in_save(sender, instance, created, **kwargs):
-    producer = get_kafka_producer()
-
-    event = LoginEvent(
-        user_id=instance.user_id,
-        device=instance.device,
-        is_signup=instance.is_sign_up,
-        created=instance.created,
-        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + LoginEvent.type),
-        user_agent=instance.user_agent,
-        device_type=instance.device_type,
-        location=instance.location,
-        os=instance.os,
-        browser=instance.browser,
-        city=instance.city,
-        country=instance.country,
-        native_app=instance.native_app
-    )
-
-    producer.produce(event)
+    def __str__(self):
+        return f'{self.device} {self.os}'

@@ -1,5 +1,4 @@
 import logging
-import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -8,9 +7,6 @@ from django.db import models
 from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
 from django.utils import timezone
 
-from accounts.event.producer import get_kafka_producer
-from accounts.models import Account
-from accounts.utils.dto import TradeEvent
 from ledger.utils.external_price import BUY
 from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
@@ -125,10 +121,19 @@ class Trade(BaseTrade):
         return market_top_prices
 
     @staticmethod
-    def get_account_orders_filled_price(account_id):
+    def get_account_orders_filled_price(account_id, order_filter=None):
+        extra_filter = {}
+        if order_filter:
+            from market.models import Order
+            order_ids = list(Order.objects.filter(account_id=account_id, **order_filter).values_list('id', flat=True))
+            if not order_ids:
+                return {}
+            extra_filter = {
+                'order_id__in': order_ids
+            }
         return {
             trade['order_id']: (trade['sum_amount'], trade['sum_value']) for trade in
-            Trade.objects.filter(account=account_id).annotate(
+            Trade.objects.filter(account=account_id, **extra_filter).annotate(
                 value=F('amount') * F('price')
             ).values('order_id').annotate(sum_amount=Sum('amount'), sum_value=Sum('value')).values(
                 'order_id', 'sum_amount', 'sum_value'
@@ -170,32 +175,3 @@ class Trade(BaseTrade):
                         group_id=trx.group_id,
                         scope=Trx.REVERT
                     )
-
-    def trigger_event(self):
-        if self.account is None or\
-                self.account.user is None or\
-                self.account.type == Account.SYSTEM or\
-                self.account.user.id in [93167, 382]:
-            logger.info('tradeEventIgnored', extra={
-                'trade_id': self.id
-            })
-            return
-
-        producer = get_kafka_producer()
-        _type = 'market'
-
-        event = TradeEvent(
-            id=self.id,
-            user_id=self.account.user_id,
-            amount=self.amount,
-            price=self.price,
-            symbol=self.symbol.name,
-            trade_type='market',
-            market=self.market,
-            created=self.created,
-            value_usdt=self.usdt_value,
-            value_irt=self.irt_value,
-            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(self.id) + TradeEvent.type)
-        )
-
-        producer.produce(event)

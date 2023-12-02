@@ -13,9 +13,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from accounts.models import Referral, Account
+from accounts.models import Referral, Account, User
 from ledger.utils.precision import floor_precision
 from market.models import ReferralTrx
+from market.models.pair_symbol import DEFAULT_MAKER_FEE, DEFAULT_TAKER_FEE
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,14 @@ class ReferralSerializer(serializers.ModelSerializer):
         return super(ReferralSerializer, self).to_internal_value(
             {'owner_share_percent': owner_share_percent, 'owner': self.context['account'].id}
         )
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+
+        if user.level < User.LEVEL2:
+            raise ValidationError('برای ساخت کد ریفرال، باید احراز هویت سطح ۲ داشته باشید.')
+
+        return super(ReferralSerializer, self).create(validated_data)
 
     @staticmethod
     def validate_owner_share_percent(value):
@@ -134,15 +143,15 @@ class TradingFeeView(APIView):
         account = request.user.get_account()
         voucher = account.get_voucher_wallet()
 
-        old_taker_fee = Decimal('0.2')
-        old_maker_fee = Decimal('0')
+        old_taker_fee = DEFAULT_TAKER_FEE
+        old_maker_fee = DEFAULT_MAKER_FEE
 
         if voucher:
             taker_fee = 0
             expiration = voucher.expiration
             voucher_amount = voucher.balance
         else:
-            taker_fee = Decimal('0.2')
+            taker_fee = DEFAULT_TAKER_FEE
             expiration = None
             voucher_amount = None
 
@@ -152,7 +161,7 @@ class TradingFeeView(APIView):
 
         if referral_code:
             referral_percent = Referral.REFERRAL_MAX_RETURN_PERCENT - referral_code.owner_share_percent
-            taker_fee = taker_fee * (Decimal('1') - referral_percent /Decimal('100'))
+            taker_fee = taker_fee * (Decimal('1') - referral_percent / Decimal('100'))
 
         return Response({
             'old_taker_fee': str(old_taker_fee),

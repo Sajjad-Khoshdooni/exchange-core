@@ -1,12 +1,13 @@
 import logging
 
+from django.db import transaction
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView
 
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
-from ledger.utils.fields import DONE, CANCELED
+from ledger.utils.fields import DONE, CANCELED, PENDING
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +26,10 @@ class ZarinpalCallbackView(TemplateView):
         payment = getattr(payment_request, 'payment', None)
 
         if not payment:
-            payment = Payment.objects.create(
-                payment_request=payment_request
-            )
+            with transaction.atomic():
+                payment = payment_request.get_or_create_payment()
 
-        if payment.status == Payment.PENDING:
+        if payment.status == PENDING:
             if status == 'NOK':
                 payment.status = CANCELED
                 payment.save()

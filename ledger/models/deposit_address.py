@@ -1,7 +1,9 @@
 from django.db import models
 
-from ledger.requester.address_requester import AddressRequester
+from accounts.models import Account
+from ledger.models import Network
 from ledger.models.address_key import AddressKey
+from ledger.requester.address_requester import AddressRequester
 from ledger.requester.architecture_requester import get_network_architecture
 
 
@@ -15,19 +17,23 @@ class DepositAddress(models.Model):
         return '%s (network= %s)' % (self.address, self.network)
 
     @classmethod
-    def get_deposit_address(cls, account, network):
-        architecture = get_network_architecture(network)
+    def get_deposit_address(cls, account: Account, network: Network):
+        architecture = get_network_architecture(network.symbol)
 
         address_key = AddressKey.objects.filter(account=account, architecture=architecture, deleted=False).first()
 
         if not address_key:
             address_dict = AddressRequester().create_wallet(account, architecture)
 
-            address_key = AddressKey.objects.create(
+            address_key, _ = AddressKey.objects.get_or_create(
                 account=account,
-                address=address_dict.get('address'),
-                public_address=address_dict.get('address'),
-                architecture=architecture
+                architecture=architecture,
+                deleted=False,
+                defaults={
+                    'address': address_dict.get('address'),
+                    'public_address': address_dict.get('address'),
+                    'memo': address_dict.get('memo') or ''
+                }
             )
 
         deposit_address = DepositAddress.objects.filter(address_key=address_key, network=network).first()
@@ -46,7 +52,4 @@ class DepositAddress(models.Model):
         UpdateTrxHistory().update_history(deposit_address=self)
 
     class Meta:
-        unique_together = (
-            ('network', 'address'),
-            # ('network', 'address_key'),
-        )
+        unique_together = ('address_key', 'network', 'address')

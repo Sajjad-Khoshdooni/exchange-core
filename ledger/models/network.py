@@ -10,7 +10,6 @@ class Network(models.Model):
 
     symbol = models.CharField(max_length=16, unique=True, db_index=True)
     name = models.CharField(max_length=128, blank=True)
-    kucoin_name = models.CharField(max_length=128, blank=True, default='')
 
     can_withdraw = models.BooleanField(default=True)
     can_deposit = models.BooleanField(default=False)
@@ -24,6 +23,10 @@ class Network(models.Model):
 
     need_memo = models.BooleanField(default=False)
 
+    expected_confirmation_minutes = models.PositiveSmallIntegerField(default=10)
+
+    slow_withdraw = models.BooleanField(default=True)
+
     def __str__(self):
         return self.symbol
 
@@ -33,3 +36,15 @@ class NetworkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Network
         fields = ('symbol', 'name', )
+
+
+class NetworkField(serializers.CharField):
+    def to_representation(self, value: Network):
+        if value:
+            return value.symbol
+
+    def to_internal_value(self, data: str):
+        if not data:
+            return
+        else:
+            return Network.objects.get(symbol=data)

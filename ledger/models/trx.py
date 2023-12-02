@@ -5,7 +5,6 @@ from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from ledger.utils.fields import get_amount_field
-from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +31,7 @@ class Trx(models.Model):
     DUST = 'du'
     MANUAL = 'mn'
     DELIST = 'dl'
+    REBRAND = 'rb'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -48,7 +48,7 @@ class Trx(models.Model):
             (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
             (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'),
             (STAKE, 'stake'), (STAKE_REVENUE, 'stake revenue'), (STAKE_FEE, 'stake fee'), (RESERVE, 'reserve'),
-            (DUST, 'dust'), (MANUAL, 'manual'), (DELIST, 'delist')
+            (DUST, 'dust'), (MANUAL, 'manual'), (DELIST, 'delist'), (REBRAND, 'rebrand')
         )
     )
 

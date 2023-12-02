@@ -19,5 +19,17 @@ class SmallAmountTrade(Exception):
     pass
 
 
+class LargeAmountTrade(Exception):
+    pass
+
+
 class AbruptDecrease(Exception):
+    pass
+
+
+class SmallDepthError(Exception):
+    pass
+
+
+class NoPriceError(Exception):
     pass

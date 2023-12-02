@@ -61,7 +61,7 @@ class PaydotirGateway(Gateway):
         return 'https://pay.ir/pg/{}'.format(authority)
 
     def _verify(self, payment: Payment):
-        payment_request = payment.payment_request
+        payment_request = payment.paymentrequest
 
         resp = requests.post(
             self.BASE_URL + '/pg/verify',
@@ -76,12 +76,8 @@ class PaydotirGateway(Gateway):
 
         if data['status'] == 1:
             with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.ref_id = data.get('transId')
-                payment.ref_status = data['status']
-                payment.save()
-
-                payment.accept(pipeline)
+                ref_id = data.get('transId')
+                payment.accept(pipeline, ref_id)
 
         else:
             payment.status = CANCELED

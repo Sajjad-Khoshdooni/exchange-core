@@ -11,6 +11,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
+OTP_TOTP_THROTTLE_FACTOR = 1
 
 DEBUG = config('DEBUG', cast=bool, default=False)
 STAGING = config('STAGING', cast=bool, default=False)
@@ -61,14 +62,14 @@ INSTALLED_APPS = [
     'accounting',
     'ledger',
     'market',
-    'trader',
     'jalali_date',
     'stake',
     'gamify',
-    'experiment',
-    'retention',
+    'health',
 
     'tinymce',
+    'import_export',
+    'django_quill',
 ]
 
 
@@ -150,14 +151,6 @@ CACHES = {
     'token': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': LOCAL_REDIS_URL + '/1',
-
-        'OPTIONS': {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    },
-    'trader': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': LOCAL_REDIS_URL + '/2',
 
         'OPTIONS': {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -294,18 +287,19 @@ REST_FRAMEWORK = {
         # 'sustained_api': '20000/day',
         'burst_api': '200/min',
         'sustained_api': '200000/day',
-    }
+    },
+    'EXCEPTION_HANDLER': 'accounts.throttle.custom_exception_handler'
 }
 
 if config('JWT_PRIVATE_KEY', None):
     SIMPLE_JWT = {
-        'ROTATE_REFRESH_TOKENS': True,
+        'ROTATE_REFRESH_TOKENS': False,
         'BLACKLIST_AFTER_ROTATION': False,
         'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
         'ALGORITHM': 'RS256',
         'SIGNING_KEY': config('JWT_PRIVATE_KEY', default=''),
         'VERIFYING_KEY': config('JWT_PUBLIC_KEY', default=''),
-        'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+        'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     }
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -377,11 +371,13 @@ JALALI_DATE_DEFAULTS = {
 SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)
 OTC_ACCOUNT_ID = config('OTC_ACCOUNT', cast=int)
 RANDOM_TRADER_ACCOUNT_ID = config('BOT_RANDOM_TRADER_ACCOUNT_ID', default=None)
-MARKET_MAKER_ACCOUNT_ID = config('MARKET_MAKER_ACCOUNT_ID', default=None)
+MARKET_MAKER_ACCOUNT_ID = config('MARKET_MAKER_ACCOUNT_ID', cast=int, default=0)
+TRADER_ACCOUNT_ID = config('TRADER_ACCOUNT_ID', cast=int, default=0)
 
 BRAND_EN = config('BRAND_EN', default='')
 BRAND = config('BRAND', default='')
 
+OTP_TOTP_ISSUER = BRAND_EN
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 2000
 
 TRADE_ENABLE = config('TRADE_ENABLE', cast=bool, default=True)
@@ -391,6 +387,5 @@ WITHDRAW_ENABLE = config('WITHDRAW_ENABLE', cast=bool, default=True)
 TINYMCE_JS_URL = os.path.join(MINIO_STORAGE_STATIC_URL, "tinymce/tinymce.min.js")
 
 EXCLUSIVE_SMS_NUMBER = config('EXCLUSIVE_SMS_NUMBER', default=None)
-RETENTION_ENABLE = bool(EXCLUSIVE_SMS_NUMBER)
 
 ZERO_USDT_HEDGE = config('ZERO_USDT_HEDGE', cast=bool, default=False)

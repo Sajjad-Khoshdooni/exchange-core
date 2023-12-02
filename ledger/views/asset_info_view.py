@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Min, F
+from django.db.models import Min, F, Q
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -13,9 +13,12 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price
+from ledger.utils.coins_info import get_coins_info
+from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.provider import CoinInfo, get_provider_requester
+from ledger.utils.precision import get_symbol_presentation_price
+from ledger.utils.price import get_prices, get_coins_symbols, get_price
+from ledger.utils.provider import CoinInfo
 from multimedia.models import CoinPriceContent
 
 
@@ -59,22 +62,12 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return self.context['cap_info'].get(asset.symbol, CoinInfo())
 
     def get_price_usdt(self, asset: Asset):
-        prices = self.context['prices']
-        price = prices.get(asset.symbol)
-        if not price:
-            return
-
-        return asset.get_presentation_price_usdt(price)
+        price = self.context['prices'].get(asset.symbol + Asset.USDT, 0)
+        return get_symbol_presentation_price(asset.symbol + Asset.USDT, price)
 
     def get_price_irt(self, asset: Asset):
-        prices = self.context['prices']
-        price = prices.get(asset.symbol)
-        if not price:
-            return
-
-        tether_irt = self.context['tether_irt']
-        price = price * tether_irt
-        return asset.get_presentation_price_irt(price)
+        price = self.context['prices'].get(asset.symbol + Asset.IRT, 0)
+        return get_symbol_presentation_price(asset.symbol + Asset.IRT, price)
 
     def get_min_withdraw_amount(self, asset: Asset):
         network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True, can_withdraw=True)
@@ -100,11 +93,11 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_high_24h(self, asset: Asset):
         cap = self.get_cap(asset)
-        return asset.get_presentation_price_usdt(Decimal(cap.high_24h))
+        return get_symbol_presentation_price(asset.symbol + 'USDT',  Decimal(cap.high_24h))
 
     def get_low_24h(self, asset: Asset):
         cap = self.get_cap(asset)
-        return asset.get_presentation_price_usdt(Decimal(cap.low_24h))
+        return get_symbol_presentation_price(asset.symbol + 'USDT', Decimal(cap.low_24h))
 
     def get_change_1h(self, asset: Asset):
         return self.get_cap(asset).change_1h
@@ -172,6 +165,7 @@ class AssetsViewSet(ModelViewSet):
     filterset_fields = ['margin_enable']
 
     def get_serializer_context(self):
+
         ctx = super().get_serializer_context()
 
         if self.request.user.is_authenticated:
@@ -182,15 +176,9 @@ class AssetsViewSet(ModelViewSet):
         ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
 
         if self.get_options('prices') or self.get_options('extra_info'):
-            symbols = list(self.get_queryset().values_list('symbol', flat=True))
-            ctx['cap_info'] = get_provider_requester().get_coins_info(symbols)
-            ctx['prices'] = get_external_usdt_prices(
-                coins=symbols,
-                side=BUY,
-                allow_stale=True,
-                apply_otc_spread=True
-            )
-            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+            coins = list(self.get_queryset().values_list('symbol', flat=True))
+            ctx['cap_info'] = get_coins_info()
+            ctx['prices'] = get_prices(get_coins_symbols(coins), side=SELL, allow_stale=True)
 
         return ctx
 
@@ -205,6 +193,8 @@ class AssetsViewSet(ModelViewSet):
             'name': self.request.query_params.get('name'),
             'can_deposit': self.request.query_params.get('can_deposit') == '1',
             'can_withdraw': self.request.query_params.get('can_withdraw') == '1',
+            'is_base': self.request.query_params.get('is_base') == '1',
+            'active': self.request.query_params.get('active') == '1',
         }
 
         return options[key]
@@ -216,11 +206,22 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        queryset = Asset.live_objects.filter(trade_enable=True)
+        if self.get_options('extra_info') and not self.get_options('active'):
+            queryset = Asset.objects.filter(Q(enable=True) | Q(price_page=True))
+        else:
+            queryset = Asset.live_objects.all()
 
         if self.get_options('category'):
-            category = get_object_or_404(CoinCategory, name=self.get_options('category'))
-            queryset = queryset.filter(coincategory=category)
+            category_name = self.get_options('category')
+
+            if category_name == 'new-coins':
+                queryset = queryset.order_by(F('publish_date').desc(nulls_last=True))[:100]
+            else:
+                category = get_object_or_404(CoinCategory, name=category_name)
+                queryset = queryset.filter(coincategory=category)
+
+        if self.get_options('is_base'):
+            queryset = queryset.filter(symbol__in=(Asset.IRT, Asset.USDT))
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
@@ -261,19 +262,32 @@ class AssetOverviewAPIView(APIView):
     permission_classes = []
 
     @classmethod
-    def set_price(cls, coins: list):
-        for coin in coins:
-            coin['price_usdt'] = get_external_price(coin=coin['symbol'], base_coin=Asset.USDT, side=BUY, allow_stale=True)
-            coin['price_irt'] = get_external_price(coin=coin['symbol'], base_coin=Asset.IRT, side=BUY, allow_stale=True)
-            coin['market_irt_enable'] = coin['symbol'] in get_irt_market_asset_symbols()
-            coin.update(AssetSerializerMini(Asset.get(symbol=coin['symbol'])).data)
+    def set_price(cls, assets_info: list):
+        for asset_info in assets_info:
+            coin = asset_info['symbol']
+
+            asset_info['price_usdt'] = get_symbol_presentation_price(
+                symbol=coin + Asset.USDT,
+                amount=get_price(coin + Asset.USDT, side=SELL, allow_stale=True) or 0
+            )
+
+            asset_info['price_irt'] = get_symbol_presentation_price(
+                symbol=coin + Asset.IRT,
+                amount=get_price(coin + Asset.IRT, side=SELL, allow_stale=True) or 0
+            )
+
+            asset_info['market_irt_enable'] = coin in get_irt_market_asset_symbols()
+            asset_info.update(AssetSerializerMini(Asset.get(symbol=coin)).data)
 
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
 
-        coins = list(Asset.live_objects.exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
-        caps = get_provider_requester().get_coins_info(coins).values()
-        caps_dict = {c.coin: c for c in caps}
+        coins = set(Asset.live_objects.filter(
+            otc_status=Asset.ACTIVE
+        ).exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
+
+        caps_dict = {c: cap for (c, cap) in get_coins_info().items() if c in coins}
+        caps = caps_dict.values()
 
         def coin_info_to_dict(info: CoinInfo):
             return {
@@ -289,7 +303,7 @@ class AssetOverviewAPIView(APIView):
         high_24h_change = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.change_24h, reverse=True)[:limit]))
         AssetOverviewAPIView.set_price(high_24h_change)
 
-        newest_coin_symbols = list(Asset.live_objects.exclude(
+        newest_coin_symbols = list(Asset.live_objects.filter(symbol__in=caps_dict, otc_status=Asset.ACTIVE).exclude(
             symbol__in=['IRT', 'IOTA']
         ).order_by(F('publish_date').desc(nulls_last=True)).values_list('symbol', flat=True))[:limit]
 

@@ -23,9 +23,12 @@ class SymbolSerializer(serializers.ModelSerializer):
     bookmark = serializers.SerializerMethodField()
     margin_enable = serializers.SerializerMethodField()
 
+    maker_fee = serializers.SerializerMethodField()
+    taker_fee = serializers.SerializerMethodField()
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        for field in ('taker_fee', 'maker_fee', 'min_trade_quantity', 'max_trade_quantity'):
+        for field in ('min_trade_quantity', 'max_trade_quantity'):
             representation[field] = get_presentation_amount(representation[field])
         return representation
 
@@ -34,6 +37,12 @@ class SymbolSerializer(serializers.ModelSerializer):
 
     def get_margin_enable(self, pair_symbol: PairSymbol):
         return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
+
+    def get_maker_fee(self, pair_symbol: PairSymbol):
+        return '0'
+
+    def get_taker_fee(self, pair_symbol: PairSymbol):
+        return '0.002'
 
     class Meta:
         model = PairSymbol
@@ -51,7 +60,9 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
 
     def get_price(self, symbol: PairSymbol):
         last_prices = get_symbol_prices()['last']
-        return last_prices.get(symbol.id)
+        price = last_prices.get(symbol.id)
+        if price:
+            return decimal_to_str(floor_precision(price, symbol.tick_size))
 
     def get_bookmark(self, pair_symbol: PairSymbol):
         return pair_symbol.id in self.context.get('bookmarks')

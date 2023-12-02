@@ -1,15 +1,17 @@
 import logging
+from decimal import Decimal
 from typing import Type
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Sum
+from django.utils import timezone
 
-from accounts.models import User
-from financial.models import BankCard
-from financial.models import PaymentRequest
-from financial.models.payment import Payment
+from accounts.models import User, SystemConfig
+from financial.models import BankCard, Payment, PaymentRequest
 from financial.utils.encryption import decrypt
 from ledger.models import FastBuyToken
+from ledger.utils.fields import DONE, get_amount_field
 
 logger = logging.getLogger(__name__)
 
@@ -21,30 +23,31 @@ class GatewayFailed(Exception):
 class Gateway(models.Model):
     BASE_URL = None
 
-    ZARINPAL = 'zarinpal'
-    PAYIR = 'payir'
-    ZIBAL = 'zibal'
-    JIBIT = 'jibit'
+    TYPES = MANUAL, ZARINPAL, PAYIR, ZIBAL, JIBIT, JIBIMO = 'manual', 'zarinpal', 'payir', 'zibal', 'jibit', 'jibimo'
 
     name = models.CharField(max_length=128)
     type = models.CharField(
         max_length=8,
-        choices=((ZARINPAL, ZARINPAL), (PAYIR, PAYIR), (ZIBAL, ZIBAL), (JIBIT, JIBIT))
+        choices=[(t, t) for t in TYPES]
     )
     merchant_id = models.CharField(max_length=128, blank=True)
 
     withdraw_enable = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
     active_for_staff = models.BooleanField(default=False)
+    primary = models.BooleanField(default=False)
 
     min_deposit_amount = models.PositiveIntegerField(default=10000)
     max_deposit_amount = models.PositiveIntegerField(default=50000000)
+    max_daily_deposit_amount = models.PositiveIntegerField(default=100000000)
 
     max_auto_withdraw_amount = models.PositiveIntegerField(null=True, blank=True)
     expected_withdraw_datetime = models.DateTimeField(null=True, blank=True)
 
     withdraw_api_key = models.CharField(max_length=1024, blank=True)
     withdraw_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
+    withdraw_api_password_encrypted = models.CharField(max_length=4096, blank=True)
+    withdraw_bank = models.CharField(max_length=128, blank=True)
 
     deposit_api_key = models.CharField(max_length=1024, blank=True)
     deposit_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
@@ -53,6 +56,14 @@ class Gateway(models.Model):
     payment_id_secret_encrypted = models.CharField(max_length=4096, blank=True)
 
     wallet_id = models.PositiveIntegerField(null=True, blank=True)
+
+    deposit_priority = models.SmallIntegerField(default=1)
+
+    ipg_fee_min = models.SmallIntegerField(default=120)
+    ipg_fee_max = models.SmallIntegerField(default=4000)
+    ipg_fee_percent = get_amount_field(default=Decimal('0.02'))
+
+    batch_id = models.CharField(max_length=20, null=True, blank=True)
 
     def clean(self):
         if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
@@ -63,6 +74,10 @@ class Gateway(models.Model):
         return decrypt(self.withdraw_api_secret_encrypted)
 
     @property
+    def withdraw_api_password(self):
+        return decrypt(self.withdraw_api_password_encrypted)
+
+    @property
     def deposit_api_secret(self):
         return decrypt(self.deposit_api_secret_encrypted)
 
@@ -71,14 +86,46 @@ class Gateway(models.Model):
         return decrypt(self.payment_id_secret_encrypted)
 
     @classmethod
-    def get_active_deposit(cls, user: User = None) -> 'Gateway':
+    def get_withdraw_fee(cls, amount):
+        config = SystemConfig.get_system_config()
+        return max(min(amount * config.withdraw_fee_percent // 100, config.withdraw_fee_max),
+                   config.withdraw_fee_min)
+
+    @classmethod
+    def _find_best_deposit_gateway(cls, user: User = None, amount: Decimal = 0) -> 'Gateway':
         if user and user.is_staff:
             gateway = Gateway.objects.filter(active_for_staff=True).order_by('id').first()
 
             if gateway:
-                return gateway.get_concrete_gateway()
+                return gateway
 
-        gateway = Gateway.objects.filter(active=True).order_by('id').first()
+        gateways = Gateway.objects.filter(active=True).order_by('-deposit_priority')
+
+        gateway = gateways.first()
+
+        if gateways.count() <= 1:
+            return gateway
+
+        today = timezone.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        today_payments = dict(Payment.objects.filter(
+            paymentrequest__isnull=False,
+            user=user,
+            created__gte=today,
+            status=DONE
+        ).values('paymentrequest__gateway').annotate(
+            total=Sum('amount')
+        ).values_list('paymentrequest__gateway', 'total'))
+
+        for g in gateways:
+            if amount + today_payments.get(g.id, 0) <= g.max_daily_deposit_amount:
+                return g
+
+        return gateway
+
+    @classmethod
+    def get_active_deposit(cls, user: User = None, amount: Decimal = 0) -> 'Gateway':
+        gateway = cls._find_best_deposit_gateway(user, amount)
 
         if gateway:
             return gateway.get_concrete_gateway()
@@ -86,6 +133,10 @@ class Gateway(models.Model):
     @classmethod
     def get_active_withdraw(cls) -> 'Gateway':
         return Gateway.objects.filter(withdraw_enable=True).order_by('id').first()
+
+    @classmethod
+    def get_active_pay_id_deposit(cls) -> 'Gateway':
+        return Gateway.objects.filter(active=True).exclude(payment_id_api_key='').order_by('id').first()
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
@@ -110,19 +161,22 @@ class Gateway(models.Model):
     def get_payment_url(cls, authority: str):
         raise NotImplementedError
 
-    def create_payment_request(self, bank_card: BankCard, amount: int, source : str) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         raise NotImplementedError
 
     def verify(self, payment: Payment):
         self._verify(payment=payment)
 
-        fast_buy_token = FastBuyToken.objects.filter(payment_request=payment.payment_request).last()
+        fast_buy_token = FastBuyToken.objects.filter(payment_request=payment.paymentrequest).last()
 
         if fast_buy_token:
             fast_buy_token.create_otc_for_fast_buy_token(payment)
 
     def _verify(self, payment: Payment):
         raise NotImplementedError
+
+    def get_ipg_fee(self, amount: int) -> int:
+        return max(min(int(amount * self.ipg_fee_percent / 100), self.ipg_fee_max), self.ipg_fee_min)
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.id)

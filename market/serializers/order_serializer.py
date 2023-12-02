@@ -1,24 +1,24 @@
 import logging
+import types
 from decimal import Decimal
 
 from django.conf import settings
-from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _, to_locale, get_language
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.generics import get_object_or_404
 
+from accounts.models import LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Wallet, Asset, CloseRequest
+from ledger.models import Wallet, Asset
+from ledger.utils.external_price import IRT
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
-from ledger.utils.external_price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
-from market.utils.redis import MarketStreamCache
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ class OrderSerializer(serializers.ModelSerializer):
     trigger_price = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
+    is_oco = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -64,29 +65,33 @@ class OrderSerializer(serializers.ModelSerializer):
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
 
         elif validated_data['fill_type'] == Order.MARKET:
+            # todo: for stop loss orders we should consider trigger price instead of current top price
             validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
+
             if not validated_data['price']:
                 raise Exception('Empty order book')
 
         wallet = self.post_validate(symbol, validated_data)
 
+        matched_trades = None
+        login_activity = LoginActivity.from_request(self.context['request'])
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
-                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol}
+                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol,
+                     'login_activity': login_activity}
                 )
                 matched_trades = created_order.submit(pipeline)
 
-            extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
-            MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
+                extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
+                pipeline.add_market_cache_data(
+                    symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra
+                )
+
             filtered_trades = list(filter(lambda t: t.order_id == created_order.id, matched_trades.trades))
             filled_amount = Decimal(sum(map(lambda t: t.amount, filtered_trades)))
             created_order.filled_amount = filled_amount
             filled_value = Decimal(sum(map(lambda t: t.price * t.amount, filtered_trades)))
-
-            for trade in matched_trades.trades:
-                trade.trigger_event()
-
             self.context['trades'] = {created_order.id: (filled_amount, filled_value)}
 
         except InsufficientBalance:
@@ -96,22 +101,32 @@ class OrderSerializer(serializers.ModelSerializer):
             if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             raise APIException(_('Could not place order'))
+        finally:
+            if matched_trades and matched_trades.to_cancel_stoploss:
+                from market.models import StopLoss
+                StopLoss.objects.filter(id__in=map(lambda s: s.id, matched_trades.to_cancel_stoploss)).update(
+                    canceled_at=timezone.now()
+                )
+
         logger.info(log_prefix + f' finished creating... {created_order.id} {timezone.now()}')
         return created_order
 
     def post_validate(self, symbol, validated_data):
-        if not symbol.enable or not symbol.asset.enable:
+        if not symbol.asset.enable:
+            raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
+        if not symbol.enable and self.context['account'].id != settings.MARKET_MAKER_ACCOUNT_ID:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
 
+        position = types.SimpleNamespace(variant=None)
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
             check_margin_view_permission(self.context['account'], symbol.asset)
-
-            if symbol.base_asset.symbol == Asset.IRT:
-                raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
+            position = symbol.get_margin_position(self.context['account'])
 
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
-        wallet = symbol.asset.get_wallet(self.context['account'], market=market, variant=self.context['variant'])
+        wallet = symbol.asset.get_wallet(
+            self.context['account'], market=market, variant=position.variant or self.context['variant']
+        )
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
         self.validate_order_size(
             validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol
@@ -188,15 +203,18 @@ class OrderSerializer(serializers.ModelSerializer):
         return decimal_to_str(floor_precision(price, order.symbol.tick_size))
 
     def get_allow_cancel(self, instance: Order):
-        if instance.wallet.variant:
+        if instance.wallet.is_for_strategy:
             return False
         return True
+
+    def get_is_oco(self, instance: Order):
+        return bool(instance.oco)
 
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel',
-                  'client_order_id')
+                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel', 'is_oco',
+                  'time_in_force', 'client_order_id')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},

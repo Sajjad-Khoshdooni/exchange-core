@@ -1,16 +1,10 @@
 import datetime
-import json
 import logging
 from datetime import timedelta
 from secrets import randbelow
 
 import jdatetime
-import requests
-from django.contrib.sessions.models import Session
 from django.utils import timezone
-
-from accounts.models.login_activity import LoginActivity
-from accounts.utils.ip import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +46,81 @@ def gregorian_to_jalali_date_str(date: datetime.date):
 
 def gregorian_to_jalali_datetime(d: datetime):
     d = d.astimezone()
-    return jdatetime.datetime.fromgregorian(year=d.year, month=d.month, day=d.day, hour=d.hour, minute=d.minute,
-                                            second=d.second)
+    return jdatetime.datetime.fromgregorian(
+        year=d.year,
+        month=d.month,
+        day=d.day,
+        hour=d.hour,
+        minute=d.minute,
+        second=d.second
+    )
+
+
+PERSIAN_DIGIT_MAP = {
+    '0': '۰',
+    '1': '۱',
+    '2': '۲',
+    '3': '۳',
+    '4': '۴',
+    '5': '۵',
+    '6': '۶',
+    '7': '۷',
+    '8': '۸',
+    '9': '۹',
+}
+
+
+def get_persian_number(num) -> str:
+    return ''.join(map(lambda c: PERSIAN_DIGIT_MAP.get(c, c), str(num)))
+
+
+def persian_timedelta(d: timedelta) -> str:
+    parts = []
+
+    if d.days > 0:
+        parts.append(f'{get_persian_number(d.days)} روز')
+
+    seconds = d.seconds
+    hours = seconds // 3600
+    seconds -= hours * 3600
+    minutes = seconds // 60
+    seconds -= minutes * 60
+
+    if hours > 0:
+        parts.append(f'{get_persian_number(hours)} ساعت')
+
+    if minutes > 0:
+        parts.append(f'{get_persian_number(minutes)} دقیقه')
+
+    if d.days == 0 and d.seconds < 300:
+        parts.append(f'{get_persian_number(seconds)} ثانیه')
+
+    return ' و '.join(parts)
+
+
+def timedelta_message(d: timedelta, ignore_seconds: bool = False) -> str:
+    parts = []
+
+    if d.days > 0:
+        parts.append(f'{d.days} days')
+
+    seconds = d.seconds
+    hours = seconds // 3600
+    seconds -= hours * 3600
+    minutes = seconds // 60
+    seconds -= minutes * 60
+
+    if hours > 0:
+        parts.append(f'{hours} hours')
+
+    if minutes > 0:
+        parts.append(f'{minutes} minutes')
+
+    if not ignore_seconds:
+        if d.days == 0 and d.seconds < 300:
+            parts.append(f'{seconds} seconds')
+
+    return ' and '.join(parts)
 
 
 def gregorian_to_jalali_datetime_str(d: datetime):
@@ -72,83 +139,5 @@ def parse_positive_int(inp: str, default: int = None):
     return num
 
 
-def get_ip_data(ip):
-
-    try:
-        resp = requests.post(
-            url='http://ip-api.com/json/{ip}'.format(ip=ip),
-            timeout=1
-        )
-        return resp.json()
-
-    except:
-        return {}
-
-
-def get_login_activity_from_request(request) -> LoginActivity:
-    try:
-        os = request.user_agent.os.family
-        if request.user_agent.os.version_string:
-            os += ' ' + request.user_agent.os.version_string
-
-        device = request.user_agent.device.family
-
-        browser = request.user_agent.browser.family
-
-        if request.user_agent.browser.version_string:
-            browser += ' ' + request.user_agent.os.version_string
-
-        if request.user_agent.is_mobile:
-            device_type = LoginActivity.MOBILE
-        elif request.user_agent.is_tablet:
-            device_type = LoginActivity.TABLET
-        elif request.user_agent.is_pc:
-            device_type = LoginActivity.PC
-        else:
-            device_type = LoginActivity.UNKNOWN
-
-        return LoginActivity(
-            user_agent=request.META['HTTP_USER_AGENT'],
-            device_type=device_type,
-            device=device,
-            os=os,
-            browser=browser,
-        )
-    except:
-        pass
-
-
-def get_login_activity_from_client_info(client_info: dict) -> LoginActivity:
-    return LoginActivity(
-        user_agent=json.dumps(client_info),
-        device_type=LoginActivity.MOBILE,
-        device=client_info.get('device_name', ''),
-        os='%s %s' % (client_info.get('system_name', ''), client_info.get('system_version', '')),
-        browser=client_info.get('brand', ''),
-    )
-
-
-def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, native_app: bool = False):
-    try:
-        if client_info:
-            login_activity = get_login_activity_from_client_info(client_info)
-        else:
-            login_activity = get_login_activity_from_request(request)
-
-        ip = get_client_ip(request)
-        ip_data = get_ip_data(ip)
-
-        login_activity.user = user
-        login_activity.session = Session.objects.filter(session_key=request.session.session_key).first()
-        login_activity.is_sign_up = is_sign_up
-        login_activity.ip = ip
-        login_activity.ip_data = ip_data
-        login_activity.city = ip_data.get('city', '')
-        login_activity.country = ip_data.get('country', '')
-        login_activity.native_app = native_app
-        login_activity.save()
-
-    except:
-        logger.exception('User login activity dos not saved ')
-
-    return
+def get_jalali_now():
+    return gregorian_to_jalali_datetime_str(timezone.now())

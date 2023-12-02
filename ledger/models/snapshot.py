@@ -7,7 +7,7 @@ from ledger.utils.fields import get_amount_field
 class AssetSnapshot(models.Model):
     history = HistoricalRecords()
 
-    updated = models.DateTimeField(db_index=True, auto_now=True)
+    updated = models.DateTimeField(db_index=True)
     asset = models.OneToOneField('ledger.Asset', on_delete=models.CASCADE)
 
     price = get_amount_field()
@@ -24,19 +24,19 @@ class AssetSnapshot(models.Model):
 
 
 class SystemSnapshot(models.Model):
-    created = models.DateTimeField(auto_now_add=True, unique=True, db_index=True)
+    created = models.DateTimeField(unique=True, db_index=True)
     usdt_price = get_amount_field()
-    hedge = get_amount_field()
-    cum_hedge = get_amount_field()
+    hedge = get_amount_field(validators=())
+    cum_hedge = get_amount_field(validators=())
     binance_margin_ratio = get_amount_field()
 
     total = get_amount_field()
     users = get_amount_field()
-    exchange = get_amount_field()
-    exchange_potential = get_amount_field()
-    reserved = get_amount_field()
+    exchange = get_amount_field(validators=())
+    reserved = get_amount_field(validators=())
 
-    margin_insurance = get_amount_field()
+    margin_insurance = get_amount_field(validators=())
     prize = get_amount_field()
 
-    verified = models.BooleanField(default=True)
+    verified = models.BooleanField(default=False)
+    description = models.TextField(null=True, blank=True)

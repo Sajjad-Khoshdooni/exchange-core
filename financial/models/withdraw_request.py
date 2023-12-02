@@ -1,35 +1,47 @@
 import logging
 import uuid
 
-from decouple import config
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.template.loader import render_to_string
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
-from accounts.event.producer import get_kafka_producer
-from accounts.models import Account
+from accounts.models import Account, EmailNotification, SmsNotification
 from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.dto import TransferEvent
-from accounts.utils.telegram import send_support_message
+from accounts.utils.telegram import send_system_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
+from analytics.event.producer import get_kafka_producer
+from analytics.utils.dto import TransferEvent
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
-from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_last_price, USDT_IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
 
-class FiatWithdrawRequest(models.Model):
+class BaseTransfer(models.Model):
+    created = models.DateTimeField(auto_now_add=True, db_index=True)
+    amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
+    gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
+    bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')
+    group_id = get_group_id_field()
+    ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
+
+    class Meta:
+        abstract = True
+
+
+class FiatWithdrawRequest(BaseTransfer):
     history = HistoricalRecords()
 
     STATUSES = INIT, PROCESSING, PENDING, CANCELED, DONE, REFUND = \
@@ -37,12 +49,6 @@ class FiatWithdrawRequest(models.Model):
 
     FREEZE_TIME = 3 * 60
 
-    created = models.DateTimeField(auto_now_add=True)
-    group_id = get_group_id_field()
-
-    bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')
-
-    amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
     fee_amount = models.PositiveIntegerField(verbose_name='کارمزد')
 
     status = models.CharField(
@@ -53,16 +59,13 @@ class FiatWithdrawRequest(models.Model):
         ]
     )
 
-    ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
-
     comment = models.TextField(verbose_name='نظر', blank=True)
 
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     receive_datetime = models.DateTimeField(null=True, blank=True)
 
-    gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
-
     risks = models.JSONField(null=True, blank=True)
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
     @property
     def total_amount(self):
@@ -104,30 +107,13 @@ class FiatWithdrawRequest(models.Model):
         from financial.utils.withdraw import ProviderError
         from financial.utils.withdraw import FiatWithdraw
 
-        wallet_id = self.gateway.wallet_id
         api_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
 
-        wallet = api_handler.get_wallet_data(wallet_id)
-
-        if wallet.free < self.amount:
-            logger.info(f'Not enough wallet balance to full fill bank acc')
-
-            link = url_to_edit_object(self)
-            send_support_message(
-                message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
-                link=link
-            )
-            return
+        self.withdraw_datetime = timezone.now()
 
         try:
-            withdraw = api_handler.create_withdraw(
-                wallet_id,
-                self.bank_account,
-                self.amount,
-                self.id
-            )
+            withdraw = api_handler.create_withdraw(transfer=self)
             self.ref_id = withdraw.tracking_id
-            self.withdraw_datetime = timezone.now()
             self.receive_datetime = withdraw.receive_datetime
             self.comment = withdraw.message
 
@@ -136,13 +122,15 @@ class FiatWithdrawRequest(models.Model):
 
         except ProviderError as e:
             self.comment = str(e)
-            self.save(update_fields=['comment'])
+            self.save(update_fields=['comment', 'withdraw_datetime'])
+
+            send_system_message("Manual fiat withdraw", link=url_to_edit_object(self))
 
     def update_status(self):
         from financial.utils.withdraw import FiatWithdraw
 
         withdraw_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
-        withdraw_data = withdraw_handler.get_withdraw_status(self.id, self.ref_id)
+        withdraw_data = withdraw_handler.get_withdraw_status(self)
         status = withdraw_data.status
 
         logger.info(f'FiatRequest {self.id} status: {status}')
@@ -164,14 +152,14 @@ class FiatWithdrawRequest(models.Model):
             )
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
-            email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
+            email_template = 'fiat_withdraw_successful'
 
         elif self.status == self.CANCELED:
             title = 'درخواست برداشت شما لغو شد.'
             description = ''
             level = Notification.ERROR
             template = 'withdraw-rejected'
-            email_template = email.SCOPE_CANCEL_FIAT_WITHDRAW
+            email_template = 'fiat_withdraw_unsuccessful'
         else:
             return
 
@@ -187,23 +175,37 @@ class FiatWithdrawRequest(models.Model):
             token=humanize_number(self.amount)
         )
 
-        email.send_email_by_template(
-            recipient=user.email,
+        EmailNotification.send_by_template(
+            recipient=user,
             template=email_template,
             context={
-                'estimated_receive_time': self.receive_datetime or None,
-                'brand': settings.BRAND,
-                'panel_url': settings.PANEL_URL,
-                'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                'estimated_receive_time': self.receive_datetime,
             }
         )
 
     def refund(self):
         assert self.status == self.DONE
 
+        content = render_to_string('accounts/notif/sms/withdraw_refund.txt', context={
+            'brand': settings.BRAND
+        })
+
         with WalletPipeline() as pipeline:
             for trx in Trx.objects.filter(group_id=self.group_id):
                 trx.revert(pipeline)
+
+            user = self.bank_account.user
+            SmsNotification.objects.create(
+                recipient=user,
+                content=content
+            )
+
+            Notification.send(
+                recipient=user,
+                title='برگشت برداشت ریالی',
+                message=content,
+                level=Notification.WARNING,
+            )
 
             self.status = self.REFUND
             self.save(update_fields=['status'])
@@ -255,12 +257,10 @@ class FiatWithdrawRequest(models.Model):
 
 @receiver(post_save, sender=FiatWithdrawRequest)
 def handle_withdraw_request_save(sender, instance, created, **kwargs):
-    producer = get_kafka_producer()
-
-    if instance.status != FiatWithdrawRequest.DONE:
+    if instance.status != FiatWithdrawRequest.DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
-    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+    usdt_price = get_last_price(USDT_IRT)
 
     event = TransferEvent(
         id=instance.id,
@@ -272,7 +272,7 @@ def handle_withdraw_request_save(sender, instance, created, **kwargs):
         value_irt=instance.amount,
         value_usdt=float(instance.amount) / float(usdt_price),
         is_deposit=False,
-        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type)
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type + 'fiat_withdraw')
     )
 
-    producer.produce(event)
+    get_kafka_producer().produce(event)

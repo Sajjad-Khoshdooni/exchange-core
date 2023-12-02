@@ -1,17 +1,23 @@
 from django.contrib import admin
+from django.contrib.admin import SimpleListFilter
 from django.db.models import Sum
+from django.utils import timezone
+from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
     AssetPrice, TradeRevenue, PeriodicFetcher, BlocklinkIncome, BlocklinkDustCost
 from accounting.models.provider_income import ProviderIncome
+from gamify.utils import clone_model
 from ledger.utils.precision import humanize_number
 
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('name', 'iban', 'get_balance')
+    list_display = ('name', 'iban', 'get_balance', 'create_vault')
     readonly_fields = ('get_balance', )
+    list_filter = ('create_vault', )
+    ordering = ('-create_vault', )
 
     @admin.display(description='موجودی')
     def get_balance(self, account: Account):
@@ -27,15 +33,30 @@ class TransactionAttachmentTabularInline(admin.TabularInline):
 
 @admin.register(AccountTransaction)
 class AccountTransactionAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'amount', 'reason')
-    readonly_fields = ('created', )
+    fields = ('account', 'amount', 'get_amount', 'reason', 'type')
+    list_display = ('created', 'account', 'get_amount', 'type', 'reason')
+    readonly_fields = ('created', 'get_amount')
     inlines = (TransactionAttachmentTabularInline, )
+    list_filter = ('account__name', 'type', 'account')
+    actions = ('clone_trx', )
+    search_fields = ('reason', )
+
+    @admin.display(description='مقدار', ordering='amount')
+    def get_amount(self, trx: AccountTransaction):
+        return trx.amount and humanize_number(trx.amount)
+
+    @admin.action(description='Clone', permissions=['change'])
+    def clone_trx(self, request, queryset):
+        for trx in queryset:
+            clone_model(trx)
 
 
 @admin.register(Vault)
 class VaultAdmin(admin.ModelAdmin):
-    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value')
+    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value', 'expected_base_balance')
     ordering = ('-real_value', )
+    list_filter = ('market', 'type')
+    list_editable = ('expected_base_balance', )
 
     @admin.display(description='usdt')
     def get_usdt(self, vault: Vault):
@@ -61,7 +82,7 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super(VaultItemAdmin, self).save_model(request, obj, form, change)
-        obj.vault.update_real_value()
+        obj.vault.update_real_value(timezone.now())
 
 
 @admin.register(ReservedAsset)
@@ -76,19 +97,41 @@ class AssetPriceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     search_fields = ('coin', )
 
 
+class GapFilledFilter(SimpleListFilter):
+    title = "gap filled"
+    parameter_name = "gap_filled"
+
+    def lookups(self, request, model_admin):
+        return (1, 'بله'), (0, 'خیر')
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value is not None:
+            queryset = queryset.filter(gap_revenue__isnull=value == '0')
+
+        return queryset
+
+
 @admin.register(TradeRevenue)
 class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = (
-        'created', 'symbol', 'source', 'side', 'amount', 'price', 'gap_revenue', 'fee_revenue', 'get_hedge_revenue',
-        'coin_price', 'coin_filled_price', 'hedge_key', 'fiat_hedge_usdt', 'fiat_hedge_base')
+        'created', 'symbol', 'source', 'get_account', 'side', 'amount', 'price', 'value', 'gap_revenue', 'fee_revenue',
+        'coin_price', 'coin_filled_price', 'hedge_key', 'value_is_fake')
 
     search_fields = ('group_id', 'hedge_key', 'symbol__name', )
-    list_filter = ('symbol', 'source',)
+    list_filter = (GapFilledFilter, 'symbol', 'source',)
     readonly_fields = ('account', 'symbol', 'group_id')
+    actions = ('zero_gap_revenue', )
 
-    @admin.display(description='hedge revenue')
-    def get_hedge_revenue(self, revenue: TradeRevenue):
-        return round(revenue.fiat_hedge_base * revenue.base_usdt_price + revenue.fiat_hedge_usdt, 3)
+    @admin.action(description='Zero Gap Revenue')
+    def zero_gap_revenue(self, request, queryset):
+        queryset.filter(gap_revenue__isnull=True).update(gap_revenue=0)
+
+    @admin.display(description='account')
+    def get_account(self, trade_revenue: TradeRevenue):
+        return mark_safe(
+            f'<span dir="ltr">{trade_revenue.account}</span>'
+        )
 
 
 @admin.register(ProviderIncome)
@@ -106,7 +149,7 @@ class PeriodicFetcherAdmin(admin.ModelAdmin):
 
 @admin.register(BlocklinkIncome)
 class BlocklinkIncomeAdmin(admin.ModelAdmin):
-    list_display = ('start', 'network', 'real_fee_amount', 'fee_cost', 'fee_income',)
+    list_display = ('start', 'network', 'coin', 'real_fee_amount', 'fee_cost', 'fee_income',)
     list_filter = ('network', )
 
 

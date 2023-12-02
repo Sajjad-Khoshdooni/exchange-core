@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q
 
 from accounting.models import TradeRevenue
 from accounts.models import User
@@ -12,7 +12,7 @@ from ledger.utils.fields import DONE
 def produce_users_analytics(user_ids: list, start: datetime = None, end: datetime = None):
     users = User.objects.filter(id__in=user_ids)
     payments = Payment.objects.filter(
-        payment_request__bank_card__user_id__in=user_ids,
+        user_id__in=user_ids,
         status=DONE
     )
 
@@ -29,11 +29,11 @@ def produce_users_analytics(user_ids: list, start: datetime = None, end: datetim
         transfers = transfers.filter(created__lte=end)
         trades = trades.filter(created__lte=end)
 
-    with_deposit_users = set(payments.values_list('payment_request__bank_card__user_id', flat=True))
+    with_deposit_users = set(payments.values_list('user_id', flat=True))
     with_deposit_users |= set(transfers.values_list('wallet__account__user_id', flat=True))
 
     crypto_deposit_volume = transfers.aggregate(value=Sum('irt_value'))['value'] or 0
-    fiat_deposit_volume = payments.aggregate(value=Sum('payment_request__amount'))['value'] or 0
+    fiat_deposit_volume = payments.aggregate(value=Sum('amount'))['value'] or 0
 
     data = {
         'users': len(user_ids),
@@ -42,9 +42,7 @@ def produce_users_analytics(user_ids: list, start: datetime = None, end: datetim
         'deposit_value': fiat_deposit_volume + crypto_deposit_volume,
         'traders': len(set(trades.values_list('account__user_id', flat=True))),
         'trade_volume': trades.aggregate(value=Sum('value'))['value'] or 0,
-        'trade_revenue': trades.aggregate(
-            value=Sum(F('gap_revenue') + F('fee_revenue') +
-                      F('fiat_hedge_usdt') + F('fiat_hedge_base') * F('base_usdt_price'))
+        'trade_revenue': trades.aggregate(value=Sum(F('gap_revenue') + F('fee_revenue'))
         )['value'] or 0,
     }
 

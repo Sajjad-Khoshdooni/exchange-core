@@ -1,27 +1,24 @@
 import logging
 import random
 from datetime import timedelta
-from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
 
-from accounts.models import Notification, Account, TrafficSource
+from accounts.models import Notification, Account, User
 from ledger.models import Prize, Asset
-from ledger.utils.external_price import BUY, get_external_price
 from ledger.utils.fields import get_amount_field, get_created_field
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
 
 class MissionJourney(models.Model):
-    SHIB, VOUCHER = 'true', 'voucher'
-
     name = models.CharField(max_length=64)
     active = models.BooleanField(default=False)
-    promotion = models.CharField(max_length=8, unique=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
+    promotion = models.CharField(max_length=8, unique=True, choices=[(p, p) for p in User.PROMOTIONS])
 
     default = models.BooleanField(default=True)
 
@@ -55,7 +52,11 @@ class MissionTemplate(models.Model):
             return self.finished(account)
 
     def finished(self, account: Account):
-        return all([task.finished(account) for task in self.task_set.all()])
+        tasks = self.task_set.all()
+        if not tasks:
+            return True
+
+        return all([task.finished(account) for task in tasks])
 
     def get_active_task(self, account: Account) -> 'Task':
         for task in self.task_set.all():
@@ -90,12 +91,12 @@ class Achievement(models.Model):
             template = 'جعبه شانس به شما تعلق گرفت. برای دریافت آن، کلیک کنید.'
         elif not self.voucher:
             template = 'جایزه {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'.format(
-                amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+                amount=humanize_number(prize.amount),
                 symbol=self.asset.name_fa
             )
         else:
-            template = 'جایزه تخفیف کارمزد تا سقف {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'.format(
-                amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+            template = 'جایزه تخفیف کارمزد تا سقف {amount} {symbol} به شما تعلق گرفت.'.format(
+                amount=humanize_number(prize.amount),
                 symbol=self.asset.name_fa
             )
 
@@ -140,7 +141,7 @@ class Achievement(models.Model):
                 voucher_expiration = timezone.now() + timedelta(days=7)
 
         if not voucher:
-            price = get_external_price(Asset.SHIB, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
+            price = get_last_price(Asset.SHIB + Asset.USDT) or 0
             value = amount * price
 
         with WalletPipeline() as pipeline:
@@ -231,7 +232,9 @@ class Task(models.Model):
             return max(min(int(_progress / self.max * 100), 100), 0)
 
     def finished(self, account: Account):
-        return self.get_progress_percent(account) == 100
+        progress = self.get_progress_percent(account)
+        logger.info('checking task progress for %s on %s is %s' % (account, self, progress))
+        return progress == 100
 
     class Meta:
         ordering = ('order', )
@@ -244,9 +247,21 @@ class UserMission(models.Model):
     created = get_created_field()
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     mission = models.ForeignKey(MissionTemplate, on_delete=models.CASCADE)
+    finished = models.BooleanField(default=False)
 
     def __str__(self):
         return '%s %s' % (self.user, self.mission)
 
+    @property
+    def expired(self):
+        if not self.mission.expiration:
+            return False
+
+        return self.mission.expiration < timezone.now()
+
     class Meta:
         unique_together = ('user', 'mission')
+
+    def check_achievements(self):
+        from gamify.utils import check_prize_achievements
+        check_prize_achievements(account=self.user.get_account())

@@ -1,33 +1,38 @@
 import re
 
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import get_object_or_404, CreateAPIView
+from rest_framework.generics import get_object_or_404, CreateAPIView, ListAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from accounts.authentication import CustomTokenAuthentication
-from accounts.models import VerificationCode
+from accounts.authentication import WithdrawTokenAuthentication
+from accounts.models import VerificationCode, LoginActivity
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
-from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
-from accounts.verifiers.legal import is_48h_rule_passed
+from accounts.utils.validation import persian_timedelta
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook, DepositAddress
-from ledger.utils.external_price import get_external_price, BUY
+from ledger.models import Asset, Transfer, NetworkAsset, AddressBook, DepositAddress
+from ledger.models import WithdrawFeedback, FeedbackCategory
+from ledger.models.asset import CoinField
+from ledger.models.network import NetworkField
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
+from ledger.utils.price import get_last_price
 from ledger.utils.withdraw_verify import can_withdraw
+from ledger.views.address_book_view import AddressBookCreateSerializer
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
     address_book_id = serializers.CharField(write_only=True, required=False, default=None)
-    coin = serializers.CharField(write_only=True, required=False)
-    network = serializers.CharField(write_only=True, required=False)
+    coin = CoinField(source='asset', required=False)
+    network = NetworkField(required=False)
     code = serializers.CharField(write_only=True, required=False)
-    address = serializers.CharField(write_only=True, required=False)
-    memo = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    address = serializers.CharField(source='out_address', required=False)
+    memo = serializers.CharField(required=False, allow_blank=True)
+    address_book = serializers.SerializerMethodField()
+    totp = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     def validate(self, attrs):
         request = self.context['request']
@@ -36,35 +41,41 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if not can_withdraw(user.get_account(), request) or not user.can_withdraw_crypto:
             raise ValidationError('امکان برداشت وجود ندارد.')
 
+        if user.is_suspended:
+            td = persian_timedelta(user.suspended_until - timezone.now())
+
+            raise ValidationError(
+                f'به دلیل افزایش امنیت حساب‌ کاربری شما، امکان ‌برداشت تا {td} دیگر وجود ندارد.'
+            )
+
         account = user.get_account()
-        api = self.context.get('api')
+        from_panel = self.context.get('from_panel')
+        asset = attrs.get('asset')
+        network = attrs.get('network')
+        address = attrs.get('out_address')
+        address_book = None
+        totp = attrs.get('totp', None)
 
-        if attrs['address_book_id'] and (not api):
+        if attrs['address_book_id'] and from_panel:
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
-
             address = address_book.address
             network = address_book.network
 
             if address_book.asset:
                 asset = address_book.asset
             else:
-                if 'coin' not in attrs:
+                if not asset:
                     raise ValidationError('رمزارزی انتخاب نشده است.')
-
-                asset = get_object_or_404(Asset, symbol=attrs['coin'])
         else:
-            if 'coin' not in attrs:
+            if not asset:
                 raise ValidationError('رمزارزی انتخاب نشده است.')
-            if 'network' not in attrs:
+            if not network:
                 raise ValidationError('شبکه‌ای انتخاب نشده است.')
-            if 'address' not in attrs:
+            if not address:
                 raise ValidationError('آدرس وارد نشده است.')
 
-            if not api and 'code' not in attrs:
+            if from_panel and 'code' not in attrs:
                 raise ValidationError('کد وارد نشده است.')
-            asset = get_object_or_404(Asset, symbol=attrs['coin'])
-            network = get_object_or_404(Network, symbol=attrs['network'])
-            address = attrs['address']
 
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
@@ -74,26 +85,21 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         memo = attrs.get('memo') or ''
 
-        if not api:
+        if from_panel:
             code = attrs['code']
-            otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW)
-
+            otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW, user=user)
             if not otp_code:
-                raise ValidationError({'code': 'کد نامعتبر است.'})
+                raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
 
-            if is_2fa_active_for_user(user):
-                code_2fa = attrs.get('code_2fa') or ''
-                code_2fa_verifier(user_token=user.auth2fa.token, code_2fa=code_2fa)
-
-        if not is_48h_rule_passed(user):
-            raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
+            if not user.is_2fa_valid(totp):
+                raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
-
         amount = attrs['amount']
 
         if not network_asset.can_withdraw_enabled():
-            raise ValidationError('در حال حاضر امکان برداشت {} روی شبکه {} وجود ندارد.'.format(asset.symbol, network.symbol))
+            raise ValidationError(
+                'در حال حاضر امکان برداشت {} روی شبکه {} وجود ندارد.'.format(asset.symbol, network.symbol))
 
         if get_precision(amount) > network_asset.withdraw_precision:
             raise ValidationError('مقدار وارد شده اشتباه است.')
@@ -107,7 +113,15 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if DepositAddress.objects.filter(address=address, address_key__deleted=True):
             raise ValidationError('آدرس برداشت نامعتبر است.')
 
-        if DepositAddress.objects.filter(address=address, address_key__account=account):
+        my_deposit_addresses = DepositAddress.objects.filter(address=address, address_key__account=account)
+
+        if network.need_memo:
+            if not memo:
+                my_deposit_addresses = DepositAddress.objects.none()
+            else:
+                my_deposit_addresses = my_deposit_addresses.filter(address_key__memo=memo)
+
+        if my_deposit_addresses:
             raise ValidationError('آدرس برداشت متعلق به خودتان است. لطفا آدرس دیگری را وارد نمایید.')
 
         wallet = asset.get_wallet(account)
@@ -122,7 +136,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 'در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
 
-        price = get_external_price(asset.symbol, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+        price = get_last_price(asset.symbol + Asset.IRT)
 
         if price:
             irt_value = price * amount
@@ -130,7 +144,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if user_reached_crypto_withdraw_limit(user, irt_value):
                 raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خود رسیده اید.'})
 
-        if not api:
+        if from_panel:
             otp_code.set_code_used()
 
         return {
@@ -140,35 +154,80 @@ class WithdrawSerializer(serializers.ModelSerializer):
             'amount': amount,
             'out_address': address,
             'account': account,
-            'memo': memo
+            'memo': memo,
+            'address_book': address_book,
         }
 
     def create(self, validated_data):
         try:
-            return Transfer.new_withdraw(
+            transfer = Transfer.new_withdraw(
                 wallet=validated_data['wallet'],
                 network=validated_data['network'],
                 amount=validated_data['amount'],
                 address=validated_data['out_address'],
                 memo=validated_data['memo'],
             )
+
+            transfer.login_activity = LoginActivity.from_request(request=self.context['request'])
+            transfer.address_book = validated_data['address_book']
+            transfer.save(update_fields=['address_book', 'login_activity'])
+
+            return transfer
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')
 
+    def get_address_book(self, transfer: Transfer):
+        if transfer.address_book:
+            return AddressBookCreateSerializer(transfer.address_book).data
+
     class Meta:
         model = Transfer
-        fields = ('id', 'amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'memo', 'code_2fa')
+        fields = ('id', 'amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'address_book', 'memo',
+                  'totp')
         ref_name = 'Withdraw Serializer'
 
 
 class WithdrawView(CreateAPIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
+    authentication_classes = (SessionAuthentication, WithdrawTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
     serializer_class = WithdrawSerializer
     queryset = Transfer.objects.all()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        if self.request.auth:
-            ctx['api'] = 1
+        ctx['from_panel'] = not isinstance(self.request.successful_authenticator, WithdrawTokenAuthentication)
         return ctx
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeedbackCategory
+        fields = ('category', 'id',)
+        extra_kwargs = {
+            'category': {'read_only': True},
+            'id': {'read_only': True}
+        }
+
+
+class FeedbackCategories(ListAPIView):
+    queryset = FeedbackCategory.objects.all()
+    serializer_class = CategorySerializer
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+
+    def validate(self, attrs):
+        attrs['user'] = self.context['request'].user
+        return attrs
+
+    class Meta:
+        model = WithdrawFeedback
+        fields = ('category', 'description',)
+        extra_kwargs = {
+            'category': {'required': True, 'write_only': True},
+            'description': {'required': False, 'write_only': True},
+        }
+
+
+class WithdrawFeedbackSubmitView(CreateAPIView):
+    serializer_class = FeedbackSerializer

@@ -1,89 +1,75 @@
-from decimal import Decimal
-
-from decouple import config
-from django.conf import settings
+from django.core.validators import validate_integer
 from django.db import models
-from django.utils import timezone
 
-from accounts.models import Account
-from accounts.models import Notification
-from accounts.utils import email
-from ledger.models import Trx, Asset
-from ledger.utils.fields import get_group_id_field
-from ledger.utils.precision import humanize_number, get_presentation_amount
+from financial.models import Payment
+from financial.validators import iban_validator
+from ledger.utils.fields import get_status_field, DONE, PENDING, get_group_id_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
-class PaymentIdRequest(models.Model):
-    IN_PROGRESS, WAITING_FOR_MERCHANT_VERIFY, FAILED, SUCCESSFUL = \
-        'IN_PROGRESS', ' WAITING_FOR_MERCHANT_VERIFY', 'FAILED', 'SUCCESSFUL'
-
+class PaymentId(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
+    pay_id = models.CharField(max_length=32, validators=[validate_integer])
+    verified = models.BooleanField(default=False)
+
+    destination = models.ForeignKey('financial.GeneralBankAccount', on_delete=models.PROTECT)
+
     group_id = get_group_id_field()
 
-    bank_payment_id = models.ForeignKey('financial.BankPaymentId', on_delete=models.PROTECT)
+    provider_status = models.CharField(max_length=256, blank=True)
+    provider_reason = models.CharField(max_length=256, blank=True)
 
-    amount = models.PositiveIntegerField()
-    bank = models.CharField(max_length=16)
-    bank_reference_number = models.IntegerField()
-    destination_account_identifier = models.CharField(max_length=100)  # todo check max length
-    external_reference_number = models.IntegerField()
-    payment_id = models.IntegerField(unique=True)
-    raw_bank_timestamp = models.DateTimeField()
-    status = models.CharField(
-        max_length=30,
-        choices=[
-            (IN_PROGRESS, IN_PROGRESS), (WAITING_FOR_MERCHANT_VERIFY, WAITING_FOR_MERCHANT_VERIFY),
-            (FAILED, FAILED), (SUCCESSFUL, SUCCESSFUL)
-        ],
-        default=IN_PROGRESS
+    def __str__(self):
+        return self.pay_id
+
+    class Meta:
+        unique_together = [('user', 'gateway'), ('pay_id', 'gateway')]
+
+
+class PaymentIdRequest(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+
+    owner = models.ForeignKey(PaymentId, on_delete=models.PROTECT)
+    status = get_status_field()
+
+    amount = models.PositiveBigIntegerField()
+    fee = models.PositiveBigIntegerField()
+
+    bank_ref = models.CharField(max_length=64, blank=True)
+    external_ref = models.CharField(max_length=64, blank=True, unique=True)
+
+    source_iban = models.CharField(
+        max_length=26,
+        validators=[iban_validator],
+        verbose_name='شبا',
     )
 
-    def alert_payment(self):
-        user = self.bank_account.user
-        user_email = user.email
-        title = 'واریز وجه با موفقیت انجام شد'
-        payment_amount = humanize_number(get_presentation_amount(Decimal(self.amount)))
-        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amount)
+    deposit_time = models.DateTimeField()
 
-        Notification.send(
-            recipient=user,
-            title=title,
-            message=description,
-            level=Notification.SUCCESS
-        )
+    group_id = get_group_id_field()
+    payment = models.OneToOneField('financial.Payment', null=True, blank=True, on_delete=models.CASCADE)
 
-        if user_email:
-            email.send_email_by_template(
-                recipient=user_email,
-                template=email.SCOPE_PAYMENT,
-                context={
-                    'payment_amount': payment_amount,
-                    'brand': settings.BRAND,
-                    'panel_url': settings.PANEL_URL,
-                    'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                }
+    def __str__(self):
+        return '%s ref=%s' % (self.amount, self.bank_ref)
+
+    def accept(self):
+        with WalletPipeline() as pipeline:
+            req = PaymentIdRequest.objects.select_for_update().get(id=self.id)
+
+            if req.payment or req.status != PENDING:
+                return
+
+            req.payment = Payment.objects.create(
+                group_id=req.group_id,
+                user=req.owner.user,
+                amount=req.amount,
+                fee=req.fee,
             )
+            req.payment.accept(pipeline, req.bank_ref)
 
-    def accept(self, pipeline: WalletPipeline):
-        asset = Asset.get(Asset.IRT)
-        user = self.bank_account.user
-        account = user.get_account()
-
-        pipeline.new_trx(
-            sender=asset.get_wallet(Account.out()),
-            receiver=asset.get_wallet(account),
-            amount=self.amount,
-            scope=Trx.TRANSFER,
-            group_id=self.group_id,
-        )
-
-        if not user.first_fiat_deposit_date:
-            user.first_fiat_deposit_date = timezone.now()
-            user.save()
-
-        from gamify.utils import check_prize_achievements, Task
-        check_prize_achievements(account, Task.DEPOSIT)
-
-        self.alert_payment()
+            req.status = DONE
+            req.save(update_fields=['status', 'payment'])

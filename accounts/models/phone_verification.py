@@ -25,15 +25,24 @@ class VerificationCode(models.Model):
     SCOPE_TELEPHONE = 'tel'
     SCOPE_CHANGE_PASSWORD = 'change_pass'
     SCOPE_CHANGE_PHONE = 'change_phone'
-    SCOPE_2FA_ACTIVATE = '2fa_activate'
+    SCOPE_CHANGE_PHONE_INIT = 'change_phone_init'
+    SCOPE_NEW_PHONE = 'new_phone'
+    SCOPE_2FA = '2fa'
+    SCOPE_FORGET_2FA = 'forget_2fa'
+    SCOPE_API_TOKEN = 'api_token'
+    SCOPE_ADDRESS_BOOK = 'address_book'
 
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
         (SCOPE_CRYPTO_WITHDRAW, SCOPE_CRYPTO_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
         (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD), (SCOPE_CHANGE_PHONE, SCOPE_CHANGE_PHONE),
-        (SCOPE_VERIFY_EMAIL, SCOPE_VERIFY_EMAIL), (SCOPE_FIAT_WITHDRAW, SCOPE_FIAT_WITHDRAW),
-        (SCOPE_2FA_ACTIVATE, SCOPE_2FA_ACTIVATE),
+        (SCOPE_CHANGE_PHONE_INIT, SCOPE_CHANGE_PHONE_INIT), (SCOPE_VERIFY_EMAIL, SCOPE_VERIFY_EMAIL),
+        (SCOPE_FIAT_WITHDRAW, SCOPE_FIAT_WITHDRAW), (SCOPE_2FA, SCOPE_2FA), (SCOPE_API_TOKEN, SCOPE_API_TOKEN),
+        (SCOPE_ADDRESS_BOOK, SCOPE_ADDRESS_BOOK), (SCOPE_NEW_PHONE, SCOPE_NEW_PHONE), (SCOPE_FORGET_2FA, SCOPE_FORGET_2FA)
     ]
+
+    RESTRICTED_SEND_SCOPES = [SCOPE_NEW_PHONE, SCOPE_FORGET_2FA]
+    RESTRICTED_VERIFY_SCOPES = [SCOPE_CHANGE_PHONE_INIT]
 
     created = models.DateTimeField(auto_now_add=True)
     expiration = models.DateTimeField(default=fifteen_minutes_later_datetime)
@@ -66,7 +75,8 @@ class VerificationCode(models.Model):
 
     scope = models.CharField(
         max_length=32,
-        choices=SCOPE_CHOICES
+        choices=SCOPE_CHOICES,
+        db_index=True
     )
 
     user = models.ForeignKey(
@@ -112,8 +122,9 @@ class VerificationCode(models.Model):
         if not settings.DEBUG_OR_TESTING_OR_STAGING:
             any_recent_code = VerificationCode.objects.filter(
                 phone=phone,
-                created__gte=timezone.now() - timedelta(minutes=2),
-            ).exists()
+                scope=scope,
+                created__gte=timezone.now() - timedelta(minutes=1),
+            ).count() >= 2
 
             if not settings.DEBUG_OR_TESTING_OR_STAGING and any_recent_code:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
@@ -121,10 +132,11 @@ class VerificationCode(models.Model):
 
             prev_codes = VerificationCode.objects.filter(
                 phone=phone,
-                created__gte=timezone.now() - timedelta(minutes=15),
+                scope=scope,
+                created__gte=timezone.now() - timedelta(minutes=5),
             ).count()
 
-            if not settings.DEBUG_OR_TESTING_OR_STAGING and prev_codes >= 3:
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and prev_codes >= 5:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
                 return
 

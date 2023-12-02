@@ -5,9 +5,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint, Q, F, UniqueConstraint
 
-from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
-from ledger.utils.fields import get_amount_field
+from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -33,13 +32,19 @@ class Wallet(models.Model):
     balance = get_amount_field(default=Decimal(0), validators=())
     locked = get_amount_field(default=Decimal(0))
 
-    variant = models.UUIDField(editable=False, null=True, blank=True)
-
+    variant = get_group_id_field(null=True, default=None)
     expiration = models.DateTimeField(null=True, blank=True)
+    credit = get_amount_field(default=0)
+
+    @property
+    def is_for_strategy(self):
+        if not self.variant:
+            return False
+        return ReserveWallet.objects.filter(group_id=self.variant).exists()
 
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
-        return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
+        return '%s Wallet %s %s [%s] %s' % (market_verbose, self.asset, self.variant, self.account, self.balance)
 
     class Meta:
         constraints = [
@@ -56,7 +61,7 @@ class Wallet(models.Model):
             CheckConstraint(
                 name='valid_balance_constraint',
                 check=Q(check_balance=False) |
-                      (~Q(market__in=('loan', 'debt')) & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
+                      (~Q(market__in=('loan', 'debt')) & Q(balance__gte=F('locked') - F('credit'))) |
                       (Q(market__in=('loan', 'debt')) & Q(balance__lte=0) & Q(locked=0)),
             ),
             CheckConstraint(
@@ -68,13 +73,14 @@ class Wallet(models.Model):
     def get_free(self) -> Decimal:
         return self.balance - self.locked
 
-    def has_balance(self, amount: Decimal, raise_exception: bool = False, check_system_wallets: bool = False) -> bool:
+    def has_balance(self, amount: Decimal, raise_exception: bool = False, check_system_wallets: bool = False,
+                    pipeline_balance_diff=Decimal(0)) -> bool:
         assert amount >= 0 and self.market not in Wallet.NEGATIVE_MARKETS
 
         if not check_system_wallets and not self.check_balance:
             can = True
         else:
-            can = self.get_free() >= amount
+            can = self.get_free() + pipeline_balance_diff - amount >= -self.credit
 
         if raise_exception and not can:
             raise InsufficientBalance()
@@ -97,6 +103,7 @@ class Wallet(models.Model):
 
     def airdrop(self, amount: Decimal, i_am_sure: bool = False):
         assert settings.DEBUG_OR_TESTING or i_am_sure
+        from accounts.models import Account
 
         from ledger.models import Trx
         from uuid import uuid4
@@ -113,6 +120,7 @@ class Wallet(models.Model):
     def seize_funds(self, amount: Decimal = None):
         from ledger.models import Trx
         from uuid import uuid4
+        from accounts.models import Account
 
         with WalletPipeline() as pipeline:
             pipeline.new_trx(
@@ -132,7 +140,7 @@ class Wallet(models.Model):
         if request_id:
             existing_reserve = ReserveWallet.objects.filter(request_id=request_id).first()
             if existing_reserve:
-                return existing_reserve.request_id
+                return existing_reserve.group_id
 
         if self.has_balance(amount, raise_exception=True):
             group_id = uuid4()
@@ -167,7 +175,7 @@ class ReserveWallet(models.Model):
     receiver = models.ForeignKey('ledger.Wallet', on_delete=models.PROTECT, related_name='reserved_wallet')
     amount = get_amount_field()
 
-    group_id = models.UUIDField(default=uuid4, db_index=True)
+    group_id = get_group_id_field(db_index=True)
 
     refund_completed = models.BooleanField(default=False)
 

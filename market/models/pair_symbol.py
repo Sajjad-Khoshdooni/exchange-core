@@ -1,14 +1,14 @@
 from collections import namedtuple
 from decimal import Decimal
 
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from accounts.models import Account
 from ledger.utils.fields import get_amount_field
 
-DEFAULT_MAKER_FEE = 0
-# DEFAULT_TAKER_FEE = 0
+DEFAULT_MAKER_FEE = Decimal(0)
 DEFAULT_TAKER_FEE = Decimal('0.002')
 
 
@@ -19,16 +19,13 @@ class PairSymbol(models.Model):
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT, related_name='pair')
     base_asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT, related_name='trading_pair')
 
-    taker_fee = models.DecimalField(max_digits=9, decimal_places=8, default=DEFAULT_TAKER_FEE)
-    maker_fee = models.DecimalField(max_digits=9, decimal_places=8, default=DEFAULT_MAKER_FEE)
+    custom_maker_fee = get_amount_field(null=True)
+    custom_taker_fee = get_amount_field(null=True)
 
-    tick_size = models.SmallIntegerField(default=2)
-    step_size = models.SmallIntegerField(default=4)
+    tick_size = models.PositiveSmallIntegerField(default=2, validators=[MaxValueValidator(8)])
+    step_size = models.PositiveSmallIntegerField(default=4, validators=[MaxValueValidator(8)])
     min_trade_quantity = get_amount_field(default=Decimal('0.0001'))
     max_trade_quantity = get_amount_field(default=Decimal('10000'))
-
-    market_maker_enabled = models.BooleanField(default=True)
-    maker_amount = get_amount_field(default=Decimal('1'))
 
     enable = models.BooleanField(default=False)
     strategy_enable = models.BooleanField(default=False)
@@ -49,17 +46,30 @@ class PairSymbol(models.Model):
             raise Exception('Could not set name for pair symbol!')
         return super(PairSymbol, self).save(**kwargs)
 
+    def get_margin_position(self, account: Account):
+        from ledger.models.position import MarginPosition
+        return MarginPosition.get_by(self, account)
+
     class Meta:
         unique_together = ('asset', 'base_asset')
         constraints = [
-            CheckConstraint(check=Q(min_trade_quantity__gte=0, max_trade_quantity__gte=0, maker_amount__gte=0), name='check_market_pairsymbol_amounts', ),
+            CheckConstraint(check=Q(min_trade_quantity__gte=0, max_trade_quantity__gte=0,), name='check_market_pairsymbol_amounts', ),
         ]
 
     def get_fee_rate(self, account: Account, is_maker: bool) -> Decimal:
         if account.is_system():
             return Decimal(0)
 
-        if account.get_voucher_wallet():
-            return Decimal(0)
+        if is_maker:
+            fees = [account.custom_maker_fee, self.custom_maker_fee, DEFAULT_MAKER_FEE]
         else:
-            return self.maker_fee if is_maker else self.taker_fee
+            fees = [account.custom_taker_fee, self.custom_taker_fee, DEFAULT_TAKER_FEE]
+
+        if fees[0] is None and account.get_voucher_wallet():
+            return Decimal(0)
+
+        for f in fees:
+            if f is not None:
+                return f
+
+        return Decimal(0)

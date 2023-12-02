@@ -11,8 +11,7 @@ from accounts.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import get_network_architecture
-from ledger.utils.external_price import get_external_price, SELL
-from ledger.utils.precision import is_zero_by_precision
+from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -23,18 +22,29 @@ class DepositSerializer(serializers.ModelSerializer):
     sender_address = serializers.CharField(max_length=256, write_only=True)
     receiver_address = serializers.CharField(max_length=256, write_only=True)
     coin = serializers.CharField(max_length=8, write_only=True)
+    memo = serializers.CharField(max_length=256, write_only=True, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Transfer
-        fields = ['status', 'amount', 'trx_hash', 'network', 'sender_address', 'receiver_address', 'coin']
+        fields = ['status', 'amount', 'trx_hash', 'network', 'sender_address', 'receiver_address', 'coin', 'memo']
 
     def create(self, validated_data):
         network_symbol = validated_data.get('network')
         sender_address = validated_data.get('sender_address')
         receiver_address = validated_data.get('receiver_address')
         network = Network.objects.get(symbol=network_symbol)
+        memo = validated_data.get('memo') or ''
 
-        deposit_address = DepositAddress.objects.filter(network=network, address=receiver_address).first()
+        need_memo = network.need_memo
+
+        if (need_memo and not memo) or (not need_memo and memo):
+            raise ValidationError({'memo': 'null memo for memo networks error'})
+
+        deposit_address = DepositAddress.objects.filter(
+            network=network,
+            address=receiver_address,
+            address_key__memo=memo
+        ).first()
 
         if deposit_address and deposit_address.address_key.deleted:
             raise ValidationError({'receiver_address': 'old deposit address not supported'})
@@ -44,8 +54,10 @@ class DepositSerializer(serializers.ModelSerializer):
                 AddressKey,
                 address=receiver_address,
                 architecture=get_network_architecture(network),
-                deleted=False
+                deleted=False,
+                memo=memo
             )
+
             deposit_address, _ = DepositAddress.objects.get_or_create(
                 address=receiver_address,
                 network=network,
@@ -123,11 +135,15 @@ class DepositSerializer(serializers.ModelSerializer):
         else:
             amount = Decimal(validated_data.get('amount')) / coin_mult
 
-            if is_zero_by_precision(amount):
-                raise ValidationError({'amount': 'small amount'})
+            min_deposit = network_asset.get_min_deposit()
+            if min_deposit and amount < min_deposit:
+                raise ValidationError({
+                    'type': 'ignore',
+                    'reason': 'small amount'
+                })
 
-            price_usdt = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True)
-            price_irt = get_external_price(coin=asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True)
+            price_usdt = get_last_price(asset.symbol + Asset.USDT)
+            price_irt = get_last_price(asset.symbol + Asset.IRT)
 
             with WalletPipeline() as pipeline:
                 transfer, _ = Transfer.objects.get_or_create(
@@ -141,6 +157,7 @@ class DepositSerializer(serializers.ModelSerializer):
                         'amount': amount,
                         'usdt_value': amount * price_usdt,
                         'irt_value': amount * price_irt,
+                        'memo': memo
                     }
                 )
 
@@ -158,7 +175,7 @@ class DepositSerializer(serializers.ModelSerializer):
                     user.first_crypto_deposit_date = timezone.now()
                     user.save(update_fields=['first_crypto_deposit_date'])
 
-            transfer.alert_user()
+                transfer.alert_user()
 
             return transfer
 

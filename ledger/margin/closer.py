@@ -5,10 +5,11 @@ from decouple import config
 from django.db import transaction
 
 from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, MarginLoan, Trx
-from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import PENDING, DONE
+from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
+from market.models.pair_symbol import DEFAULT_TAKER_FEE
 
 logger = logging.getLogger(__name__)
 
@@ -109,14 +110,16 @@ class MarginCloser:
             self.info_log('fast repay %s %s' % (amount, asset))
 
             # todo: add reason field to margin loan
-            MarginLoan.new_loan(
-                account=self.account,
-                asset=margin_wallet.asset,
-                amount=amount,
-                loan_type=MarginLoan.REPAY
-            )
+            with WalletPipeline() as pipeline:
+                MarginLoan.new_loan(
+                    account=self.account,
+                    asset=margin_wallet.asset,
+                    amount=amount,
+                    loan_type=MarginLoan.REPAY,
+                    pipeline=pipeline
+                )
 
-            price = get_external_price(asset.symbol, base_coin=Asset.USDT, side=SELL)
+            price = get_last_price(asset.symbol + Asset.USDT)
             self._liquidated_value += amount * price
 
     def _provide_tether(self):
@@ -158,7 +161,7 @@ class MarginCloser:
 
                 symbol = PairSymbol.objects.get(asset=wallet.asset, base_asset=self.tether)
                 to_buy = -wallet.balance
-                to_buy = to_buy / (1 - symbol.taker_fee)
+                to_buy = to_buy / (1 - DEFAULT_TAKER_FEE)
 
                 request = OTCRequest.new_trade(
                     self.account,
@@ -200,14 +203,16 @@ class MarginCloser:
             asset = wallet.asset
             amount = -wallet.balance
 
-            MarginLoan.new_loan(
-                account=self.account,
-                asset=asset,
-                amount=amount,
-                loan_type=MarginLoan.REPAY
-            )
+            with WalletPipeline() as pipeline:
+                MarginLoan.new_loan(
+                    account=self.account,
+                    asset=asset,
+                    amount=amount,
+                    loan_type=MarginLoan.REPAY,
+                    pipeline=pipeline
+                )
 
-            price = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL)
+            price = get_last_price(asset.symbol + Asset.USDT)
             self._liquidated_value += amount * price
 
         if insurance_asked:

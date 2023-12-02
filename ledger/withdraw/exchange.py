@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.db import transaction
 
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_system_message
@@ -16,22 +17,23 @@ def handle_provider_withdraw(transfer_id: int):
 
     logger.info('withdraw handling transfer_id = %d' % transfer_id)
 
-    transfer = Transfer.objects.get(id=transfer_id)
+    with transaction.atomic():
+        transfer = Transfer.objects.select_for_update().get(id=transfer_id)
 
-    assert not transfer.deposit
-    assert transfer.source == Transfer.PROVIDER
-    assert transfer.status == transfer.PROCESSING
+        assert not transfer.deposit
+        assert transfer.source == Transfer.PROVIDER
+        assert transfer.status == transfer.PROCESSING
 
-    resp = get_provider_requester().new_withdraw(transfer)
+        resp = get_provider_requester().new_withdraw(transfer)
 
-    if not resp.success:
-        if resp.status_code == 400:
-            change_to_manual(transfer)
+        if not resp.success:
+            if resp.status_code == 400:
+                change_to_manual(transfer)
 
-        return
+            return
 
-    transfer.status = transfer.PENDING
-    transfer.save(update_fields=['status'])
+        transfer.status = transfer.PENDING
+        transfer.save(update_fields=['status'])
 
 
 def change_to_manual(transfer: Transfer):

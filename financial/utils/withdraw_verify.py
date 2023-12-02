@@ -23,8 +23,10 @@ def get_fiat_withdraw_risks(withdraw: FiatWithdrawRequest) -> list:
     risks = []
 
     total_deposits = Payment.objects.filter(
-        payment_request__bank_card__user=user
-    ).exclude(status=CANCELED).aggregate(amount=Sum('payment_request__amount'))['amount'] or 0
+        user=user
+    ).exclude(status=CANCELED).aggregate(
+        amount=Sum('amount')
+    )['amount'] or 0
 
     total_withdraws = FiatWithdrawRequest.objects.filter(
         bank_account__user=user
@@ -41,7 +43,7 @@ def get_fiat_withdraw_risks(withdraw: FiatWithdrawRequest) -> list:
             )
         )
 
-    gateway = Gateway.get_active_deposit()
+    gateway = Gateway.get_active_withdraw()
     if gateway.max_auto_withdraw_amount is not None and withdraw.amount > gateway.max_auto_withdraw_amount:
         risks.append(
             RiskFactor(

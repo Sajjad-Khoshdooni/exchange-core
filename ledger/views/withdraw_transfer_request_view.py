@@ -31,9 +31,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
         valid_transitions = [
             (Transfer.PENDING, Transfer.PENDING),
             (Transfer.PENDING, Transfer.DONE),
-            (Transfer.PENDING, Transfer.CANCELED),
+            # (Transfer.PENDING, Transfer.CANCELED),
             (Transfer.PROCESSING, Transfer.DONE),
-            (Transfer.PROCESSING, Transfer.CANCELED),
+            # (Transfer.PROCESSING, Transfer.CANCELED),
         ]
 
         if transfer.source != Transfer.SELF:

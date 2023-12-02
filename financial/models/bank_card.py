@@ -48,7 +48,7 @@ class BankCard(models.Model):
         if len(self.card_pan) < 10:
             return self.card_pan
 
-        return self.card_pan[:4] + '********' + self.card_pan[-4:]
+        return self.card_pan[:4] + '********' + self.card_pan[-4:] + ' ' + self.bank
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -121,7 +121,7 @@ class BankAccount(models.Model):
     live_objects = LiveManager()
 
     def __str__(self):
-        return self.iban[:6] + '********' + self.iban[-4:]
+        return self.iban[:6] + '********' + self.iban[-5:] + ' ' + self.bank
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -147,35 +147,6 @@ class BankAccount(models.Model):
                 condition=Q(verified=True, deleted=False),
             )
         ]
-
-
-class BankPaymentId(models.Model):
-    WAITING_FOR_USER, WAITING_FOR_VERIFICATION, VERIFIED, REJECTED, REVIEWING = \
-        'WAITING_FOR_USER', 'WAITING_FOR_VERIFICATION', 'VERIFIED', 'REJECTED', 'REVIEWING'
-
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-
-    bank_account = models.ForeignKey('financial.BankAccount', on_delete=models.PROTECT)
-    gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
-
-    destination_deposit_number = models.IntegerField()
-    destination_iban = models.CharField(max_length=100)
-    merchant_code = models.CharField(max_length=100)
-    merchant_name = models.CharField(max_length=100)
-    merchant_reference_number = models.IntegerField()
-    pay_id = models.IntegerField()
-    registry_status = models.CharField(
-        max_length=28,
-        choices=[(WAITING_FOR_USER, WAITING_FOR_USER), (WAITING_FOR_VERIFICATION, WAITING_FOR_VERIFICATION),
-                 (VERIFIED, VERIFIED), (REJECTED, REJECTED), (REVIEWING, REVIEWING)],
-        default=WAITING_FOR_VERIFICATION
-    )
-    user_iban = models.CharField(max_length=100)
-    user_iban_list = models.TextField(null=True)
-
-    class Meta:
-        unique_together = ('gateway', 'bank_account')
 
 
 class BankCardSerializer(serializers.ModelSerializer):

@@ -7,34 +7,13 @@ from accounts.models import Account
 from financial.models import FiatWithdrawRequest
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Wallet, Prize, Asset
-from ledger.requester.internal_assets_requester import InternalAssetsRequester
-from ledger.utils.cache import cache_for
-from ledger.utils.external_price import get_external_price, SELL, BUY
-from ledger.utils.provider import get_provider_requester, BINANCE, CoinOrders
-
-
-@cache_for(60)
-def get_internal_asset_deposits() -> dict:
-    assets = InternalAssetsRequester().get_assets()
-
-    if not assets:
-        return {}
-
-    return {
-        asset['coin']: Decimal(asset['amount']) for asset in assets
-    }
+from ledger.utils.price import USDT_IRT
+from ledger.utils.provider import get_provider_requester, BINANCE
 
 
 class AssetOverview:
-    def __init__(self, calculated_hedge: bool = False):
-        self._coin_total_orders = None
+    def __init__(self, prices: dict):
         self.provider = get_provider_requester()
-
-        if calculated_hedge:
-            self._coin_total_orders = {
-                coin_order.coin: coin_order for coin_order in self.provider.get_total_orders_amount_sum()
-            }
-
         self._binance_futures = self.provider.get_futures_info(BINANCE)
 
         wallets = Wallet.objects.filter(
@@ -46,16 +25,11 @@ class AssetOverview:
         ).values('asset__symbol').annotate(amount=Sum('balance'))
         self.users_balances = {w['asset__symbol']: w['amount'] for w in wallets}
 
-        self.usdt_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
+        self.prices = prices
 
         self.assets_map = {a.symbol: a for a in Asset.objects.all()}
 
         self.reserved_assets = dict(ReservedAsset.objects.values_list('coin', 'amount'))
-
-    def get_calculated_hedge(self, coin: str):
-        assert self._coin_total_orders is not None
-        coin_orders = self._coin_total_orders.get(coin, CoinOrders(coin=coin, buy=Decimal(), sell=Decimal()))
-        return self.provider.get_hedge_amount(self.assets_map[coin], coin_orders)
 
     def get_binance_margin_ratio(self):
         if not self._binance_futures:
@@ -86,7 +60,7 @@ class AssetOverview:
         if not amount:
             return Decimal(0)
 
-        price = get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
+        price = self.prices.get(coin + Asset.USDT, 0)
         return amount * price
 
     def get_users_asset_amount(self, coin: str) -> Decimal:
@@ -98,8 +72,7 @@ class AssetOverview:
         if not balance:
             return Decimal(0)
 
-        price = get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
-        
+        price = self.prices.get(coin + Asset.USDT, 0)
         return balance * price
 
     def get_all_users_asset_value(self) -> Decimal:
@@ -112,7 +85,7 @@ class AssetOverview:
             status=FiatWithdrawRequest.PENDING
         ).aggregate(amount=Sum('amount'))['amount'] or 0
 
-        return value - pending_withdraws / self.usdt_irt
+        return value - pending_withdraws / self.prices[USDT_IRT]
 
     def get_all_prize_value(self) -> Decimal:
         return Prize.objects.filter(
@@ -131,29 +104,6 @@ class AssetOverview:
 
     def get_exchange_assets_usdt(self):
         return self.get_all_real_assets_value() - self.get_all_users_asset_value()
-
-    def get_exchange_potential_usdt(self):
-        value = Decimal(0)
-
-        non_deposited = self.get_non_deposited_accounts_per_asset_balance()
-
-        for coin, balance in non_deposited.items():
-            price = get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
-            value += balance * price
-
-        return self.get_exchange_assets_usdt() + value
-
-    @classmethod
-    def get_non_deposited_accounts_per_asset_balance(cls) -> dict:
-        non_deposited_wallets = Wallet.objects.filter(
-            account__type=Account.ORDINARY,
-            account__user__first_fiat_deposit_date__isnull=True,
-            account__user__first_crypto_deposit_date__isnull=True,
-        ).exclude(
-            market=Wallet.VOUCHER
-        ).values('asset__symbol').annotate(amount=Sum('balance'))
-
-        return {w['asset__symbol']: w['amount'] for w in non_deposited_wallets}
 
     def get_margin_insurance_balance(self):
         return Asset.get(Asset.USDT).get_wallet(MARGIN_INSURANCE_ACCOUNT).balance

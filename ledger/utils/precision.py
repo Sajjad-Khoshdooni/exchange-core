@@ -1,6 +1,8 @@
 from decimal import Decimal, ROUND_DOWN, ROUND_UP
 from math import ceil
 
+from ledger.utils.cache import cache_for
+
 AMOUNT_PRECISION = 8
 
 
@@ -23,7 +25,7 @@ def ceil_precision(amount: Decimal, precision: int = 0):
     return amount.quantize(step, rounding=ROUND_UP)
 
 
-def floor_precision(amount: Decimal, precision: int = 0):
+def floor_precision(amount: Decimal, precision: int = 0) -> Decimal:
     step = precision_to_step(precision)
     return amount.quantize(step, rounding=ROUND_DOWN)
 
@@ -42,7 +44,7 @@ def get_precision(amount: Decimal) -> int:
         return len(amount.split('.')[1])
 
 
-def decimal_to_str(amount: Decimal):
+def decimal_to_str(amount: Decimal) -> str:
     amount = '{:f}'.format(amount)
     if '.' in amount:
         amount = amount.rstrip('0').rstrip('.')
@@ -58,7 +60,7 @@ def precision_to_step(precision: int) -> Decimal:
         return Decimal('0.' + '0' * (precision - 1) + '1')
 
 
-def get_presentation_amount(amount: Decimal, precision: int = None) -> str:
+def get_presentation_amount(amount: Decimal, precision: int = None, trunc_zero: bool = True) -> str:
     if amount is None:
         return
 
@@ -70,20 +72,15 @@ def get_presentation_amount(amount: Decimal, precision: int = None) -> str:
 
     rounded = format(amount, 'f')
 
-    if '.' not in rounded:
+    if not trunc_zero or '.' not in rounded:
         return rounded
     else:
         return rounded.rstrip('0').rstrip('.') or '0'
 
 
 def humanize_number(num):
-    if isinstance(num, int):
-        num = str(num)
-
-    if isinstance(num, str):
-        num = Decimal(num)
-
-    return '{:,f}'.format(num)
+    num = get_presentation_amount(num, precision=8)
+    return '{:,f}'.format(Decimal(num))
 
 
 def normalize_fraction(d: Decimal):
@@ -92,9 +89,40 @@ def normalize_fraction(d: Decimal):
     return normalized if exponent <= 0 else normalized.quantize(1)
 
 
-def humanize_presentation(num):
-    return humanize_number(get_presentation_amount(num, precision=8))
-
-
 def is_zero_by_precision(amount: Decimal, precision: int = AMOUNT_PRECISION):
     return int(amount * 10 ** precision) == 0
+
+
+@cache_for(60)
+def get_symbols_tick_size() -> dict:
+    from market.models import PairSymbol
+    return dict(PairSymbol.objects.values_list('name', 'tick_size'))
+
+
+@cache_for(60)
+def get_symbols_step_size() -> dict:
+    from market.models import PairSymbol
+    return dict(PairSymbol.objects.values_list('name', 'step_size'))
+
+
+def get_symbol_presentation_price(symbol: str, amount: Decimal, trunc_zero: bool = False):
+    if symbol == 'IRTUSDT':
+        precision = 8
+    else:
+        precision = get_symbols_tick_size().get(symbol, 0)
+
+    return get_presentation_amount(amount, precision, trunc_zero=trunc_zero)
+
+
+def get_symbol_presentation_amount(symbol: str, amount: Decimal):
+    precision = get_symbols_step_size().get(symbol, 0)
+    return get_presentation_amount(amount, precision, trunc_zero=True)
+
+
+def get_coin_presentation_balance(coin: str, balance: Decimal):
+    if coin == 'IRT':
+        precision = 0
+    else:
+        precision = None
+
+    return get_presentation_amount(balance, precision=precision)

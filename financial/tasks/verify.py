@@ -3,7 +3,7 @@ import logging
 from celery import shared_task
 
 from accounts.models import Notification
-from accounts.verifiers.jibit_basic_verify import verify_bank_account, verify_bank_card
+from accounts.verifiers.basic_verifier import verify_bank_card, verify_bank_account
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)

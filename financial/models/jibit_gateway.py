@@ -1,7 +1,6 @@
 import requests
 from decouple import config
 from django.conf import settings
-from django.core.cache import caches
 from rest_framework.reverse import reverse
 
 from financial.models import Gateway, BankCard, PaymentRequest, Payment
@@ -9,18 +8,15 @@ from financial.models.gateway import GatewayFailed, logger
 from ledger.utils.fields import DONE, CANCELED
 from ledger.utils.wallet_pipeline import WalletPipeline
 
-token_cache = caches['token']
-JIBIT_GATEWAY_ACCESS_KEY = 'jibit_gateway_key'
-
 
 class JibitGateway(Gateway):
     BASE_URL = 'https://napi.jibit.cloud/ppg'
+    _token = None
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
-            token = token_cache.get(JIBIT_GATEWAY_ACCESS_KEY)
-            if token:
-                return token
+            if self._token:
+                return self._token
 
         resp = requests.post(
             url=self.BASE_URL + '/v3/tokens',
@@ -33,19 +29,20 @@ class JibitGateway(Gateway):
 
         if resp.ok:
             resp_data = resp.json()
-            token = resp_data['accessToken']
-            expire = 23 * 3600
-            token_cache.set(JIBIT_GATEWAY_ACCESS_KEY, token, expire)
+            self._token = resp_data['accessToken']
 
-            return token
+            return self._token
 
     def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         token = self._get_token()
         base_url = config('PAYMENT_PROXY_HOST_URL', default='') or settings.HOST_URL
 
+        fee = self.get_ipg_fee(amount)
+
         payment_request = PaymentRequest.objects.create(
             bank_card=bank_card,
-            amount=amount,
+            amount=amount - fee,
+            fee=fee,
             gateway=self,
             source=source,
         )
@@ -64,7 +61,7 @@ class JibitGateway(Gateway):
         )
 
         if not resp.ok:
-            print(resp.json())
+            logger.info('jibit gateway connection error %s' % resp.json())
             raise GatewayFailed
 
         authority = resp.json()['purchaseId']
@@ -89,7 +86,7 @@ class JibitGateway(Gateway):
         return 'https://napi.jibit.cloud/ppg/v3/purchases/{}/payments'.format(authority)
 
     def _verify(self, payment: Payment):
-        payment_request = payment.payment_request
+        payment_request = payment.paymentrequest
         token = self._get_token()
         resp = requests.post(
             headers={'Authorization': 'Bearer ' + token},
@@ -104,9 +101,6 @@ class JibitGateway(Gateway):
 
         if status in ('SUCCESSFUL', 'ALREADY_VERIFIED'):
             with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.save(update_fields=['status', 'ref_status'])
-
                 payment.accept(pipeline)
 
         else:

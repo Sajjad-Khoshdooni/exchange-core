@@ -1,4 +1,5 @@
 import dataclasses
+from datetime import datetime
 from decimal import Decimal
 from typing import List
 
@@ -18,10 +19,13 @@ class VaultData:
 
 
 class Vault(models.Model):
+    TYPES = PROVIDER, GATEWAY, HOT_WALLET, COLD_WALLET, BANK, MANUAL = \
+        'provider', 'gateway', 'hw', 'cw', 'bank', 'manual'
+    MARKETS = SPOT, FUTURES = 'spot', 'futures'
+
     history = HistoricalRecords()
 
-    TYPES = PROVIDER, GATEWAY, HOT_WALLET, COLD_WALLET, MANUAL = 'provider', 'gateway', 'hw', 'cw', 'manual'
-    MARKETS = SPOT, FUTURES = 'spot', 'futures'
+    updated = models.DateTimeField(db_index=True)
 
     name = models.CharField(max_length=32)
 
@@ -30,6 +34,8 @@ class Vault(models.Model):
     key = models.CharField(max_length=128, blank=True)
 
     real_value = get_amount_field(default=Decimal())
+
+    expected_base_balance = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return '%s %s %s' % (self.type, self.name, self.market)
@@ -54,28 +60,38 @@ class Vault(models.Model):
 
             coins.append(vd.coin)
 
-        VaultItem.objects.filter(vault=self).exclude(coin__in=coins).update(
+        VaultItem.objects.filter(
+            vault=self
+        ).exclude(
+            coin__in=coins
+        ).exclude(
+            balance=0,
+            value_usdt=0,
+            value_irt=0
+        ).update(
             balance=0,
             value_usdt=0,
             value_irt=0,
             updated=now,
         )
 
-        self.update_real_value(real_vault_value)
+        self.update_real_value(now, real_vault_value)
 
-    def update_real_value(self, real_vault_value: Decimal = None):
+    def update_real_value(self, now: datetime, real_vault_value: Decimal = None):
+        self.updated = now
+
         if real_vault_value is not None:
             self.real_value = real_vault_value
         else:
             self.real_value = VaultItem.objects.filter(vault=self).aggregate(value=Sum('value_usdt'))['value'] or 0
 
-        self.save(update_fields=['real_value'])
+        self.save(update_fields=['updated', 'real_value'])
 
 
 class VaultItem(models.Model):
     history = HistoricalRecords()
 
-    updated = models.DateTimeField(auto_now=True)
+    updated = models.DateTimeField(db_index=True)
 
     vault = models.ForeignKey(Vault, on_delete=models.CASCADE)
     coin = models.CharField(max_length=32, db_index=True)
@@ -93,7 +109,7 @@ class VaultItem(models.Model):
 class ReservedAsset(models.Model):
     history = HistoricalRecords()
 
-    updated = models.DateTimeField(auto_now=True)
+    updated = models.DateTimeField()
 
     coin = models.CharField(max_length=32, unique=True)
     amount = get_amount_field(validators=())
@@ -108,7 +124,7 @@ class ReservedAsset(models.Model):
 class AssetPrice(models.Model):
     history = HistoricalRecords()
 
-    updated = models.DateTimeField(auto_now=True)
+    updated = models.DateTimeField()
 
     coin = models.CharField(max_length=32, unique=True)
     price = get_amount_field(decimal_places=12)

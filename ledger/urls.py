@@ -1,12 +1,25 @@
 from django.urls import path
+from ledger import views
+from django.urls import path
 
 from ledger import views
 
 urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
+    path('v1/assets/categories/', views.CoinCategoryListView.as_view()),
     path('v1/networkassets/', views.NetworkAssetView.as_view()),
-
     path('v1/asset/overview/', views.AssetOverviewAPIView.as_view()),
+    path('v1/price/alert/single/', views.AssetAlertViewSet.as_view({
+        'post': 'create',
+        'get': 'list',
+        'delete': 'destroy',
+    })),
+    path('v1/price/alert/bulk/', views.BulkAssetAlertViewSet.as_view({
+        'post': 'create',
+        'get': 'list',
+        'delete': 'destroy'
+    })),
+    path('v1/price/alert/switch/', views.PriceNotifSwitchView.as_view()),
 
     path('v1/networks/', views.BriefNetworkAssetsView.as_view()),
 
@@ -18,9 +31,19 @@ urlpatterns = [
     path('v1/wallets/', views.WalletViewSet.as_view({'get': 'list'})),
     path('v1/wallets/<slug:symbol>/', views.WalletViewSet.as_view({'get': 'retrieve'})),
     path('v1/wallets/<slug:symbol>/balance/', views.WalletBalanceView.as_view()),
+    path('v1/withdraw/feedback/categories/', views.FeedbackCategories.as_view()),
+    path('v1/withdraw/feedback/', views.WithdrawFeedbackSubmitView.as_view()),
+
     path('v1/deposit/address/', views.DepositAddressView.as_view()),
 
     path('v1/withdraw/', views.WithdrawView.as_view()),
+
+    path('v1/withdraws/', views.WithdrawViewSet.as_view({
+        'get': 'list'
+    })),
+    path('v1/withdraws/<int:pk>/', views.WithdrawViewSet.as_view({
+        'delete': 'destroy'
+    })),
 
     path('v1/withdraw/list/', views.WithdrawHistoryView.as_view()),
     path('v1/deposit/list/', views.DepositHistoryView.as_view()),
@@ -44,6 +67,11 @@ urlpatterns = [
         'post': 'create'
     })),
 
+    path('v2/margin/wallets/', views.MarginAssetViewSet.as_view({'get': 'list'})),
+    path('v2/margin/balance/', views.MarginBalanceAPIView.as_view()),
+    path('v2/margin/transfer-balance/', views.MarginTransferBalanceAPIView.as_view()),
+    path('v2/margin/positions/', views.MarginPositionViewSet.as_view({'get': 'list'})),
+
     path('v1/addressbook/<int:pk>/', views.AddressBookView.as_view({
         'get': 'retrieve',
         'delete': 'destroy',
@@ -58,6 +86,7 @@ urlpatterns = [
     })),
 
     path('v1/wallet/balance/', views.BalanceInfoView.as_view()),
+    path('v1/funds/overview/', views.WalletsOverviewAPIView.as_view()),
     path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view()),
 
     path('v1/transfer/deposit/', views.DepositTransferUpdateView.as_view()),
@@ -69,4 +98,5 @@ urlpatterns = [
 
     path('v1/fast_buy/', views.FastBuyTokenAPI.as_view()),
 
+    path('v1/transactions/recent/', views.RecentTransactionsView.as_view()),
 ]

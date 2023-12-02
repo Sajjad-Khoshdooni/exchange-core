@@ -14,6 +14,9 @@ class VerifyOTPSerializer(serializers.ModelSerializer):
         code = validated_data['code']
         scope = validated_data['scope']
 
+        if scope in VerificationCode.RESTRICTED_VERIFY_SCOPES:
+            raise ValidationError({'scope': f'restricted {scope}'})
+
         otp_code = VerificationCode.get_by_code(
             code=code,
             phone=phone,
@@ -21,7 +24,7 @@ class VerifyOTPSerializer(serializers.ModelSerializer):
         )
 
         if not otp_code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
 
         otp_code.set_code_used()
 
@@ -54,6 +57,9 @@ class OTPSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         scope = validated_data['scope']
         user = validated_data['user']
+
+        if scope in VerificationCode.RESTRICTED_SEND_SCOPES:
+            raise ValidationError({'scope': f'restricted {scope}'})
 
         if scope == VerificationCode.SCOPE_TELEPHONE:
             phone = user.telephone

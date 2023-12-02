@@ -40,7 +40,8 @@ class CustomTokenAuthentication(TokenAuthentication):
     def authenticate_credentials(self, key, request):
         model = self.get_model()
         request_ip = get_client_ip(request=request)
-        print('request_ip', request_ip)
+        logger.info('request ip for %s is %s, x-forward %s, remote addr %s' % (
+            request.path, request_ip, request.META.get('HTTP_X_FORWARDED_FOR'), request.META.get('REMOTE_ADDR')))
 
         try:
             token = model.objects.select_related('user').get(
@@ -56,6 +57,30 @@ class CustomTokenAuthentication(TokenAuthentication):
             raise exceptions.AuthenticationFailed(_('User inactive or deleted.'))
 
         return (token.user, token)
+
+
+class WithdrawTokenAuthentication(CustomTokenAuthentication):
+    def authenticate(self, request):
+        auth_detail = super().authenticate(request)
+        if not auth_detail:
+            return None
+        user, token = auth_detail
+        if not (token.scopes and CustomToken.WITHDRAW in token.scopes):
+            msg = _('permission denied')
+            raise exceptions.AuthenticationFailed(msg)
+        return user, token
+
+
+class TradeTokenAuthentication(CustomTokenAuthentication):
+    def authenticate(self, request):
+        auth_detail = super().authenticate(request)
+        if not auth_detail:
+            return None
+        user, token = auth_detail
+        if not (token.scopes and CustomToken.TRADE in token.scopes):
+            msg = _('permission denied')
+            raise exceptions.AuthenticationFailed(msg)
+        return user, token
 
 
 def is_app(request):

@@ -26,6 +26,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO metabase;
 
 -- if needed to exclude some
 REVOKE SELECT ON accounts_user from metabase;
+REVOKE SELECT ON django_session from metabase;
+REVOKE SELECT ON otp_totp_totpdevice from metabase;
+REVOKE SELECT ON accounts_customtoken FROM metabase;
 
 CREATE VIEW accounts_users AS SELECT id, last_login, is_superuser, username, first_name, last_name, email, is_staff, 
                                      is_active, date_joined, phone, birth_date, birth_date_verified, first_name_verified, 
