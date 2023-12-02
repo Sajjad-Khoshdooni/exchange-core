@@ -8,6 +8,7 @@ from django.shortcuts import render
 from openpyxl import Workbook
 
 from accounts.models import TrafficSource
+from analytics.models import ReportPermission
 
 
 @login_required
@@ -33,17 +34,12 @@ def get_source_analytics(request):
             return HttpResponseBadRequest('Report time filter threshold must be less than 30 days')
 
         q = Q()
-
-        if request.user.has_perm('accounts.has_marketing_adivery_reports'):
-            q = Q(
-                utm_source='yektanet',
-                utm_medium='mobile'
-            )
-
-        if request.user.has_perm('accounts.has_marketing_mediaad_reports'):
-            q = q | Q(utm_source='mediaad')
-        if not request.user.has_perm('accounts.has_marketing_adivery_reports') and not request.user.has_perm('accounts.has_marketing_mediaad_reports'):
+        report_permissions = ReportPermission.objects.filter(user=request.user)
+        if not report_permissions:
             return HttpResponseForbidden('You do not have permission to view this content')
+
+        for permission in report_permissions:
+            q = q | permission.q
 
         # generate Excel workbook from queryset
         if q is None:
