@@ -73,14 +73,14 @@ def queryset_to_workbook(queryset, sheet_name='Sheet1'):
     sheet = workbook.active
     sheet.title = sheet_name
 
-    headers = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'users', 'verified', 'depositors']
+    headers = ['date', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'users', 'verified', 'depositors']
 
     # write headers
     for col_num, header in enumerate(headers, 1):
         cell = sheet.cell(row=1, column=col_num)
         cell.value = header
 
-    groups = queryset.values('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term') \
+    groups = queryset.values('created__date', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term') \
         .annotate(
         user_count=Count('user__id', distinct=True),
         verified_count=Count('user__id', distinct=True, filter=Q(level__gte=User.LEVEL2)),
@@ -90,8 +90,8 @@ def queryset_to_workbook(queryset, sheet_name='Sheet1'):
                    Q(user__first_crypto_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1)))
         )
     ).values_list(
-        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'user_count', 'verified_count',
-        'depositor_count',
+        'created__date', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+        'user_count', 'verified_count', 'depositor_count',
     )
 
     # write data
