@@ -27,6 +27,7 @@ class MarginPositionSerializer(AssetSerializerMini):
     coin_amount = serializers.SerializerMethodField()
     liquidation_price = serializers.SerializerMethodField()
     pnl = serializers.SerializerMethodField()
+    average_price = serializers.SerializerMethodField()
 
     def get_margin_ratio(self, instance: MarginPosition):
         if instance.base_debt_amount:
@@ -44,13 +45,16 @@ class MarginPositionSerializer(AssetSerializerMini):
         return instance.loan_wallet.balance
 
     def get_amount(self, instance):
-        return abs(floor_precision(instance.base_debt_amount / instance.symbol.last_trade_price, instance.symbol.tick_size))
+        return abs(floor_precision(instance.base_debt_amount / instance.symbol.last_trade_price, instance.symbol.step_size))
 
     def get_liquidation_price(self, instance):
-        return floor_precision(instance.liquidation_price, instance.symbol.step_size)
+        return floor_precision(instance.liquidation_price, instance.symbol.tick_size)
+
+    def get_average_price(self, instance):
+        return floor_precision(instance.average_price, instance.symbol.tick_size)
 
     def get_coin_amount(self, instance):
-        return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.tick_size)
+        return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
 
     def get_pnl(self, instance):
         if instance.side == SHORT:

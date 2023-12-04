@@ -168,10 +168,6 @@ class MarginPositionInfoView(APIView):
         from market.models import PairSymbol
         symbol_model = PairSymbol.get_by(symbol)
 
-        # position = MarginPosition.objects.filter(status=MarginPosition.OPEN, account=account, symbol__name=symbol,
-        #                                          side=side, liquidation_price__isnull=False).first()
-
-        # if not position:
         free = symbol_model.base_asset.get_wallet(
             account, Wallet.MARGIN, None
         ).get_free()
@@ -181,13 +177,6 @@ class MarginPositionInfoView(APIView):
             'max_buy_volume': free * get_position_leverage(leverage=margin_leverage.leverage, side=BUY, is_open_position=True),
             'max_sell_volume': free * get_position_leverage(leverage=margin_leverage.leverage, side=SELL, is_open_position=True) / symbol_model.last_trade_price
         }
-        # else:
-        #     free = position.base_margin_wallet.get_free()
-        #
-        #     data = {
-        #         'max_buy_volume': free * get_position_leverage(leverage=position.leverage, side=BUY, is_open_position=False),
-        #         'max_sell_volume': free * get_position_leverage(leverage=position.leverage, side=SELL, is_open_position=False) / symbol_model.last_trade_price,
-        #     }
 
         data["max_buy_volume"] = floor_precision(max(Decimal('0'), data['max_buy_volume']) * Decimal('0.99'), symbol_model.tick_size)
         data["max_sell_volume"] = floor_precision(max(Decimal('0'), data['max_sell_volume']) * Decimal('0.99'), symbol_model.step_size)
