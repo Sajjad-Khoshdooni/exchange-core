@@ -89,7 +89,7 @@ class MarginTransfer(models.Model):
 
 
 class MarginLoan(models.Model):
-    BORROW, REPAY = 'borrow', 'repay'
+    BORROW, REPAY, OPEN = 'borrow', 'repay', 'open'
 
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE)

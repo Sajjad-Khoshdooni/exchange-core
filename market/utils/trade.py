@@ -97,7 +97,7 @@ def _update_trading_positions(trading_positions, pipeline):
             position.average_price = (previous_amount * previous_price +
                                       short_amount * trade_info.trade_price) / position.amount
 
-        position.update_liquidation_price(pipeline, rebalance=trade_info.loan_type != Order.LIQUIDATION)
+        position.update_liquidation_price(pipeline, rebalance=trade_info.loan_type not in [Order.LIQUIDATION, MarginLoan.OPEN])
         position.update_net_amount(amount=trade_info.trade_amount, price=trade_info.trade_price, side=trade_info.order_side)
         to_update_positions[position.id] = position
 
@@ -226,8 +226,11 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                 if loan_type == MarginLoan.REPAY:
                     trade_amount = min(position.amount, trade_amount)
                 from ledger.models.position import MarginPositionTradeInfo
+                loan_type = Order.LIQUIDATION if order.type == Order.LIQUIDATION else loan_type
+                if order.is_open_position:
+                    loan_type = MarginLoan.OPEN
                 trading_positions.append(MarginPositionTradeInfo(
-                    loan_type=Order.LIQUIDATION if order.type == Order.LIQUIDATION else loan_type,
+                    loan_type=loan_type,
                     position=position,
                     trade_amount=trade_amount,
                     trade_price=trade_price,
