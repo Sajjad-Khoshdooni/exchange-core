@@ -98,6 +98,7 @@ def _update_trading_positions(trading_positions, pipeline):
                                       short_amount * trade_info.trade_price) / position.amount
 
         position.update_liquidation_price(pipeline, rebalance=trade_info.loan_type != Order.LIQUIDATION)
+        position.update_net_amount(amount=trade_info.trade_amount, price=trade_info.trade_price, side=trade_info.order_side)
         to_update_positions[position.id] = position
 
         if trade_info.loan_type == Order.LIQUIDATION or \
@@ -115,7 +116,7 @@ def _update_trading_positions(trading_positions, pipeline):
                 )
 
     MarginPosition.objects.bulk_update(
-        to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status']
+        to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status', 'net_amount']
     )
 
 
@@ -230,7 +231,8 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                     position=position,
                     trade_amount=trade_amount,
                     trade_price=trade_price,
-                    group_id=order.group_id
+                    group_id=order.group_id,
+                    order_side=order.side
                 ))
     return trading_positions
 

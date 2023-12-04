@@ -37,6 +37,7 @@ class MarginPosition(models.Model):
 
     symbol = models.ForeignKey('market.PairSymbol', on_delete=models.PROTECT)
     amount = get_amount_field(default=0)
+    net_amount = get_amount_field(default=0)
     average_price = get_amount_field(default=0)
     liquidation_price = get_amount_field(null=True)
     side = models.CharField(max_length=8, choices=SIDE_CHOICES)
@@ -125,6 +126,13 @@ class MarginPosition(models.Model):
         else:
             raise NotImplementedError
 
+    def update_net_amount(self, amount, price, side):
+        if (self.side == SHORT and side == SELL) or (self.side == LONG and side == BUY):
+            sign = Decimal('1')
+        else:
+            sign = Decimal('-1')
+        self.net_amount += sign * price * amount
+
     def get_margin_ratio(self) -> Decimal:
         if self.side == SHORT:
             return 1 / self.DEFAULT_LIQUIDATION_LEVEL
@@ -189,6 +197,9 @@ class MarginPosition(models.Model):
                 group_id=uuid.uuid4(),
                 scope=Trx.MARGIN_TRANSFER
             )
+
+            self.net_amount -= amount
+            self.save(update_fields=['net_amount'])
 
     @classmethod
     def get_by(cls, symbol: PairSymbol, account: Account, order_side: str, is_open_position: bool):
@@ -405,6 +416,7 @@ class MarginLeverage(models.Model):
 class MarginPositionTradeInfo:
     loan_type: str
     position: MarginPosition
+    order_side: str
     trade_amount: Decimal = 0
     trade_price: Decimal = 0
     group_id: UUID = 0

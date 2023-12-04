@@ -66,10 +66,16 @@ class MarginTransfer(models.Model):
         elif self.type == self.MARGIN_TO_POSITION:
             sender, receiver = margin_wallet, position_wallet
 
+            position.net_amount += self.amount
+            position.save(update_fields=['net_amount'])
+
         elif self.type == self.POSITION_TO_MARGIN:
             sender, receiver = position_wallet, margin_wallet
             if not position.has_enough_margin(self.amount):
                 raise InsufficientBalance
+
+            position.net_amount -= self.amount
+            position.save(update_fields=['net_amount'])
         else:
             raise NotImplementedError
 
