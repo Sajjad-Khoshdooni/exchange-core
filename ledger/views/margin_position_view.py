@@ -23,10 +23,14 @@ class MarginPositionSerializer(AssetSerializerMini):
     base_debt = serializers.SerializerMethodField()
     asset_debt = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
+    coin_amount = serializers.SerializerMethodField()
+    liquidation_price = serializers.SerializerMethodField()
 
     def get_margin_ratio(self, instance: MarginPosition):
-        ratio = instance.base_total_balance / instance.base_debt_amount
-        return floor_precision(abs(ratio), 2)
+        if instance.base_debt_amount:
+            ratio = instance.base_total_balance / instance.base_debt_amount
+            return floor_precision(abs(ratio), 2)
+        return None
 
     def get_balance(self, instance):
         return instance.equity
@@ -40,11 +44,17 @@ class MarginPositionSerializer(AssetSerializerMini):
     def get_amount(self, instance):
         return abs(floor_precision(instance.base_debt_amount / instance.symbol.last_trade_price, instance.symbol.tick_size))
 
+    def get_liquidation_price(self, instance):
+        return floor_precision(instance.liquidation_price, instance.symbol.step_size)
+
+    def get_coin_amount(self, instance):
+        return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.tick_size)
+
     class Meta:
         model = MarginPosition
         fields = ('created', 'account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price',
                   'liquidation_price', 'side', 'status', 'id', 'margin_ratio', 'balance', 'base_debt', 'asset_debt',
-                  'leverage')
+                  'leverage', 'coin_amount')
 
 
 class MarginPositionFilter(django_filters.FilterSet):
@@ -63,7 +73,8 @@ class MarginPositionViewSet(ModelViewSet):
     filter_class = MarginPositionFilter
 
     def get_queryset(self):
-        return MarginPosition.objects.filter(account=self.request.user.get_account(), liquidation_price__isnull=False)
+        return MarginPosition.objects.filter(account=self.request.user.get_account(),
+                                             liquidation_price__isnull=False, status=MarginPosition.OPEN)
 
 
 class MarginClosePositionSerializer(serializers.Serializer):
