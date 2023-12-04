@@ -12,7 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Wallet, MarginPosition
 from ledger.models.asset import Asset, AssetSerializerMini
 from ledger.utils.external_price import SELL
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_presentation_amount, get_coin_presentation_balance
 from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import get_last_price
 from market.models import PairSymbol
@@ -109,6 +109,7 @@ class MarginAssetSerializer(AssetSerializerMini):
     margin_position = serializers.SerializerMethodField()
     available_margin = serializers.SerializerMethodField()
     equity = serializers.SerializerMethodField()
+    locked_amount = serializers.SerializerMethodField()
 
     def get_asset(self, asset: Asset):
         return self.context.get(asset.symbol)
@@ -116,7 +117,7 @@ class MarginAssetSerializer(AssetSerializerMini):
     def get_margin_position(self, asset: Asset):
         asset = self.get_asset(asset)
 
-        return asset.get('equity', Decimal('0'))
+        return get_coin_presentation_balance(asset.symbol, asset.get('equity', Decimal('0')))
 
     def get_available_margin(self, asset: Asset):
         cross_wallet = self.get_asset(asset).get('cross_wallet')
@@ -124,14 +125,22 @@ class MarginAssetSerializer(AssetSerializerMini):
         if not cross_wallet:
             return Decimal('0')
 
-        return cross_wallet.get_free()
+        return get_coin_presentation_balance(asset.symbol, cross_wallet.get_free())
 
     def get_equity(self, asset: Asset):
-        return self.get_available_margin(asset) + self.get_margin_position(asset)
+        return get_coin_presentation_balance(asset.symbol,
+                                             self.get_available_margin(asset) + self.get_margin_position(asset))
+
+    def get_locked_amount(self, asset: Asset):
+        cross_wallet = self.get_asset(asset).get('cross_wallet')
+        if not cross_wallet:
+            return Decimal('0')
+
+        return get_coin_presentation_balance(asset.symbol, cross_wallet.locked)
 
     class Meta:
         model = Asset
-        fields = (*AssetSerializerMini.Meta.fields, 'equity', 'margin_position', 'available_margin')
+        fields = (*AssetSerializerMini.Meta.fields, 'equity', 'margin_position', 'available_margin', 'locked_amount')
         ref_name = 'margin assets'
 
 
