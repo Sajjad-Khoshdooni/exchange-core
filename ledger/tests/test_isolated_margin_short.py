@@ -332,7 +332,7 @@ class ShortIsolatedMarginTestCase(TestCase):
 
         self.print_wallets(self.account)
         mp.refresh_from_db()
-        print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.status)
+        print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.status, mp.net_amount)
 
         self.assert_liquidation(self.account, self.btcusdt)
 

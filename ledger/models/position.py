@@ -132,7 +132,6 @@ class MarginPosition(models.Model):
         else:
             sign = Decimal('-1')
         self.net_amount = self.net_amount + sign * price * amount
-        self.save(update_fields=['net_amount'])
 
     def get_margin_ratio(self) -> Decimal:
         if self.side == SHORT:
@@ -417,6 +416,7 @@ class MarginLeverage(models.Model):
 class MarginPositionTradeInfo:
     loan_type: str
     position: MarginPosition
+    order_side: str
     trade_amount: Decimal = 0
     trade_price: Decimal = 0
     group_id: UUID = 0
