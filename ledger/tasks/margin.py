@@ -15,6 +15,7 @@ from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_T
 from ledger.models import Wallet, MarginPosition, Trx
 from ledger.models.margin import CloseRequest
 from ledger.utils.external_price import SHORT, LONG
+from ledger.utils.margin import alert_position_warning
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -126,3 +127,21 @@ def collect_margin_interest():
 
     for position in to_liquid_long_positions:
         position.liquidate(pipeline)
+
+
+@shared_task(queue='margin')
+def alert_risky_position():
+    queryset = MarginPosition.objects.filter(alert_mode=False)
+
+    alert_position_warning(queryset.filter(side=SHORT, base_margin_wallet__balance__lte=F('asset_margin_wallet.balance') * F('symbol.last_trade_price') * Decimal('1.15')))
+    alert_position_warning(queryset.filter(side=LONG, base_margin_wallet__balance__gte=F('asset_margin_wallet.balance') * F('symbol.last_trade_price') * Decimal('1.15')))
+
+    queryset = MarginPosition.objects.filter(alert_mode=True)
+
+    queryset.filter(side=SHORT,
+                    base_margin_wallet__balance__gte=F('asset_margin_wallet.balance') * F('symbol.last_trade_price') * Decimal('1.2'))\
+        .update(alert_mode=False)
+
+    queryset.filter(side=LONG,
+                    base_margin_wallet__balance__lte=F('asset_margin_wallet.balance') * F('symbol.last_trade_price') * Decimal('1.2'))\
+        .update(alert_mode=False)

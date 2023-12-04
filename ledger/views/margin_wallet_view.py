@@ -115,9 +115,9 @@ class MarginAssetSerializer(AssetSerializerMini):
         return self.context.get(asset.symbol)
 
     def get_margin_position(self, asset: Asset):
-        asset = self.get_asset(asset)
+        asset_data = self.get_asset(asset)
 
-        return get_coin_presentation_balance(asset.symbol, asset.get('equity', Decimal('0')))
+        return get_coin_presentation_balance(asset.symbol, asset_data.get('equity', Decimal('0')))
 
     def get_available_margin(self, asset: Asset):
         cross_wallet = self.get_asset(asset).get('cross_wallet')
