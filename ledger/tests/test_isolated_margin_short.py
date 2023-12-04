@@ -371,6 +371,7 @@ class ShortIsolatedMarginTestCase(TestCase):
                       price=BTC_USDT_PRICE)
 
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
+        print('aksljdfhakljsskfasdf')
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.net_amount)
 
         self.place_order(amount=loan_amount/2, side=BUY, market=Wallet.MARGIN, price=BTC_USDT_PRICE / 2)
@@ -379,6 +380,7 @@ class ShortIsolatedMarginTestCase(TestCase):
                       fill_type='market')
 
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
+        print('aksljdfhakljsskfasdf')
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.net_amount)
         self.print_wallets(self.account)
 

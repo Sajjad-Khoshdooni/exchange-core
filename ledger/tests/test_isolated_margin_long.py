@@ -1,12 +1,9 @@
 from decimal import Decimal
 
-from django.db.models import Sum
 from django.test import Client
 from django.test import TestCase
 from django.utils import timezone
 
-from accounting.models import Account
-from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Asset, Wallet, MarginPosition, MarginLeverage
 from ledger.utils.external_price import SELL, BUY, LONG
 from ledger.utils.precision import floor_precision
@@ -145,7 +142,7 @@ class LongIsolatedMarginTestCase(TestCase):
 
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         self.assertEqual(mp.debt_amount, loan_amount * BTC_USDT_PRICE/2)
-        print('position', mp.debt_amount, mp.liquidation_price)
+        print('position', mp.debt_amount, mp.liquidation_price, mp.net_amount)
         self.assertTrue(mp.liquidation_price == Decimal('550'))
         self.assertEqual(mp.side, LONG)
 
@@ -205,7 +202,7 @@ class LongIsolatedMarginTestCase(TestCase):
 
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         self.assertEqual(mp.debt_amount, loan_amount * BTC_USDT_PRICE/2)
-        print('position', mp.debt_amount, mp.liquidation_price)
+        print('position', mp.debt_amount, mp.liquidation_price, mp.net_amount)
         self.assertTrue(mp.liquidation_price == Decimal('550'))
         self.assertEqual(mp.side, LONG)
 
@@ -216,7 +213,7 @@ class LongIsolatedMarginTestCase(TestCase):
 
         self.print_wallets(self.account)
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
-        print('position', mp.debt_amount, mp.liquidation_price)
+        print('position', mp.debt_amount, mp.liquidation_price, mp.net_amount)
 
     def test_long_buy4(self):
         self.transfer_usdt_api(TO_TRANSFER_USDT/2)
@@ -231,7 +228,7 @@ class LongIsolatedMarginTestCase(TestCase):
 
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         self.assertEqual(mp.debt_amount, loan_amount * BTC_USDT_PRICE/2)
-        print('position', mp.debt_amount, mp.liquidation_price)
+        print('position', mp.debt_amount, mp.liquidation_price, mp.net_amount)
         self.assertTrue(mp.liquidation_price == Decimal('550'))
         self.assertEqual(mp.side, LONG)
 
@@ -240,7 +237,7 @@ class LongIsolatedMarginTestCase(TestCase):
             new_order(pipeline, self.btcusdt, self.account2, side=BUY, amount=loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE)
 
         mp.refresh_from_db()
-        print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.status)
+        print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.status, mp.net_amount)
         self.print_wallets(self.account)
         self.assertEqual(mp.status, MarginPosition.CLOSED)
 
@@ -263,13 +260,12 @@ class LongIsolatedMarginTestCase(TestCase):
             new_order(pipeline, self.btcusdt, self.account3, side=SELL, amount=loan_amount, market=Wallet.SPOT,
                       price=mp.liquidation_price)
 
-        print('position', mp.liquidation_price)
-        self.print_wallets(self.account)
-
         self.assert_liquidation(self.account, self.btcusdt)
 
         print('************************************insurance_account_wallet************************************')
         self.print_wallets(self.account)
+        mp.refresh_from_db()
+        print(f'margin position: {mp.liquidation_price}', mp.net_amount)
 
     def test_long_buy_liquidate2(self):
         self.transfer_usdt_api(TO_TRANSFER_USDT)
@@ -284,7 +280,7 @@ class LongIsolatedMarginTestCase(TestCase):
         self.place_order(amount=loan_amount/10, side=SELL, market=Wallet.MARGIN, price=BTC_USDT_PRICE)
 
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
-        print(f'margin position: {mp.liquidation_price}')
+        print(f'margin position: {mp.liquidation_price}', mp.net_amount)
         self.print_wallets(self.account)
 
         with WalletPipeline() as pipeline:
@@ -295,6 +291,8 @@ class LongIsolatedMarginTestCase(TestCase):
         self.print_wallets(self.account)
 
         self.assert_liquidation(self.account, self.btcusdt)
+        mp.refresh_from_db()
+        print(f'margin position: {mp.liquidation_price}', mp.net_amount)
 
     def test_long_buy_partial_liquidate(self):
         self.transfer_usdt_api(TO_TRANSFER_USDT)

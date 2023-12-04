@@ -131,7 +131,7 @@ class MarginPosition(models.Model):
             sign = Decimal('1')
         else:
             sign = Decimal('-1')
-        self.net_amount = self.net_amount + sign * price * amount
+        self.net_amount += sign * price * amount
 
     def get_margin_ratio(self) -> Decimal:
         if self.side == SHORT:

@@ -9,6 +9,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import MarginPosition
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.external_price import SHORT, LONG
 from ledger.utils.precision import floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.serializers.symbol_serializer import SymbolSerializer
@@ -50,7 +51,13 @@ class MarginPositionSerializer(AssetSerializerMini):
         return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.tick_size)
 
     def get_pnl(self, instance):
-        return instance.base_total_balance + instance.base_debt_amount - instance.net_amount
+        if instance.side == SHORT:
+            pnl = instance.base_total_balance + instance.base_debt_amount - instance.net_amount
+        elif instance.side == LONG:
+            pnl = instance.net_amount - instance.base_total_balance + instance.base_debt_amount
+        else:
+            raise NotImplementedError
+        return floor_precision(pnl, 2)
 
     class Meta:
         model = MarginPosition
