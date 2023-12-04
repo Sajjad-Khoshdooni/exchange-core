@@ -1,6 +1,7 @@
-import uuid
 import logging
+import uuid
 from decimal import Decimal
+
 from celery import shared_task
 from django.db.models import F
 from django.utils import timezone
@@ -15,7 +16,6 @@ from ledger.models import Wallet, MarginPosition, Trx
 from ledger.models.margin import CloseRequest
 from ledger.utils.external_price import SHORT, LONG
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import PairSymbol
 
 logger = logging.getLogger(__name__)
 

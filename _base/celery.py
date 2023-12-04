@@ -112,7 +112,7 @@ app.conf.beat_schedule = {
 
     'collect_margin_interest': {
         'task': 'ledger.tasks.margin.collect_margin_interest',
-        'schedule': crontab(hour='*/8'),
+        'schedule': crontab(hour='*/8', minute=30),
         'options': {
             'queue': 'celery',
             'expires': 3600
