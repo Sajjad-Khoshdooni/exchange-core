@@ -12,6 +12,7 @@ from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT, MARGIN_POOL_ACCOUNT
 from ledger.models import Trx
 from ledger.utils.external_price import SHORT, LONG, BUY, SELL, get_other_side
 from ledger.utils.fields import get_amount_field
+from ledger.utils.margin import alert_liquidate
 from ledger.utils.precision import floor_precision, ceil_precision
 from ledger.utils.price import get_depth_price, get_base_depth_price
 from market.models import PairSymbol
@@ -43,6 +44,7 @@ class MarginPosition(models.Model):
     side = models.CharField(max_length=8, choices=SIDE_CHOICES)
     status = models.CharField(default=OPEN, max_length=12, choices=STATUS_CHOICES)
     leverage = models.IntegerField(default=1)
+    alert_mode = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         indexes = [
@@ -378,6 +380,8 @@ class MarginPosition(models.Model):
 
         self.save(update_fields=['amount', 'status'])
         self.update_liquidation_price(pipeline, rebalance=False)
+
+        alert_liquidate(self)
 
     @classmethod
     def check_for_liquidation(cls, order, min_price, max_price, pipeline):

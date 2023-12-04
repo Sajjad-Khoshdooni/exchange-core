@@ -118,6 +118,14 @@ app.conf.beat_schedule = {
             'expires': 3600
         },
     },
+    'alert_risky_position': {
+        'task': 'ledger.tasks.margin.alert_risky_position',
+        'schedule': 120 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expires': 120 * TASK_MULTIPLIER
+        },
+    },
 
     'fill_trades_revenue': {
         'task': 'accounting.tasks.revenue.fill_revenue_filled_prices',

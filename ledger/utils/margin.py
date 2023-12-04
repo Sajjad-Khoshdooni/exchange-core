@@ -1,6 +1,6 @@
 from rest_framework.exceptions import ValidationError
 
-from accounts.models import Account, User
+from accounts.models import Account, User, SmsNotification, Notification
 from accounts.tasks import send_message_by_kavenegar
 from ledger.models import Asset, CloseRequest, Wallet, Trx
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -52,3 +52,33 @@ def close_margin_account(user: User):
         template='disable-margin',
         token='تعهدی'
     )
+
+
+def alert_liquidate(position):
+    try:
+        Notification.objects.get_or_create(
+            recipient=position.account.user,
+            group_id=position.group_id,
+            defaults={
+                'title': 'لیکویید شدن موقعیت',
+                'message': f'کاربر گرامی موقعیت {position.symbol.name} شما لیکویید شد.',
+                'hidden': False,
+                'push_status': Notification.PUSH_WAITING,
+                'source': 'core'
+            }
+        )
+    except:
+        pass
+
+
+def alert_position_warning(positions):
+    for position in positions:
+        if not position.alert_mode:
+            SmsNotification.objects.get_or_create(
+                recipient=position.account.user,
+                group_id=position.group_id,
+                defaults={
+                    'content': f'کاربر گرامی موقعیت {position.symbol.name} شما نزدیک به لیکویید شدن است.',
+                }
+            )
+    positions.update(alert_mode=True)
