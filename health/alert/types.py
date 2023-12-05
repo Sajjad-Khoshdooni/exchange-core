@@ -173,20 +173,17 @@ class RiskyMarginRatioAlert(BaseAlertHandler):
 
 class VaultLowBaseBalanceAlert(BaseAlertHandler):
     NAME = 'vault_low_base_balance'
-    HELP = 'multiplier to Vault\'s expected_base_balance'
+    HELP = 'multiplier to VaultItem\'s expected_min_balance'
 
     def get_alerting(self, threshold: Decimal) -> list:
-        vaults = Vault.objects.filter(expected_base_balance__gt=0)
-
-        ok_vault_ids = list(
-            VaultItem.objects.filter(
-                vault__in=vaults,
-                coin='USDT',
-                balance__gte=F('vault__expected_base_balance') * threshold
-            ).values_list('vault', flat=True)
+        vault_items = VaultItem.objects.filter(
+            expected_min_balance__isnull=False,
+            balance__lt=F('expected_min_balance') * threshold
         )
 
-        return vaults.exclude(id__in=ok_vault_ids)
+        return [
+            f'{vi} ({vi.balance} < {vi.expected_min_balance * threshold})' for vi in vault_items
+        ]
 
 
 class HotWalletLowBalanceAlert(BaseAlertHandler):
