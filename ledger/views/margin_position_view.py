@@ -38,7 +38,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         return None
 
     def get_balance(self, instance):
-        return instance.equity
+        return floor_precision(instance.equity, instance.symbol.step_size)
 
     def get_base_debt(self, instance):
         return instance.base_debt_amount
@@ -65,7 +65,7 @@ class MarginPositionSerializer(AssetSerializerMini):
             pnl = instance.net_amount - instance.base_total_balance + instance.base_debt_amount
         else:
             raise NotImplementedError
-        return floor_precision(pnl, 2)
+        return floor_precision(pnl, instance.symbol.step_size)
 
     class Meta:
         model = MarginPosition

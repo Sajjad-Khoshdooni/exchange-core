@@ -228,9 +228,9 @@ class Order(models.Model):
             else:
                 from ledger.models import MarginPosition
 
-                position = MarginPosition.objects.filter(
-                    account=wallet.account, symbol=symbol, side=SHORT if side == BUY else LONG
-                ).first()
+                position = MarginPosition.get_by(
+                    account=wallet.account, symbol=symbol, is_open_position=is_open_position, order_side=side
+                )
 
                 return position.base_margin_wallet if side == BUY else position.asset_margin_wallet
 

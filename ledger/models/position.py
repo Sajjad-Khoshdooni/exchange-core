@@ -333,7 +333,6 @@ class MarginPosition(models.Model):
                 parent_lock_group_id=group_id
             )
 
-        margin_cross_wallet = self.margin_wallet.asset.get_wallet(self.account, market=Wallet.MARGIN, variant=None)
         remaining_balance = self.margin_wallet.balance + pipeline.get_wallet_free_balance_diff(self.margin_wallet.id)
 
         if remaining_balance > Decimal('0') and loss_amount > Decimal('0'):
