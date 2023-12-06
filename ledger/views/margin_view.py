@@ -210,7 +210,6 @@ class MarginPositionInterestHistoryView(ListAPIView):
         id = self.request.query_params.get('id')
         if id:
             position = MarginPosition.objects.filter(
-                MarginPosition,
                 id=id,
                 account=account,
                 status=MarginPosition.OPEN,
