@@ -133,15 +133,15 @@ def collect_margin_interest():
 def alert_risky_position():
     queryset = MarginPosition.objects.filter(alert_mode=False)
 
-    alert_position_warning(queryset.filter(side=SHORT, base_wallet__balance__lte=F('asset_wallet.balance') * F('symbol.last_trade_price') * Decimal('1.15')))
-    alert_position_warning(queryset.filter(side=LONG, base_wallet__balance__gte=F('asset_wallet.balance') * F('symbol.last_trade_price') * Decimal('1.15')))
+    alert_position_warning(queryset.filter(side=SHORT, base_wallet__balance__lte=F('asset_wallet__balance') * F('symbol__last_trade_price') * Decimal('1.15')))
+    alert_position_warning(queryset.filter(side=LONG, base_wallet__balance__gte=F('asset_wallet__balance') * F('symbol__last_trade_price') * Decimal('1.15')))
 
     queryset = MarginPosition.objects.filter(alert_mode=True)
 
     queryset.filter(side=SHORT,
-                    base_wallet__balance__gte=F('asset_wallet.balance') * F('symbol.last_trade_price') * Decimal('1.2'))\
+                    base_wallet__balance__gte=F('asset_wallet__balance') * F('symbol__last_trade_price') * Decimal('1.2'))\
         .update(alert_mode=False)
 
     queryset.filter(side=LONG,
-                    base_wallet__balance__lte=F('asset_wallet.balance') * F('symbol.last_trade_price') * Decimal('1.2'))\
+                    base_wallet__balance__lte=F('asset_wallet__balance') * F('symbol__last_trade_price') * Decimal('1.2'))\
         .update(alert_mode=False)
