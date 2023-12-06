@@ -218,7 +218,7 @@ class MarginTransferBalanceAPIView(APIView):
 
             return Response({
                 'asset': base_asset.symbol,
-                'balance': get_presentation_amount(margin_cross_wallet.get_free())
+                'balance': get_coin_presentation_balance(base_asset.symbol, margin_cross_wallet.get_free())
             })
 
         elif transfer_type == MarginTransfer.POSITION_TO_MARGIN:
@@ -240,7 +240,7 @@ class MarginTransferBalanceAPIView(APIView):
             else:
                 return Response({
                     'asset': symbol.base_asset.symbol,
-                    'balance': get_presentation_amount(position.withdrawable_base_asset)
+                    'balance': get_coin_presentation_balance(symbol.base_asset.symbol, position.withdrawable_base_asset)
                 })
 
         elif transfer_type == MarginTransfer.SPOT_TO_MARGIN:
@@ -249,7 +249,7 @@ class MarginTransferBalanceAPIView(APIView):
 
             return Response({
                             'asset': base_asset.symbol,
-                            'balance': get_presentation_amount(spot_wallet.get_free())
+                            'balance': get_coin_presentation_balance(base_asset.symbol, spot_wallet.get_free())
                         })
         else:
             return Response({'Error': 'Invalid type'}, status=400)
