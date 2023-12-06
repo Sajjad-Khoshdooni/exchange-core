@@ -57,13 +57,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
 
     def get_pnl(self, instance):
-        if instance.side == SHORT:
-            pnl = instance.base_total_balance - instance.net_amount
-        elif instance.side == LONG:
-            pnl = instance.net_amount - instance.base_total_balance
-        else:
-            raise NotImplementedError
-        return floor_precision(pnl, instance.symbol.tick_size)
+        return floor_precision(instance.base_total_balance - instance.net_amount, instance.symbol.tick_size)
 
     class Meta:
         model = MarginPosition
