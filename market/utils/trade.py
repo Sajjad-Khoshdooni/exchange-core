@@ -113,7 +113,7 @@ def _update_trading_positions(trading_positions, pipeline):
             if remaining_balance > Decimal('0'):
                 pipeline.new_trx(
                     position.base_margin_wallet, margin_cross_wallet, remaining_balance, Trx.MARGIN_TRANSFER,
-                    trade_info.group_id
+                    uuid4()
                 )
 
     MarginPosition.objects.bulk_update(

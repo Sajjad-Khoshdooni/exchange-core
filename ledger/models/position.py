@@ -380,8 +380,8 @@ class MarginPosition(models.Model):
 
         self.save(update_fields=['amount', 'status'])
         self.update_liquidation_price(pipeline, rebalance=False)
-
-        alert_liquidate(self)
+        if charge_insurance:
+            alert_liquidate(self)
 
     @classmethod
     def check_for_liquidation(cls, order, min_price, max_price, pipeline):
