@@ -213,7 +213,7 @@ class MarginPositionInterestHistoryView(ListAPIView):
                 id=id,
                 account=account,
                 status=MarginPosition.OPEN,
-            )
+            ).first()
             queryset = queryset.filter(
                 created__gte=position.created,
                 sender__in=[position.base_margin_wallet, position.base_margin_wallet]
