@@ -214,10 +214,13 @@ class MarginPositionInterestHistoryView(ListAPIView):
                 account=account,
                 status=MarginPosition.OPEN,
             ).first()
-            queryset = queryset.filter(
-                created__gte=position.created,
-                sender__in=[position.base_margin_wallet, position.base_margin_wallet]
-            )
+            if position:
+                queryset = queryset.filter(
+                    created__gte=position.created,
+                    sender__in=[position.base_margin_wallet, position.base_margin_wallet]
+                )
+            else:
+                queryset = Trx.objects.none()
 
         return queryset.prefetch_related('sender__asset').order_by('-created')
 
