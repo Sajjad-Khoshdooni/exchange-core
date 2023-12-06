@@ -58,7 +58,7 @@ class MarginPositionSerializer(AssetSerializerMini):
 
     def get_pnl(self, instance):
         if instance.side == SHORT:
-            pnl = abs(instance.base_debt_amount) - instance.net_amount
+            pnl = instance.net_amount - abs(instance.base_debt_amount)
         elif instance.side == LONG:
             pnl = instance.base_total_balance - instance.net_amount
         else:
