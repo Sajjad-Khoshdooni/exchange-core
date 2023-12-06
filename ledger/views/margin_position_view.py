@@ -36,7 +36,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         return None
 
     def get_balance(self, instance):
-        return floor_precision(instance.equity, instance.symbol.step_size)
+        return floor_precision(instance.equity, instance.symbol.tick_size)
 
     def get_base_debt(self, instance):
         return instance.base_debt_amount
@@ -63,7 +63,7 @@ class MarginPositionSerializer(AssetSerializerMini):
             pnl = instance.net_amount - instance.base_total_balance + instance.base_debt_amount
         else:
             raise NotImplementedError
-        return floor_precision(pnl, instance.symbol.step_size)
+        return floor_precision(pnl, instance.symbol.tick_size)
 
     class Meta:
         model = MarginPosition
@@ -89,7 +89,7 @@ class MarginPositionViewSet(ModelViewSet):
 
     def get_queryset(self):
         return MarginPosition.objects.filter(account=self.request.user.get_account(),
-                                             liquidation_price__isnull=False, status=MarginPosition.OPEN)
+                                             liquidation_price__isnull=False, status=MarginPosition.OPEN).order_by('-created')
 
 
 class MarginClosePositionSerializer(serializers.Serializer):
