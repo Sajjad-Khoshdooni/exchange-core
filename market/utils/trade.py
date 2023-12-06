@@ -94,7 +94,7 @@ def _update_trading_positions(trading_positions, pipeline):
             else -trade_info.trade_amount
         previous_amount, previous_price = position.amount, position.average_price
         position.amount += short_amount
-        if short_amount > 0:
+        if short_amount > 0 and position.amount:
             position.average_price = (previous_amount * previous_price +
                                       short_amount * trade_info.trade_price) / position.amount
 
