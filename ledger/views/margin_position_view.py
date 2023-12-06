@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from ledger.exceptions import SmallDepthError, InsufficientBalance
 from ledger.models import MarginPosition
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.external_price import SHORT, LONG
@@ -124,7 +125,9 @@ class MarginClosePositionView(APIView):
         )
         Order.cancel_orders(queryset)
 
-        with WalletPipeline() as pipeline:
-            position.liquidate(pipeline=pipeline, charge_insurance=False)
-
+        try:
+            with WalletPipeline() as pipeline:
+                position.liquidate(pipeline=pipeline, charge_insurance=False)
+        except (SmallDepthError, InsufficientBalance) as e:
+            return Response({'Error': f'{e.__name__}'}, 400)
         return Response(200)
