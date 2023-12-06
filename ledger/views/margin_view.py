@@ -197,7 +197,7 @@ class MarginInterestTrxSerializer(serializers.ModelSerializer):
 
 
 class MarginPositionInterestHistoryView(ListAPIView):
-    serializers = MarginInterestTrxSerializer
+    serializer_class = MarginInterestTrxSerializer
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
