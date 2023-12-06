@@ -17,7 +17,7 @@ from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
-from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE
+from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE, SHORT, LONG
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -229,7 +229,7 @@ class Order(models.Model):
                 from ledger.models import MarginPosition
 
                 position = MarginPosition.objects.filter(
-                    account=wallet.account, symbol=symbol
+                    account=wallet.account, symbol=symbol, side=SHORT if side == BUY else LONG
                 ).first()
 
                 return position.base_margin_wallet if side == BUY else position.asset_margin_wallet
