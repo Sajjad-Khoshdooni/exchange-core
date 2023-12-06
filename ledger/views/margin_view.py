@@ -201,23 +201,26 @@ class MarginPositionInterestHistoryView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        q = {
-            'status': MarginPosition.OPEN,
-            'account': self.request.user.get_account()
-        }
+        account = self.request.user.get_account()
+        queryset = Trx.objects.filter(
+            scope=Trx.MARGIN_INTEREST,
+            sender__account=account
+        )
+
         id = self.request.query_params.get('id')
         if id:
-            q['id'] = id
+            position = MarginPosition.objects.filter(
+                MarginPosition,
+                id=id,
+                account=account,
+                status=MarginPosition.OPEN,
+            )
+            queryset = queryset.filter(
+                created__gte=position.created,
+                sender__in=[position.base_margin_wallet, position.base_margin_wallet]
+            )
 
-        position = get_object_or_404(
-            MarginPosition,
-            **q
-        )
-        return Trx.objects.filter(
-            scope=Trx.MARGIN_INTEREST,
-            sender__in=[position.base_margin_wallet, position.base_margin_wallet],
-            created__gte=position.created
-        ).prefetch_related('sender__asset').order_by('-created')
+        return queryset.prefetch_related('sender__asset').order_by('-created')
 
 
 class LeverageViewSerializer(serializers.ModelSerializer):
