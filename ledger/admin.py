@@ -941,6 +941,6 @@ class DepositRecoveryRequestAdmin(admin.ModelAdmin):
 class MarginPositionAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'symbol', 'amount')
     readonly_fields = ('account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price', 'side',
-                       'liquidation_price', 'status', 'leverage')
+                       'liquidation_price', 'status', 'leverage', 'net_amount', 'group_id')
     list_filter = ('status', 'side', 'symbol')
     search_fields = ('symbol__name', 'status',)
