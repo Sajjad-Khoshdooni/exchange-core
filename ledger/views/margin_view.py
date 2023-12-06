@@ -201,11 +201,17 @@ class MarginPositionInterestHistoryView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
+        q = {
+            'status': MarginPosition.OPEN,
+            'account': self.request.user.get_account()
+        }
+        id = self.request.query_params.get('id')
+        if id:
+            q['id'] = id
+
         position = get_object_or_404(
             MarginPosition,
-            id=self.kwargs.get('id'),
-            status=MarginPosition.OPEN,
-            account=self.request.user.get_account()
+            **q
         )
         return Trx.objects.filter(
             scope=Trx.MARGIN_INTEREST,

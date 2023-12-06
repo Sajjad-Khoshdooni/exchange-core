@@ -218,7 +218,6 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                     )
                 elif order.is_open_position is False:
                     position.get_margin_ratio()
-                    pass
 
                 order.symbol.get_margin_position(order.account, order.side, order.is_open_position)
                 fee_amount = floor_precision(trade.fee_amount,
