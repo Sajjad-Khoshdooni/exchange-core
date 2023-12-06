@@ -12,6 +12,7 @@ from ledger.models.asset import AssetSerializerMini
 from ledger.utils.external_price import SHORT, LONG
 from ledger.utils.precision import floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
+from market.models import Order
 from market.serializers.symbol_serializer import SymbolSerializer
 
 
@@ -111,8 +112,17 @@ class MarginClosePositionView(APIView):
     def post(self, request):
         serializer = MarginClosePositionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        position = serializer.position
+
+        queryset = Order.objects.filter(
+            status=Order.NEW,
+            account=position.account,
+            symbol=position.symbol,
+            wallet__market=position.asset_wallet.MARGIN
+        )
+        Order.cancel_orders(queryset)
 
         with WalletPipeline() as pipeline:
-            serializer.position.liquidate(pipeline=pipeline, charge_insurance=False)
+            position.liquidate(pipeline=pipeline, charge_insurance=False)
 
         return Response(200)

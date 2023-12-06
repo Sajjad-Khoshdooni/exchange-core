@@ -62,6 +62,7 @@ class MarginPosition(models.Model):
     @property
     def variant(self):
         return self.group_id
+
     @property
     def loan_wallet(self):
         if self.side == SHORT:
