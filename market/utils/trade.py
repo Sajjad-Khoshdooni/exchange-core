@@ -90,7 +90,8 @@ def _update_trading_positions(trading_positions, pipeline):
     to_update_positions = {}
     for trade_info in trading_positions:
         position = to_update_positions.get(trade_info.position.id, trade_info.position)
-        short_amount = trade_info.trade_amount if trade_info.loan_type == MarginLoan.BORROW else -trade_info.trade_amount
+        short_amount = trade_info.trade_amount if trade_info.loan_type in [MarginLoan.BORROW, MarginLoan.OPEN]\
+            else -trade_info.trade_amount
         previous_amount, previous_price = position.amount, position.average_price
         position.amount += short_amount
         if short_amount > 0:
