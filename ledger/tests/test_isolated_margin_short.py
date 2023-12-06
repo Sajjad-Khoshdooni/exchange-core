@@ -374,7 +374,7 @@ class ShortIsolatedMarginTestCase(TestCase):
         print('aksljdfhakljsskfasdf')
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.net_amount)
 
-        self.place_order(amount=loan_amount/2, side=BUY, market=Wallet.MARGIN, price=BTC_USDT_PRICE / 2)
+        self.place_order(amount=loan_amount/2, side=BUY, market=Wallet.MARGIN, price=BTC_USDT_PRICE / 2, is_open_position=False)
         with WalletPipeline() as pipeline:
             new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=loan_amount/2, market=Wallet.SPOT,
                       fill_type='market')

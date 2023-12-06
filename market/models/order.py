@@ -293,7 +293,7 @@ class Order(models.Model):
         to_lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, self.symbol,
                                                   is_open_position)
 
-        if self.side == BUY and self.fill_type == Order.MARKET:
+        if self.side == BUY and self.fill_type == Order.MARKET and self.wallet.market != Wallet.MARGIN:
             free_amount = to_lock_wallet.get_free()
             if free_amount > Decimal('0.95') * lock_amount:
                 lock_amount = min(lock_amount, free_amount)
