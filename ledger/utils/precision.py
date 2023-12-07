@@ -126,3 +126,14 @@ def get_coin_presentation_balance(coin: str, balance: Decimal):
         precision = None
 
     return get_presentation_amount(balance, precision=precision)
+
+
+def get_margin_coin_presentation_balance(coin: str, balance: Decimal):
+    if coin == 'IRT':
+        precision = 0
+    elif coin == 'USDT':
+        precision = 2
+    else:
+        precision = None
+
+    return get_presentation_amount(balance, precision=precision)

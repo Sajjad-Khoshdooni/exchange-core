@@ -403,11 +403,4 @@ def get_markets_info(base: str):
 
 
 def get_position_leverage(leverage, side, is_open_position):
-    # if is_open_position:
-    #     if side == SELL:
-    #         leverage -= 1
-    # else:
-    #     if side == BUY:
-    #         leverage -= 1
-
     return leverage

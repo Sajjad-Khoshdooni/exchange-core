@@ -12,7 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Wallet, MarginPosition
 from ledger.models.asset import Asset, AssetSerializerMini
 from ledger.utils.external_price import SELL
-from ledger.utils.precision import get_presentation_amount, get_coin_presentation_balance
+from ledger.utils.precision import get_presentation_amount, get_margin_coin_presentation_balance
 from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import get_last_price
 from market.models import PairSymbol
@@ -117,7 +117,7 @@ class MarginAssetSerializer(AssetSerializerMini):
     def get_margin_position(self, asset: Asset):
         asset_data = self.get_asset(asset)
 
-        return get_coin_presentation_balance(asset.symbol, asset_data.get('equity', Decimal('0')))
+        return get_margin_coin_presentation_balance(asset.symbol, asset_data.get('equity', Decimal('0')))
 
     def get_available_margin(self, asset: Asset):
         cross_wallet = self.get_asset(asset).get('cross_wallet')
@@ -125,10 +125,10 @@ class MarginAssetSerializer(AssetSerializerMini):
         if not cross_wallet:
             return Decimal('0')
 
-        return get_coin_presentation_balance(asset.symbol, cross_wallet.get_free())
+        return get_margin_coin_presentation_balance(asset.symbol, cross_wallet.get_free())
 
     def get_equity(self, asset: Asset):
-        return get_coin_presentation_balance(asset.symbol,
+        return get_margin_coin_presentation_balance(asset.symbol,
                                              Decimal(self.get_available_margin(asset)) +
                                              Decimal(self.get_margin_position(asset)))
 
@@ -137,7 +137,7 @@ class MarginAssetSerializer(AssetSerializerMini):
         if not cross_wallet:
             return Decimal('0')
 
-        return get_coin_presentation_balance(asset.symbol, cross_wallet.locked)
+        return get_margin_coin_presentation_balance(asset.symbol, cross_wallet.locked)
 
     class Meta:
         model = Asset
@@ -218,7 +218,7 @@ class MarginTransferBalanceAPIView(APIView):
 
             return Response({
                 'asset': base_asset.symbol,
-                'balance': get_coin_presentation_balance(base_asset.symbol, margin_cross_wallet.get_free())
+                'balance': get_margin_coin_presentation_balance(base_asset.symbol, margin_cross_wallet.get_free())
             })
 
         elif transfer_type == MarginTransfer.POSITION_TO_MARGIN:
@@ -240,7 +240,7 @@ class MarginTransferBalanceAPIView(APIView):
             else:
                 return Response({
                     'asset': symbol.base_asset.symbol,
-                    'balance': get_coin_presentation_balance(symbol.base_asset.symbol, position.withdrawable_base_asset)
+                    'balance': get_margin_coin_presentation_balance(symbol.base_asset.symbol, position.withdrawable_base_asset)
                 })
 
         elif transfer_type == MarginTransfer.SPOT_TO_MARGIN:
@@ -249,7 +249,7 @@ class MarginTransferBalanceAPIView(APIView):
 
             return Response({
                             'asset': base_asset.symbol,
-                            'balance': get_coin_presentation_balance(base_asset.symbol, spot_wallet.get_free())
+                            'balance': get_margin_coin_presentation_balance(base_asset.symbol, spot_wallet.get_free())
                         })
         else:
             return Response({'Error': 'Invalid type'}, status=400)
