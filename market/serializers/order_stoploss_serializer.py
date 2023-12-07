@@ -86,7 +86,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
 
     def get_leverage(self, instance):
         if isinstance(instance, Order):
-            return instance.position and instance.posiotion.leverage
+            return instance.position and instance.position.leverage
         return None
 
     def get_position_side(self, instance: Order):
