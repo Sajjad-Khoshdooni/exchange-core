@@ -24,6 +24,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
     leverage = serializers.SerializerMethodField()
+    position_side = serializers.SerializerMethodField()
 
     def to_representation(self, instance: Union[Order, StopLoss]):
         data = super(OrderStopLossSerializer, self).to_representation(instance)
@@ -88,8 +89,13 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
             return instance.position and instance.posiotion.leverage
         return None
 
+    def get_position_side(self, instance: Order):
+        if isinstance(instance, Order):
+            return instance.position and instance.position.side
+        return None
+
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
                   'filled_price', 'trigger_price', 'side', 'fill_type', 'status', 'market', 'allow_cancel', 'is_oco',
-                  'leverage')
+                  'leverage', 'position_side')

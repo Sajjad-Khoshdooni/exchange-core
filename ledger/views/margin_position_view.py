@@ -75,7 +75,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         return instance.symbol.last_trade_price
 
     def get_volume(self, instance):
-        return get_margin_coin_presentation_balance(self.get_current_price(instance) * self.get_amount(instance))
+        return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, self.get_current_price(instance) * self.get_amount(instance))
 
     class Meta:
         model = MarginPosition

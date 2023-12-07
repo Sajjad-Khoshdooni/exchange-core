@@ -416,6 +416,18 @@ class MarginLeverage(models.Model):
         return f'{self.account}-{self.leverage}'
 
 
+class MarginInterestHistory(models.Model):
+    created = models.DateTimeField()
+    position = models.ForeignKey('ledger.MarginPosition', on_delete=models.CASCADE)
+    group_id = models.UUIDField()
+    amount = get_amount_field()
+    asset = models.ForeignKey('ledger.Asset', on_delete=models.CASCADE)
+    debt = get_amount_field()
+
+    class Meta:
+        unique_together = ('position', 'group_id', 'created')
+
+
 @dataclass
 class MarginPositionTradeInfo:
     loan_type: str

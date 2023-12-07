@@ -41,6 +41,7 @@ class OrderSerializer(serializers.ModelSerializer):
     is_oco = serializers.SerializerMethodField()
     is_open_position = serializers.BooleanField(allow_null=True, required=False)
     leverage = serializers.SerializerMethodField()
+    position_side = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -240,11 +241,14 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_leverage(self, instance: Order):
         return instance.position and instance.position.leverage
 
+    def get_position_side(self, instance: Order):
+        return instance.position and instance.position.side
+
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
                   'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel', 'is_oco',
-                  'time_in_force', 'client_order_id', 'is_open_position', 'leverage')
+                  'time_in_force', 'client_order_id', 'is_open_position', 'leverage', 'position_side')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
