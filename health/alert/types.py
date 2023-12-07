@@ -195,7 +195,12 @@ class HotWalletLowBalanceAlert(BaseAlertHandler):
 
         network_assets = NetworkAsset.objects.filter(expected_hw_balance__gt=0).prefetch_related('asset', 'network')
 
-        return list(filter(
+        network_assets = list(filter(
             lambda ns: hw_balances.get((ns.asset.symbol, ns.network.symbol), 0) < ns.expected_hw_balance * threshold,
             network_assets
         ))
+
+        return [
+            f'{ns} ({hw_balances.get((ns.asset.symbol, ns.network.symbol), 0)} < {ns.expected_hw_balance * threshold})'
+            for ns in network_assets
+        ]
