@@ -65,8 +65,10 @@ class Account(models.Model):
         return Account.objects.get(type=cls.OUT)
 
     def is_proxy_trader(self, symbol_name: str):
+        from accounts.models import SystemConfig
+
         return self.id == settings.OTC_ACCOUNT_ID \
-               or (settings.ZERO_USDT_HEDGE and symbol_name == 'USDTIRT' and self.id == settings.MARKET_MAKER_ACCOUNT_ID)
+               or (SystemConfig.get_system_config().hedge_irt_by_internal_market and symbol_name == 'USDTIRT' and self.id == settings.MARKET_MAKER_ACCOUNT_ID)
 
     def get_voucher_wallet(self):
         from ledger.models import Wallet

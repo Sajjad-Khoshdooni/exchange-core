@@ -13,7 +13,7 @@ from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum, Uni
 from django.utils import timezone
 
 from accounting.models import TradeRevenue
-from accounts.models import Notification
+from accounts.models import Notification, SystemConfig
 from ledger.models import Wallet, Trx
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
@@ -559,7 +559,7 @@ class Order(models.Model):
             any_proxy = taker_is_proxy or maker_is_proxy
 
             if symbol.name == USDT_IRT:
-                if settings.ZERO_USDT_HEDGE:
+                if SystemConfig.get_system_config().hedge_irt_by_internal_market:
                     hedger_account_id = settings.TRADER_ACCOUNT_ID
                     hedger_prefix = 'tr'
                 else:

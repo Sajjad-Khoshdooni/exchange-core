@@ -13,6 +13,8 @@ class SystemConfig(models.Model):
     withdraw_fee_max = models.SmallIntegerField(default=5000)
     withdraw_fee_percent = get_amount_field(default=Decimal('5'))
 
+    hedge_irt_by_internal_market = models.BooleanField(default=False)
+
     @classmethod
     def get_system_config(cls) -> 'SystemConfig':
         return SystemConfig.objects.filter(

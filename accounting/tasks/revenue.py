@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db.models import Sum, F
 
 from accounting.models import TradeRevenue
+from accounts.models import SystemConfig
 from ledger.models import OTCTrade
 from ledger.utils.external_price import SELL
 from ledger.utils.market_maker import get_market_maker_requester
@@ -66,7 +67,7 @@ def fill_revenue_filled_prices():
 
             revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue', 'coin_price'])
 
-        elif not settings.ZERO_USDT_HEDGE and revenue.symbol.name == USDT_IRT:
+        elif not SystemConfig.get_system_config().hedge_irt_by_internal_market and revenue.symbol.name == USDT_IRT:
             revenue.coin_filled_price = 1
             revenue.filled_amount = revenue.amount
             revenue.gap_revenue = revenue.get_gap_revenue()
