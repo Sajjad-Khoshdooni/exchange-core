@@ -51,7 +51,7 @@ class MarginPositionSerializer(AssetSerializerMini):
             amount = instance.total_balance
         else:
             raise NotImplementedError
-        return abs(floor_precision(amount, instance.symbol.step_size))
+        return abs(amount)
 
     def get_liquidation_price(self, instance):
         return floor_precision(instance.liquidation_price, instance.symbol.tick_size)
