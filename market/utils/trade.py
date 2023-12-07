@@ -56,6 +56,7 @@ class TradesPair:
             group_id=group_id,
             market=maker_order.wallet.market,
             login_activity=maker_order.login_activity,
+            position=maker_order.position
         )
 
         taker_trade = Trade(
@@ -72,6 +73,7 @@ class TradesPair:
             group_id=group_id,
             market=taker_order.wallet.market,
             login_activity=taker_order.login_activity,
+            position=taker_order.position
         )
         maker_trade.client_order_id = maker_order.client_order_id
         taker_trade.client_order_id = taker_order.client_order_id
@@ -103,7 +105,12 @@ def _update_trading_positions(trading_positions, pipeline):
         to_update_positions[position.id] = position
 
         if trade_info.loan_type == Order.LIQUIDATION or \
-                ((position.loan_wallet.balance + pipeline.get_wallet_free_balance_diff(position.loan_wallet.id) >= 0)
+                ((floor_precision(position.loan_wallet.balance + pipeline.get_wallet_free_balance_diff(position.loan_wallet.id),
+                                  position.symbol.step_size) >= Decimal('0') or
+                  (floor_precision(
+                      position.asset_wallet.balance + pipeline.get_wallet_free_balance_diff(position.asset_wallet.id),
+                      position.symbol.step_size) == Decimal('0'))
+                 )
                  and trade_info.loan_type != MarginLoan.BORROW):
 
             position.status = MarginPosition.CLOSED
@@ -403,11 +410,4 @@ def get_markets_info(base: str):
 
 
 def get_position_leverage(leverage, side, is_open_position):
-    # if is_open_position:
-    #     if side == SELL:
-    #         leverage -= 1
-    # else:
-    #     if side == BUY:
-    #         leverage -= 1
-
     return leverage
