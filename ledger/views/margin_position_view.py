@@ -24,6 +24,7 @@ class MarginPositionSerializer(AssetSerializerMini):
     base_debt = serializers.SerializerMethodField()
     asset_debt = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
+    free_amount = serializers.SerializerMethodField()
     coin_amount = serializers.SerializerMethodField()
     liquidation_price = serializers.SerializerMethodField()
     pnl = serializers.SerializerMethodField()
@@ -45,13 +46,10 @@ class MarginPositionSerializer(AssetSerializerMini):
         return instance.loan_wallet.balance
 
     def get_amount(self, instance):
-        if instance.side == SHORT:
-            amount = instance.total_balance / instance.symbol.last_trade_price
-        elif instance.side == LONG:
-            amount = instance.total_balance
-        else:
-            raise NotImplementedError
-        return abs(amount)
+        return abs(instance.asset_wallet.balance)
+
+    def get_free_amount(self, instance):
+        return abs(instance.asset_wallet.get_free())
 
     def get_liquidation_price(self, instance):
         return floor_precision(instance.liquidation_price, instance.symbol.tick_size)
@@ -73,9 +71,9 @@ class MarginPositionSerializer(AssetSerializerMini):
 
     class Meta:
         model = MarginPosition
-        fields = ('created', 'account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price',
-                  'liquidation_price', 'side', 'status', 'id', 'margin_ratio', 'balance', 'base_debt', 'asset_debt',
-                  'leverage', 'coin_amount', 'pnl')
+        fields = ('created', 'account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'free_amount',
+                  'average_price', 'liquidation_price', 'side', 'status', 'id', 'margin_ratio', 'balance', 'base_debt',
+                  'asset_debt', 'leverage', 'coin_amount', 'pnl',)
 
 
 class MarginPositionFilter(django_filters.FilterSet):
