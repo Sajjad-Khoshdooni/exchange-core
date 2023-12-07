@@ -44,7 +44,12 @@ class OrderSerializer(serializers.ModelSerializer):
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
         data['amount'] = decimal_to_str(floor_precision(Decimal(data['amount']), order.symbol.step_size))
-        data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), order.symbol.tick_size))
+
+        if order.fill_type == Order.MARKET:
+            data['price'] = None
+        else:
+            data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), order.symbol.tick_size))
+
         data['symbol'] = order.symbol.name
         return data
 
