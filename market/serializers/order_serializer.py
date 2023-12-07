@@ -136,10 +136,12 @@ class OrderSerializer(serializers.ModelSerializer):
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
             check_margin_view_permission(self.context['account'], symbol)
-            position = symbol.get_margin_position(self.context['account'], order_side=validated_data['side'],
-                                                is_open_position=validated_data['is_open_position'])
+            position = symbol.get_margin_position(
+                self.context['account'], order_side=validated_data['side'],
+                is_open_position=validated_data['is_open_position']
+            )
             if position.leverage != MarginLeverage.objects.get(account=self.context['account']).leverage:
-                raise ValidationError(_(f'برای سفارش گزاری در موقعیت قبلی باید ضریب را به {position.leverage} برگردانید.').format(symbol=symbol))
+                raise ValidationError(_(f'برای افزایش موقعیت فعلی باید ضریب را به {position.leverage} برگردانید.').format(symbol=symbol))
 
         wallet = symbol.asset.get_wallet(
             self.context['account'], market=market, variant=position.group_id or self.context['variant']
