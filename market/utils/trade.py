@@ -56,6 +56,7 @@ class TradesPair:
             group_id=group_id,
             market=maker_order.wallet.market,
             login_activity=maker_order.login_activity,
+            position=maker_order.position
         )
 
         taker_trade = Trade(
@@ -72,6 +73,7 @@ class TradesPair:
             group_id=group_id,
             market=taker_order.wallet.market,
             login_activity=taker_order.login_activity,
+            position=taker_order.position
         )
         maker_trade.client_order_id = maker_order.client_order_id
         taker_trade.client_order_id = taker_order.client_order_id

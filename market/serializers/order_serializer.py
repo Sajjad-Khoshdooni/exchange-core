@@ -12,7 +12,7 @@ from rest_framework.generics import get_object_or_404
 from accounts.models import LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Wallet, Asset
+from ledger.models import Wallet, Asset, MarginLeverage
 from ledger.utils.external_price import IRT, BUY
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
@@ -40,6 +40,7 @@ class OrderSerializer(serializers.ModelSerializer):
     allow_cancel = serializers.SerializerMethodField()
     is_oco = serializers.SerializerMethodField()
     is_open_position = serializers.BooleanField(allow_null=True, required=False)
+    leverage = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -75,12 +76,17 @@ class OrderSerializer(serializers.ModelSerializer):
         wallet = self.post_validate(symbol, validated_data)
 
         matched_trades = None
+        position = None
+        if wallet.market == wallet.MARGIN:
+            position = symbol.get_margin_position(self.context['account'], order_side=validated_data['side'],
+                                                  is_open_position=validated_data['is_open_position'])
+
         login_activity = LoginActivity.from_request(self.context['request'])
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol,
-                     'login_activity': login_activity}
+                     'login_activity': login_activity, 'position': position}
                 )
                 matched_trades = created_order.submit(pipeline, is_open_position=validated_data.get('is_open_position'))
 
@@ -126,6 +132,8 @@ class OrderSerializer(serializers.ModelSerializer):
             check_margin_view_permission(self.context['account'], symbol)
             position = symbol.get_margin_position(self.context['account'], order_side=validated_data['side'],
                                                 is_open_position=validated_data['is_open_position'])
+            if position.leverage != MarginLeverage.objects.get(account=self.context['account']).leverage:
+                raise ValidationError(_(f'برای سفارش گزاری در موقعیت قبلی باید ضریب را به {position.leverage} برگردانبد.').format(symbol=symbol))
 
         wallet = symbol.asset.get_wallet(
             self.context['account'], market=market, variant=position.group_id or self.context['variant']
@@ -224,11 +232,14 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_is_oco(self, instance: Order):
         return bool(instance.oco)
 
+    def get_leverage(self, instance: Order):
+        return instance.position and instance.position.leverage
+
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
                   'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel', 'is_oco',
-                  'time_in_force', 'client_order_id', 'is_open_position')
+                  'time_in_force', 'client_order_id', 'is_open_position', 'leverage')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},

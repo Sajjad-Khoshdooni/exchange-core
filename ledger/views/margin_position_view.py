@@ -45,7 +45,13 @@ class MarginPositionSerializer(AssetSerializerMini):
         return instance.loan_wallet.balance
 
     def get_amount(self, instance):
-        return abs(floor_precision(instance.base_debt_amount / instance.symbol.last_trade_price, instance.symbol.step_size))
+        if instance.side == SHORT:
+            amount = instance.debt_amount
+        elif instance.side == LONG:
+            amount = instance.debt_amount / instance.symbol.last_trade_price
+        else:
+            raise NotImplementedError
+        return abs(floor_precision(amount, instance.symbol.step_size))
 
     def get_liquidation_price(self, instance):
         return floor_precision(instance.liquidation_price, instance.symbol.tick_size)
