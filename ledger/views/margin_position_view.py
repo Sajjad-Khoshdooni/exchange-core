@@ -29,6 +29,7 @@ class MarginPositionSerializer(AssetSerializerMini):
     liquidation_price = serializers.SerializerMethodField()
     pnl = serializers.SerializerMethodField()
     average_price = serializers.SerializerMethodField()
+    current_price = serializers.SerializerMethodField()
 
     def get_margin_ratio(self, instance: MarginPosition):
         if instance.base_debt_amount:
@@ -69,11 +70,14 @@ class MarginPositionSerializer(AssetSerializerMini):
             raise NotImplementedError
         return floor_precision(pnl, instance.symbol.tick_size)
 
+    def get_current_price(self, instance):
+        return instance.symbol.last_trade_price
+
     class Meta:
         model = MarginPosition
         fields = ('created', 'account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'free_amount',
                   'average_price', 'liquidation_price', 'side', 'status', 'id', 'margin_ratio', 'balance', 'base_debt',
-                  'asset_debt', 'leverage', 'coin_amount', 'pnl',)
+                  'asset_debt', 'leverage', 'coin_amount', 'pnl', 'current_price')
 
 
 class MarginPositionFilter(django_filters.FilterSet):
@@ -92,8 +96,11 @@ class MarginPositionViewSet(ModelViewSet):
     filter_class = MarginPositionFilter
 
     def get_queryset(self):
-        return MarginPosition.objects.filter(account=self.request.user.get_account(),
-                                             liquidation_price__isnull=False, status=MarginPosition.OPEN).order_by('-created')
+        return MarginPosition.objects.filter(
+            account=self.request.user.get_account(),
+            liquidation_price__isnull=False,
+            status=MarginPosition.OPEN
+        ).order_by('-created').prefetch_related('base_wallet', 'asset_wallet', 'symbol')
 
 
 class MarginClosePositionSerializer(serializers.Serializer):
