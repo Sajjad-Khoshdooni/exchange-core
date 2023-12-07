@@ -9,6 +9,7 @@ from accounting.models import Vault, VaultItem
 from financial.models import FiatWithdrawRequest
 from ledger.models import Transfer, OTCTrade, Asset, SystemSnapshot, NetworkAsset
 from ledger.requester.internal_assets_requester import get_hot_wallet_balances
+from ledger.utils.precision import get_presentation_amount
 
 
 @dataclass
@@ -201,6 +202,6 @@ class HotWalletLowBalanceAlert(BaseAlertHandler):
         ))
 
         return [
-            f'{ns} ({hw_balances.get((ns.asset.symbol, ns.network.symbol), 0)} < {ns.expected_hw_balance * threshold})'
+            f'{ns} ({get_presentation_amount(hw_balances.get((ns.asset.symbol, ns.network.symbol), 0))} < {get_presentation_amount(ns.expected_hw_balance * threshold)})'
             for ns in network_assets
         ]
