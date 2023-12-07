@@ -35,6 +35,7 @@ from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
 from market.utils.fix import create_symbols_for_asset
 from .models import Asset, BalanceLock
+from .models.position import MarginInterestHistory
 from .utils.price import get_last_price
 from .utils.wallet_pipeline import WalletPipeline
 
@@ -942,3 +943,11 @@ class MarginPositionAdmin(admin.ModelAdmin):
                        'liquidation_price', 'status', 'leverage', 'net_amount', 'group_id')
     list_filter = ('status', 'side', 'symbol')
     search_fields = ('symbol__name', 'status',)
+
+
+@admin.register(MarginInterestHistory)
+class MarginInterestHistoryAdmin(admin.ModelAdmin):
+    list_display = ('created', 'position', 'asset', 'amount', 'debt')
+    readonly_fields = ('created', 'position', 'asset', 'amount', 'debt', 'group_id')
+    search_fields = ('group_id', 'asset__symbol', 'position__symbol__name')
+    list_filter = ('asset',)

@@ -12,9 +12,10 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.exceptions import InsufficientBalance
 from ledger.margin.margin_info import MarginInfo
-from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, Trx, MarginLeverage
+from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, MarginLeverage
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
+from ledger.models.position import MarginInterestHistory
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_presentation_amount, get_margin_coin_presentation_balance
@@ -184,14 +185,9 @@ class MarginPositionInfoView(APIView):
 
 
 class MarginInterestTrxSerializer(serializers.ModelSerializer):
-    symbol = serializers.SerializerMethodField()
-
-    def get_symbol(self, instance: Trx):
-        return instance.sender.asset.symbol
-
-    class Meta:
-        model = Trx
-        fields = ('created', 'amount', 'symbol')
+       class Meta:
+        model = MarginInterestHistory
+        fields = ('created', 'amount', 'asset')
 
 
 class MarginPositionInterestHistoryView(ListAPIView):
@@ -200,25 +196,11 @@ class MarginPositionInterestHistoryView(ListAPIView):
 
     def get_queryset(self):
         account = self.request.user.get_account()
-        queryset = Trx.objects.filter(
-            scope=Trx.MARGIN_INTEREST,
-            sender__account=account
-        )
+        queryset = MarginInterestHistory.objects.filter(position__account=account)
 
         id = self.request.query_params.get('id')
         if id:
-            position = MarginPosition.objects.filter(
-                id=id,
-                account=account,
-                status=MarginPosition.OPEN,
-            ).first()
-            if position:
-                queryset = queryset.filter(
-                    created__gte=position.created,
-                    sender__in=[position.base_margin_wallet, position.base_margin_wallet]
-                )
-            else:
-                queryset = Trx.objects.none()
+            queryset = queryset.filter(position__id=id)
 
         return queryset.prefetch_related('sender__asset').order_by('-created')
 

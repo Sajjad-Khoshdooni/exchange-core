@@ -12,12 +12,16 @@ class AccountTradeSerializer(serializers.ModelSerializer):
     base_asset = serializers.CharField(source='symbol.base_asset.symbol')
     base_amount = serializers.SerializerMethodField()
     leverage = serializers.SerializerMethodField()
+    position_side = serializers.SerializerMethodField()
 
     def get_base_amount(self, trade: Trade):
         return trade.price * trade.amount
 
     def get_leverage(self, trade: Trade):
         return trade.position and trade.position.leverage
+
+    def get_position_side(self, trade: Trade):
+        return trade.position and trade.position.side
 
     def to_representation(self, trade: Trade):
         data = super(AccountTradeSerializer, self).to_representation(trade)
@@ -34,7 +38,7 @@ class AccountTradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trade
         fields = ('id', 'created', 'asset', 'base_asset', 'side', 'amount', 'price', 'base_amount', 'fee_amount',
-                  'market', 'leverage')
+                  'market', 'leverage', 'position_side')
 
 
 class TradeSerializer(serializers.ModelSerializer):
