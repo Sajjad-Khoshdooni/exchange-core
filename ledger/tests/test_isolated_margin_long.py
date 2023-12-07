@@ -146,6 +146,25 @@ class LongIsolatedMarginTestCase(TestCase):
         self.assertTrue(mp.liquidation_price == Decimal('550'))
         self.assertEqual(mp.side, LONG)
 
+    def test_long_buy_market(self):
+        self.transfer_usdt_api(TO_TRANSFER_USDT)
+        loan_amount = TO_TRANSFER_USDT / BTC_USDT_PRICE
+        self.print_wallets(self.account)
+
+        with WalletPipeline() as pipeline:
+            balance = self.usdt.get_wallet(self.account2).balance / BTC_USDT_PRICE
+            new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=balance, market=Wallet.SPOT, price=BTC_USDT_PRICE)
+
+        self.place_order(amount=loan_amount, side=BUY, market=Wallet.MARGIN, price=BTC_USDT_PRICE, is_open_position=True, fill_type='market')
+
+        self.print_wallets(self.account)
+
+        mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
+        self.assertEqual(mp.debt_amount, loan_amount * BTC_USDT_PRICE/2)
+        print('position', mp.debt_amount, mp.liquidation_price, mp.net_amount)
+        self.assertTrue(mp.liquidation_price >= Decimal('550'))
+        self.assertEqual(mp.side, LONG)
+
     def test_long_buy2(self):
         self.transfer_usdt_api(2 * TO_TRANSFER_USDT)
         trade_amount = floor_precision(TO_TRANSFER_USDT / BTC_USDT_PRICE / 6, 2)

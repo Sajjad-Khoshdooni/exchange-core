@@ -15,12 +15,10 @@ from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, Trx, MarginLeverage
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
-from ledger.utils.external_price import BUY, SELL
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
-from ledger.utils.precision import floor_precision, get_presentation_amount, get_coin_presentation_balance
+from ledger.utils.precision import floor_precision, get_presentation_amount, get_margin_coin_presentation_balance
 from ledger.utils.price import get_last_price, get_last_prices, get_coins_symbols
-from market.utils.trade import get_position_leverage
 
 
 class MarginInfoView(APIView):
@@ -174,13 +172,13 @@ class MarginPositionInfoView(APIView):
         margin_leverage, _ = MarginLeverage.objects.get_or_create(account=account)
 
         data = {
-            'max_buy_volume': free * get_position_leverage(leverage=margin_leverage.leverage, side=BUY, is_open_position=True),
-            'max_sell_volume': free * get_position_leverage(leverage=margin_leverage.leverage, side=SELL, is_open_position=True) / symbol_model.last_trade_price
+            'max_buy_volume': free * margin_leverage.leverage,
+            'max_sell_volume': free * margin_leverage.leverage / symbol_model.last_trade_price
         }
 
-        data["max_buy_volume"] = get_coin_presentation_balance(symbol_model.base_asset.symbol,
+        data["max_buy_volume"] = get_margin_coin_presentation_balance(symbol_model.base_asset.symbol,
                                                                max(Decimal('0'), data['max_buy_volume']) * Decimal('0.99'))
-        data["max_sell_volume"] = get_coin_presentation_balance(symbol_model.asset.symbol,
+        data["max_sell_volume"] = get_margin_coin_presentation_balance(symbol_model.asset.symbol,
                                                                 max(Decimal('0'), data['max_sell_volume']) * Decimal('0.99'))
         return Response(data)
 

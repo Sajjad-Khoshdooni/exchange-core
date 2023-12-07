@@ -245,11 +245,8 @@ class Order(models.Model):
         return amount * price if side == BUY else amount
 
     def get_position_leverage(self):
-        from market.utils.trade import get_position_leverage
-
         if self.wallet.market == Wallet.MARGIN:
-            leverage = self.symbol.get_margin_position(self.account, self.side, self.is_open_position).leverage
-            return get_position_leverage(leverage=leverage, side=self.side, is_open_position=self.is_open_position)
+            return self.symbol.get_margin_position(self.account, self.side, self.is_open_position).leverage
         return None
 
     def handle_oco_updates(self, pipeline):
@@ -307,7 +304,13 @@ class Order(models.Model):
         pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
-            return floor_precision(lock_amount / self.price, self.symbol.step_size)
+            return floor_precision(self.get_overriding_fill_amount(lock_amount), self.symbol.step_size)
+
+    def get_overriding_fill_amount(self, lock_amount):
+        overriding_fill_amount = lock_amount / self.price
+        if self.wallet.market == self.wallet.MARGIN:
+            overriding_fill_amount *= self.get_position_leverage()
+        return overriding_fill_amount
 
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side, self.wallet.market,
