@@ -106,7 +106,11 @@ def _update_trading_positions(trading_positions, pipeline):
 
         if trade_info.loan_type == Order.LIQUIDATION or \
                 ((floor_precision(position.loan_wallet.balance + pipeline.get_wallet_free_balance_diff(position.loan_wallet.id),
-                                  position.symbol.step_size) >= Decimal('0'))
+                                  position.symbol.step_size) >= Decimal('0') or
+                  (floor_precision(
+                      position.asset_wallet.balance + pipeline.get_wallet_free_balance_diff(position.asset_wallet.id),
+                      position.symbol.step_size) >= Decimal('0'))
+                 )
                  and trade_info.loan_type != MarginLoan.BORROW):
 
             position.status = MarginPosition.CLOSED
