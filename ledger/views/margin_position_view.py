@@ -46,9 +46,9 @@ class MarginPositionSerializer(AssetSerializerMini):
 
     def get_amount(self, instance):
         if instance.side == SHORT:
-            amount = instance.debt_amount
+            amount = instance.total_balance / instance.symbol.last_trade_price
         elif instance.side == LONG:
-            amount = instance.debt_amount / instance.symbol.last_trade_price
+            amount = instance.total_balance
         else:
             raise NotImplementedError
         return abs(floor_precision(amount, instance.symbol.step_size))
