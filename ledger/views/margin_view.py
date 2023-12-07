@@ -18,7 +18,7 @@ from ledger.models.margin import SymbolField
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
-from ledger.utils.precision import floor_precision, get_presentation_amount
+from ledger.utils.precision import floor_precision, get_presentation_amount, get_coin_presentation_balance
 from ledger.utils.price import get_last_price, get_last_prices, get_coins_symbols
 from market.utils.trade import get_position_leverage
 
@@ -178,8 +178,10 @@ class MarginPositionInfoView(APIView):
             'max_sell_volume': free * get_position_leverage(leverage=margin_leverage.leverage, side=SELL, is_open_position=True) / symbol_model.last_trade_price
         }
 
-        data["max_buy_volume"] = floor_precision(max(Decimal('0'), data['max_buy_volume']) * Decimal('0.99'), symbol_model.tick_size)
-        data["max_sell_volume"] = floor_precision(max(Decimal('0'), data['max_sell_volume']) * Decimal('0.99'), symbol_model.step_size)
+        data["max_buy_volume"] = get_coin_presentation_balance(symbol_model.base_asset.symbol,
+                                                               max(Decimal('0'), data['max_buy_volume']) * Decimal('0.99'))
+        data["max_sell_volume"] = get_coin_presentation_balance(symbol_model.asset.symbol,
+                                                                max(Decimal('0'), data['max_sell_volume']) * Decimal('0.99'))
         return Response(data)
 
 
@@ -195,21 +197,32 @@ class MarginInterestTrxSerializer(serializers.ModelSerializer):
 
 
 class MarginPositionInterestHistoryView(ListAPIView):
-    serializers = MarginInterestTrxSerializer
+    serializer_class = MarginInterestTrxSerializer
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        position = get_object_or_404(
-            MarginPosition,
-            id=self.kwargs.get('id'),
-            status=MarginPosition.OPEN,
-            account=self.request.user.get_account()
-        )
-        return Trx.objects.filter(
+        account = self.request.user.get_account()
+        queryset = Trx.objects.filter(
             scope=Trx.MARGIN_INTEREST,
-            sender__in=[position.base_margin_wallet, position.base_margin_wallet],
-            created__gte=position.created
-        ).prefetch_related('sender__asset').order_by('-created')
+            sender__account=account
+        )
+
+        id = self.request.query_params.get('id')
+        if id:
+            position = MarginPosition.objects.filter(
+                id=id,
+                account=account,
+                status=MarginPosition.OPEN,
+            ).first()
+            if position:
+                queryset = queryset.filter(
+                    created__gte=position.created,
+                    sender__in=[position.base_margin_wallet, position.base_margin_wallet]
+                )
+            else:
+                queryset = Trx.objects.none()
+
+        return queryset.prefetch_related('sender__asset').order_by('-created')
 
 
 class LeverageViewSerializer(serializers.ModelSerializer):

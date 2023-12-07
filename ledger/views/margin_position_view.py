@@ -7,11 +7,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from ledger.exceptions import SmallDepthError, InsufficientBalance
 from ledger.models import MarginPosition
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.external_price import SHORT, LONG
 from ledger.utils.precision import floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
+from market.models import Order
 from market.serializers.symbol_serializer import SymbolSerializer
 
 
@@ -34,7 +36,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         return None
 
     def get_balance(self, instance):
-        return instance.equity
+        return floor_precision(instance.equity, instance.symbol.tick_size)
 
     def get_base_debt(self, instance):
         return instance.base_debt_amount
@@ -56,12 +58,12 @@ class MarginPositionSerializer(AssetSerializerMini):
 
     def get_pnl(self, instance):
         if instance.side == SHORT:
-            pnl = instance.base_total_balance + instance.base_debt_amount - instance.net_amount
+            pnl = instance.net_amount - abs(instance.base_debt_amount)
         elif instance.side == LONG:
-            pnl = instance.net_amount - instance.base_total_balance + instance.base_debt_amount
+            pnl = instance.base_total_balance - instance.net_amount
         else:
             raise NotImplementedError
-        return floor_precision(pnl, 2)
+        return floor_precision(pnl, instance.symbol.tick_size)
 
     class Meta:
         model = MarginPosition
@@ -87,7 +89,7 @@ class MarginPositionViewSet(ModelViewSet):
 
     def get_queryset(self):
         return MarginPosition.objects.filter(account=self.request.user.get_account(),
-                                             liquidation_price__isnull=False, status=MarginPosition.OPEN)
+                                             liquidation_price__isnull=False, status=MarginPosition.OPEN).order_by('-created')
 
 
 class MarginClosePositionSerializer(serializers.Serializer):
@@ -111,8 +113,19 @@ class MarginClosePositionView(APIView):
     def post(self, request):
         serializer = MarginClosePositionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        position = serializer.position
 
-        with WalletPipeline() as pipeline:
-            serializer.position.liquidate(pipeline=pipeline, charge_insurance=False)
+        queryset = Order.objects.filter(
+            status=Order.NEW,
+            account=position.account,
+            symbol=position.symbol,
+            wallet__market=position.asset_wallet.MARGIN
+        )
+        Order.cancel_orders(queryset)
 
+        try:
+            with WalletPipeline() as pipeline:
+                position.liquidate(pipeline=pipeline, charge_insurance=False)
+        except (SmallDepthError, InsufficientBalance) as e:
+            return Response({'Error': f'{repr(e)}'}, 400)
         return Response(200)

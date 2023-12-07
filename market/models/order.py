@@ -17,7 +17,7 @@ from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
-from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE
+from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE, SHORT, LONG
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -228,9 +228,9 @@ class Order(models.Model):
             else:
                 from ledger.models import MarginPosition
 
-                position = MarginPosition.objects.filter(
-                    account=wallet.account, symbol=symbol
-                ).first()
+                position = MarginPosition.get_by(
+                    account=wallet.account, symbol=symbol, is_open_position=is_open_position, order_side=side
+                )
 
                 return position.base_margin_wallet if side == BUY else position.asset_margin_wallet
 
@@ -293,7 +293,7 @@ class Order(models.Model):
         to_lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, self.symbol,
                                                   is_open_position)
 
-        if self.side == BUY and self.fill_type == Order.MARKET:
+        if self.side == BUY and self.fill_type == Order.MARKET and self.wallet.market != Wallet.MARGIN:
             free_amount = to_lock_wallet.get_free()
             if free_amount > Decimal('0.95') * lock_amount:
                 lock_amount = min(lock_amount, free_amount)

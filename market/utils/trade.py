@@ -90,10 +90,11 @@ def _update_trading_positions(trading_positions, pipeline):
     to_update_positions = {}
     for trade_info in trading_positions:
         position = to_update_positions.get(trade_info.position.id, trade_info.position)
-        short_amount = trade_info.trade_amount if trade_info.loan_type == MarginLoan.BORROW else -trade_info.trade_amount
+        short_amount = trade_info.trade_amount if trade_info.loan_type in [MarginLoan.BORROW, MarginLoan.OPEN]\
+            else -trade_info.trade_amount
         previous_amount, previous_price = position.amount, position.average_price
         position.amount += short_amount
-        if short_amount > 0:
+        if short_amount > 0 and position.amount:
             position.average_price = (previous_amount * previous_price +
                                       short_amount * trade_info.trade_price) / position.amount
 
@@ -112,7 +113,7 @@ def _update_trading_positions(trading_positions, pipeline):
             if remaining_balance > Decimal('0'):
                 pipeline.new_trx(
                     position.base_margin_wallet, margin_cross_wallet, remaining_balance, Trx.MARGIN_TRANSFER,
-                    trade_info.group_id
+                    uuid4()
                 )
 
     MarginPosition.objects.bulk_update(
@@ -217,7 +218,6 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                     )
                 elif order.is_open_position is False:
                     position.get_margin_ratio()
-                    pass
 
                 order.symbol.get_margin_position(order.account, order.side, order.is_open_position)
                 fee_amount = floor_precision(trade.fee_amount,

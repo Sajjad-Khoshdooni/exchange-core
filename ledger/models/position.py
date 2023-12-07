@@ -62,6 +62,7 @@ class MarginPosition(models.Model):
     @property
     def variant(self):
         return self.group_id
+
     @property
     def loan_wallet(self):
         if self.side == SHORT:
@@ -332,7 +333,6 @@ class MarginPosition(models.Model):
                 parent_lock_group_id=group_id
             )
 
-        margin_cross_wallet = self.margin_wallet.asset.get_wallet(self.account, market=Wallet.MARGIN, variant=None)
         remaining_balance = self.margin_wallet.balance + pipeline.get_wallet_free_balance_diff(self.margin_wallet.id)
 
         if remaining_balance > Decimal('0') and loss_amount > Decimal('0'):
@@ -380,8 +380,8 @@ class MarginPosition(models.Model):
 
         self.save(update_fields=['amount', 'status'])
         self.update_liquidation_price(pipeline, rebalance=False)
-
-        alert_liquidate(self)
+        if charge_insurance:
+            alert_liquidate(self)
 
     @classmethod
     def check_for_liquidation(cls, order, min_price, max_price, pipeline):
