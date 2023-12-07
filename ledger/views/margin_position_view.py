@@ -47,7 +47,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         return instance.loan_wallet.balance
 
     def get_amount(self, instance):
-        return abs(instance.asset_wallet.balance)
+        return abs(floor_precision(instance.asset_wallet.balance, instance.symbol.step_size))
 
     def get_free_amount(self, instance):
         return abs(instance.asset_wallet.get_free())
