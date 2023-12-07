@@ -35,6 +35,7 @@ class Trade(BaseTrade):
         db_index=True,
         default=MARKET
     )
+    position = models.ForeignKey(to='ledger.MarginPosition', on_delete=models.CASCADE, null=True)
 
     class Meta:
         indexes = [
