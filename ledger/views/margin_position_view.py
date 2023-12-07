@@ -11,7 +11,7 @@ from ledger.exceptions import SmallDepthError, InsufficientBalance
 from ledger.models import MarginPosition
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.external_price import SHORT, LONG
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, get_margin_coin_presentation_balance
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order
 from market.serializers.symbol_serializer import SymbolSerializer
@@ -30,6 +30,7 @@ class MarginPositionSerializer(AssetSerializerMini):
     pnl = serializers.SerializerMethodField()
     average_price = serializers.SerializerMethodField()
     current_price = serializers.SerializerMethodField()
+    volume = serializers.SerializerMethodField()
 
     def get_margin_ratio(self, instance: MarginPosition):
         if instance.base_debt_amount:
@@ -73,11 +74,14 @@ class MarginPositionSerializer(AssetSerializerMini):
     def get_current_price(self, instance):
         return instance.symbol.last_trade_price
 
+    def get_volume(self, instance):
+        return get_margin_coin_presentation_balance(self.get_current_price(instance) * self.get_amount(instance))
+
     class Meta:
         model = MarginPosition
         fields = ('created', 'account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'free_amount',
                   'average_price', 'liquidation_price', 'side', 'status', 'id', 'margin_ratio', 'balance', 'base_debt',
-                  'asset_debt', 'leverage', 'coin_amount', 'pnl', 'current_price')
+                  'asset_debt', 'leverage', 'coin_amount', 'pnl', 'current_price', 'volume')
 
 
 class MarginPositionFilter(django_filters.FilterSet):
