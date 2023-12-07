@@ -147,8 +147,8 @@ class ProviderRequester:
                 return
 
             if market_info.type == 'spot' and side == SELL:
-                balance_map = self.get_balances(market_info.id, market_info.type)
-                balance = Decimal(balance_map[asset.symbol])
+                balance_map = self.get_balances(market_info.id, market_info.type)['balances']
+                balance = Decimal(balance_map.get(asset.symbol, 0))
 
                 if balance < order_amount:
                     diff = order_amount - balance
