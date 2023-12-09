@@ -223,6 +223,7 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                         amount=trade_value,
                         scope=Trx.MARGIN_TRANSFER
                     )
+                    position.update_net_amount(amount=trade_amount, price=trade_price, side=order.side)
                 elif order.is_open_position is False:
                     position.get_margin_ratio()
 
