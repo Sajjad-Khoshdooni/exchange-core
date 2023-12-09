@@ -146,7 +146,7 @@ class OrderSerializer(serializers.ModelSerializer):
         )
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
         self.validate_order_size(
-            validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol
+            validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol, market, validated_data.get('is_open_position')
         )
         return wallet
 
@@ -170,7 +170,10 @@ class OrderSerializer(serializers.ModelSerializer):
         return quantize_amount
 
     @staticmethod
-    def validate_order_size(amount: Decimal, price: Decimal, min_order_size: Decimal, base_asset: str):
+    def validate_order_size(amount: Decimal, price: Decimal, min_order_size: Decimal, base_asset: str, market, is_open_position=None):
+        if market == Wallet.MARGIN and not is_open_position:
+            return
+
         if (amount * price) < min_order_size:
             msg = _('Small order size {min_order_size} {base_asset}').format(
                 min_order_size=humanize_number(min_order_size),

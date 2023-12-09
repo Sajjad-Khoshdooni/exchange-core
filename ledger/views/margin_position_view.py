@@ -62,13 +62,8 @@ class MarginPositionSerializer(AssetSerializerMini):
     def get_coin_amount(self, instance):
         return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
 
-    def get_pnl(self, instance):
-        if instance.side == SHORT:
-            pnl = instance.net_amount - abs(instance.base_debt_amount)
-        elif instance.side == LONG:
-            pnl = instance.base_total_balance - instance.net_amount
-        else:
-            raise NotImplementedError
+    def get_pnl(self, instance: MarginPosition):
+        pnl = (instance.base_total_balance - abs(instance.base_debt_amount)) - instance.net_amount
         return floor_precision(pnl, instance.symbol.tick_size)
 
     def get_current_price(self, instance):

@@ -116,7 +116,7 @@ def _update_trading_positions(trading_positions, pipeline):
             position.status = MarginPosition.CLOSED
             margin_cross_wallet = position.base_margin_wallet.asset.get_wallet(
                 position.account, market=Wallet.MARGIN, variant=None)
-            remaining_balance = position.base_margin_wallet.balance + pipeline.get_wallet_free_balance_diff(position.base_margin_wallet.id)
+            remaining_balance = position.base_margin_wallet.balance + pipeline.get_wallet_balance_diff(position.base_margin_wallet.id)
             if remaining_balance > Decimal('0'):
                 pipeline.new_trx(
                     position.base_margin_wallet, margin_cross_wallet, remaining_balance, Trx.MARGIN_TRANSFER,

@@ -244,9 +244,7 @@ class MarginPosition(models.Model):
             )
 
     def has_enough_margin(self, extending_base_amount):
-        if self.side == SHORT and self.leverage == 1:
-            return self.withdrawable_base_asset >= extending_base_amount
-        raise NotImplementedError
+        return self.withdrawable_base_asset >= extending_base_amount
 
     def get_insurance_wallet(self):
         if self.side == SHORT:
