@@ -140,8 +140,10 @@ class OrderSerializer(serializers.ModelSerializer):
                 self.context['account'], order_side=validated_data['side'],
                 is_open_position=validated_data['is_open_position']
             )
-            if position.leverage != MarginLeverage.objects.get(account=self.context['account']).leverage:
-                raise ValidationError(_(f'برای افزایش موقعیت فعلی باید ضریب را به {position.leverage} برگردانید.').format(symbol=symbol))
+            if position.liquidation_price and\
+                    position.leverage != MarginLeverage.objects.get(account=self.context['account']).leverage:
+                raise ValidationError(_(f'برای افزایش موقعیت فعلی باید ضریب را به {position.leverage} برگردانید.')
+                                      .format(symbol=symbol))
 
         wallet = symbol.asset.get_wallet(
             self.context['account'], market=market, variant=position.group_id or self.context['variant']

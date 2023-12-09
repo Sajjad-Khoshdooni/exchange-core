@@ -170,13 +170,21 @@ class LeveragedIsolatedMarginTestCase(TestCase):
         with WalletPipeline() as pipeline:
             new_order(pipeline, self.btcusdt, self.account2, side=BUY, amount=3 * loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE)
 
+        mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
+        self.assertEqual(mp.debt_amount, loan_amount * 3)
+        self.assertEqual(mp.side, SHORT)
+        self.assertTrue(mp.liquidation_price > Decimal('1212'))
+
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcusdt, self.account2, side=BUY, amount=4 * loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE - 2)
+            new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=4 * loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE + 2)
+            mp.liquidate(pipeline, False)
+
         self.print_wallets(self.account)
 
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side)
-        self.assertEqual(mp.debt_amount, loan_amount * 3)
-        self.assertEqual(mp.side, SHORT)
-        self.assertTrue(mp.liquidation_price > Decimal('1212'))
+
 
     def test_long_buy_3x(self):
         self.transfer_usdt_api(TO_TRANSFER_USDT / 2)
@@ -197,3 +205,8 @@ class LeveragedIsolatedMarginTestCase(TestCase):
         self.assertEqual(mp.debt_amount, loan_amount * 2 * BTC_USDT_PRICE)
         self.assertEqual(mp.side, LONG)
         self.assertTrue(mp.liquidation_price > Decimal('733'))
+
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcusdt, self.account2, side=BUY, amount=4 * loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE - 2)
+            new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=4 * loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE + 2)
+            mp.liquidate(pipeline, False)
