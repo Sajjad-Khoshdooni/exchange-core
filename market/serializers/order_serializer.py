@@ -13,7 +13,7 @@ from accounts.models import LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet, Asset, MarginLeverage
-from ledger.utils.external_price import IRT, BUY
+from ledger.utils.external_price import IRT, BUY, SELL, LONG, SHORT
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
@@ -202,15 +202,28 @@ class OrderSerializer(serializers.ModelSerializer):
                 {'price': _('price is mandatory in limit order.')}
             )
         if attrs['wallet']['market'] == Wallet.MARGIN:
+            from ledger.models import MarginLeverage, MarginPosition
             if attrs.get('is_open_position') is None:
                 raise ValidationError('Cant place margin order without is_open_position')
 
             if attrs.get('is_open_position') and attrs['side'] == BUY:
-                from ledger.models import MarginLeverage
-                margin_leverage, _ = MarginLeverage.objects.get_or_create(account=self.context['request'].user.account)
+                margin_leverage, _ = MarginLeverage.objects.get_or_create(account=self.context['request'].user.get_account())
 
                 if margin_leverage.leverage == Decimal('1'):
                     raise ValidationError('Cant place Long Buy margin order with Leverage 1')
+
+            if attrs.get('is_open_position'):
+                position_side = SHORT if attrs['side'] == SELL else LONG
+            else:
+                position_side = SHORT if attrs['side'] == BUY else LONG
+
+            if MarginPosition.objects.filter(
+                account=self.context['request'].user.get_account(),
+                symbol__name=attrs['symbol']['name'].upper(),
+                status=MarginPosition.TERMINATING,
+                side=position_side
+            ).exists():
+                raise ValidationError('Cant place margin order Due to Terminating position')
 
         return attrs
 
