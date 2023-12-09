@@ -4,6 +4,7 @@ from datetime import datetime
 from celery import shared_task
 from django.db import IntegrityError
 from django.db.models import Q
+from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet
@@ -25,6 +26,7 @@ def create_stake_revenue(now: datetime = None):
         )
     else:
         stake_requests = StakeRequest.objects.filter(status=StakeRequest.DONE)
+        now = timezone.now()
 
     system = Account.system()
     for stake_request in stake_requests:
@@ -36,7 +38,8 @@ def create_stake_revenue(now: datetime = None):
                 stake_revenue = StakeRevenue.objects.create(
                     stake_request=stake_request,
                     revenue=revenue,
-                    wallet_source=Wallet.STAKE
+                    wallet_source=Wallet.STAKE,
+                    created=now,
                 )
                 pipeline.new_trx(
                     group_id=stake_revenue.group_id,
