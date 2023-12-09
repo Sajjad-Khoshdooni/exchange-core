@@ -174,6 +174,8 @@ class ShortIsolatedMarginTestCase(TestCase):
 
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.net_amount)
+        print('***************************MP_PNL***************************')
+        print((mp.base_total_balance - abs(mp.base_debt_amount)) - mp.net_amount)
         self.assertEqual(mp.debt_amount, loan_amount)
         self.assertEqual(mp.side, SHORT)
         self.assertTrue(mp.liquidation_price > Decimal('1818'))
@@ -257,6 +259,9 @@ class ShortIsolatedMarginTestCase(TestCase):
         self.assertTrue(mp.liquidation_price == liquidation_price)
         self.assertEqual(mp.side, SHORT)
 
+        print('***************************MP_PNL***************************')
+        print((mp.base_total_balance - abs(mp.base_debt_amount)) - mp.net_amount)
+
     def test_short_sell3(self):
         self.transfer_usdt_api(TO_TRANSFER_USDT / 2)
         loan_amount = TO_TRANSFER_USDT / BTC_USDT_PRICE / 2
@@ -283,6 +288,8 @@ class ShortIsolatedMarginTestCase(TestCase):
 
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.net_amount)
+        print('***************************MP_PNL***************************')
+        print((mp.base_total_balance - abs(mp.base_debt_amount)) - mp.net_amount)
 
     def test_short_sell4(self):
         self.transfer_usdt_api(TO_TRANSFER_USDT / 2)
@@ -359,6 +366,9 @@ class ShortIsolatedMarginTestCase(TestCase):
         self.print_wallets(self.account)
 
         self.assert_liquidation(self.account, self.btcusdt)
+        mp.refresh_from_db()
+        print('***************************MP_PNL***************************')
+        print((mp.base_total_balance - abs(mp.base_debt_amount)) - mp.net_amount)
 
     def test_short_sell_partial_liquidate(self):
         self.transfer_usdt_api(TO_TRANSFER_USDT)

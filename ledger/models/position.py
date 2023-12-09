@@ -129,13 +129,6 @@ class MarginPosition(models.Model):
         else:
             raise NotImplementedError
 
-    def update_net_amount(self, amount, price, side):
-        if (self.side == SHORT and side == SELL) or (self.side == LONG and side == BUY):
-            sign = Decimal('1')
-        else:
-            sign = Decimal('-1')
-        self.net_amount += sign * price * amount
-
     def get_margin_ratio(self) -> Decimal:
         if self.side == SHORT:
             return 1 / self.DEFAULT_LIQUIDATION_LEVEL
