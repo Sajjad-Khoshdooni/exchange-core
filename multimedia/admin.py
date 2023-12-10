@@ -40,7 +40,8 @@ class BannerAdmin(admin.ModelAdmin):
 
 @admin.register(CoinPriceContent)
 class CoinPriceContentAdmin(SimpleHistoryAdmin):
-    pass
+    list_display = ('id', 'asset')
+    search_fields = ('asset__symbol', )
 
 
 @admin.register(Article)

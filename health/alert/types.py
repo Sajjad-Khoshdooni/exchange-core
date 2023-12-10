@@ -187,6 +187,21 @@ class VaultLowBaseBalanceAlert(BaseAlertHandler):
         ]
 
 
+class VaultHighBalanceAlert(BaseAlertHandler):
+    NAME = 'vault_high_balance'
+    HELP = 'multiplier to Vault\'s expected_max_value (in usdt)'
+
+    def get_alerting(self, threshold: Decimal) -> list:
+        vaults = Vault.objects.filter(
+            expected_max_value__isnull=False,
+            real_value__gt=F('expected_max_value') * threshold
+        )
+
+        return [
+            f'{v} ({int(v.real_value)} > {int(v.expected_max_value * threshold)})' for v in vaults
+        ]
+
+
 class HotWalletLowBalanceAlert(BaseAlertHandler):
     NAME = 'hot_wallet_low_balance'
     HELP = 'multiplier to NetworkAsset\'s expected_hw_balance'

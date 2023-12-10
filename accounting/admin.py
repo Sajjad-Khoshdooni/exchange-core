@@ -53,9 +53,10 @@ class AccountTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(Vault)
 class VaultAdmin(admin.ModelAdmin):
-    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value')
+    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value', 'expected_max_value')
     ordering = ('-real_value', )
     list_filter = ('market', 'type')
+    list_editable = ('expected_max_value', )
 
     @admin.display(description='usdt')
     def get_usdt(self, vault: Vault):
