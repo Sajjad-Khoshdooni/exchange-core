@@ -101,7 +101,7 @@ def _update_trading_positions(trading_positions, pipeline):
                                       short_amount * trade_info.trade_price) / position.amount
 
         position.update_liquidation_price(pipeline, rebalance=trade_info.loan_type not in [Order.LIQUIDATION, MarginLoan.OPEN])
-        position.update_net_amount(amount=trade_info.trade_amount, price=trade_info.trade_price, side=trade_info.order_side)
+
         to_update_positions[position.id] = position
 
         if trade_info.loan_type == Order.LIQUIDATION or \
@@ -116,12 +116,13 @@ def _update_trading_positions(trading_positions, pipeline):
             position.status = MarginPosition.CLOSED
             margin_cross_wallet = position.base_margin_wallet.asset.get_wallet(
                 position.account, market=Wallet.MARGIN, variant=None)
-            remaining_balance = position.base_margin_wallet.balance + pipeline.get_wallet_free_balance_diff(position.base_margin_wallet.id)
+            remaining_balance = position.base_margin_wallet.balance + pipeline.get_wallet_balance_diff(position.base_margin_wallet.id)
             if remaining_balance > Decimal('0'):
                 pipeline.new_trx(
                     position.base_margin_wallet, margin_cross_wallet, remaining_balance, Trx.MARGIN_TRANSFER,
                     uuid4()
                 )
+                position.net_amount -= remaining_balance
 
     MarginPosition.objects.bulk_update(
         to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status', 'net_amount']
@@ -223,6 +224,8 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                         amount=trade_value,
                         scope=Trx.MARGIN_TRANSFER
                     )
+                    position.net_amount += trade_value
+
                 elif order.is_open_position is False:
                     position.get_margin_ratio()
 

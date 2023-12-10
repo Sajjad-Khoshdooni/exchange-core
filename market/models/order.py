@@ -307,10 +307,14 @@ class Order(models.Model):
         if self.side == BUY and self.fill_type == Order.MARKET:
             return floor_precision(self.get_overriding_fill_amount(lock_amount), self.symbol.step_size)
 
-    def get_overriding_fill_amount(self, lock_amount):
+    def get_overriding_fill_amount(self, lock_amount):  # todo :: for god's sake delete this shit
         overriding_fill_amount = lock_amount / self.price
         if self.wallet.market == self.wallet.MARGIN:
-            overriding_fill_amount *= self.get_position_leverage()
+            # only LONG POSITION Accepted
+            if self.is_open_position:
+                overriding_fill_amount *= self.get_position_leverage()
+            else:
+                overriding_fill_amount = Decimal('0')
         return overriding_fill_amount
 
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):

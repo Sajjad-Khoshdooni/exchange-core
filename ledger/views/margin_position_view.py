@@ -10,7 +10,6 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.exceptions import SmallDepthError, InsufficientBalance
 from ledger.models import MarginPosition
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.external_price import SHORT, LONG
 from ledger.utils.precision import floor_precision, get_margin_coin_presentation_balance
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order
@@ -48,10 +47,10 @@ class MarginPositionSerializer(AssetSerializerMini):
         return instance.loan_wallet.balance
 
     def get_amount(self, instance):
-        return abs(floor_precision(instance.asset_wallet.balance, instance.symbol.step_size))
+        return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
 
     def get_free_amount(self, instance):
-        return abs(instance.asset_wallet.get_free())
+        return floor_precision(abs(instance.asset_wallet.get_free()), instance.symbol.step_size)
 
     def get_liquidation_price(self, instance):
         return floor_precision(instance.liquidation_price, instance.symbol.tick_size)
@@ -62,13 +61,8 @@ class MarginPositionSerializer(AssetSerializerMini):
     def get_coin_amount(self, instance):
         return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
 
-    def get_pnl(self, instance):
-        if instance.side == SHORT:
-            pnl = instance.net_amount - abs(instance.base_debt_amount)
-        elif instance.side == LONG:
-            pnl = instance.base_total_balance - instance.net_amount
-        else:
-            raise NotImplementedError
+    def get_pnl(self, instance: MarginPosition):
+        pnl = (instance.base_total_balance - abs(instance.base_debt_amount)) - instance.net_amount
         return floor_precision(pnl, instance.symbol.tick_size)
 
     def get_current_price(self, instance):
