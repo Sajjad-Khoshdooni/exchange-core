@@ -24,6 +24,7 @@ from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
+from gamify.utils import clone_model
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
     ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, TokenRebrand
@@ -609,12 +610,18 @@ class AddressBookAdmin(admin.ModelAdmin):
     list_display = ('name', 'get_username', 'network', 'address', 'asset',)
     search_fields = ('address', 'name')
     raw_id_fields = ('account', )
+    actions = ('clone', )
 
     @admin.display(description='user')
     def get_username(self, address_book: models.AddressBook):
         return mark_safe(
             f'<span dir="ltr">{address_book.account}</span>'
         )
+
+    @admin.action(description='Clone')
+    def clone(self, request, queryset):
+        for q in queryset:
+            clone_model(q)
 
 
 class PrizeUserFilter(admin.SimpleListFilter):
