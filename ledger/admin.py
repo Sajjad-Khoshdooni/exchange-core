@@ -608,7 +608,7 @@ class CloseRequestAdmin(admin.ModelAdmin):
 class AddressBookAdmin(admin.ModelAdmin):
     list_display = ('name', 'get_username', 'network', 'address', 'asset',)
     search_fields = ('address', 'name')
-    readonly_fields = ('account', 'network', 'address', 'asset')
+    raw_id_fields = ('account', )
 
     @admin.display(description='user')
     def get_username(self, address_book: models.AddressBook):
