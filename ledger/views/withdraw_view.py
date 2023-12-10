@@ -9,6 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.authentication import WithdrawTokenAuthentication
 from accounts.models import VerificationCode, LoginActivity
+from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.utils.validation import persian_timedelta
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
@@ -85,11 +86,16 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         memo = attrs.get('memo') or ''
 
+        ignore_sms_otp = user.is_2fa_active() and \
+                         address_book and \
+                         user.has_feature_perm(UserFeaturePerm.NO_SMS_FOR_CRYPTO_WITHDRAW)
+
         if from_panel:
-            code = attrs['code']
-            otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW, user=user)
-            if not otp_code:
-                raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
+            if not ignore_sms_otp:
+                code = attrs['code']
+                otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW, user=user)
+                if not otp_code:
+                    raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
 
             if not user.is_2fa_valid(totp):
                 raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
@@ -144,7 +150,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if user_reached_crypto_withdraw_limit(user, irt_value):
                 raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خود رسیده اید.'})
 
-        if from_panel:
+        if from_panel and not ignore_sms_otp:
             otp_code.set_code_used()
 
         return {
