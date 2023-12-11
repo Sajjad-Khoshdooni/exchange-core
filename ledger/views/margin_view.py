@@ -259,16 +259,10 @@ class MarginLeverageView(APIView):
 
     def get(self, request):
         margin_leverage, _ = MarginLeverage.objects.get_or_create(account=request.user.account)
-
-        return Response({
-            "leverage": margin_leverage.leverage
-        }, 200)
-
-
-class MaxLeverageView(APIView):
-    def get(self, request):
-        from accounts.models import SystemConfig
         sys_config = SystemConfig.get_system_config()
+
         return Response({
+            "leverage": margin_leverage.leverage,
             "max_leverage": sys_config.max_margin_leverage
         }, 200)
+

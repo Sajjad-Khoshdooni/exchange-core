@@ -66,7 +66,6 @@ urlpatterns = [
     path('v2/margin/position/info/', views.MarginPositionInfoView.as_view()),
     path('v2/margin/position/interest/', views.MarginPositionInterestHistoryView.as_view()),
     path('v2/margin/leverage/', views.MarginLeverageView.as_view()),
-    path('v2/margin/max_leverage/', views.MaxLeverageView.as_view()),
 
     path('v1/addressbook/<int:pk>/', views.AddressBookView.as_view({
         'get': 'retrieve',
