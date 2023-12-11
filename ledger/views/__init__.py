@@ -1,6 +1,6 @@
 from .address_book_view import AddressBookView, AddressBookViewV2
 from .asset_alert_view import AssetAlertViewSet, BulkAssetAlertViewSet, PriceNotifSwitchView
-from .asset_info_view import AssetsViewSet, AssetOverviewAPIView
+from .asset_info_view import AssetsViewSet, AssetOverviewAPIView, MarginAssetInterestView
 from .asset_info_view import AssetsViewSet, AssetOverviewAPIView
 from .balance_information import BalanceInfoView
 from .bookmark_asset import BookmarkAssetsAPIView
@@ -11,7 +11,7 @@ from .deposit_transfer_request_view import DepositTransferUpdateView
 from .fast_buy_token_view import FastBuyTokenAPI
 from .margin_position_view import MarginPositionViewSet, MarginClosePositionView
 from .margin_view import (MarginInfoView, AssetMarginInfoView, MarginTransferViewSet, MarginPositionInfoView,
-                          MarginPositionInterestHistoryView, MarginLeverageView)
+                          MarginPositionInterestHistoryView, MarginLeverageView, MaxLeverageView)
 from .margin_wallet_view import MarginWalletViewSet, MarginAssetViewSet, MarginBalanceAPIView, \
     MarginTransferBalanceAPIView
 from .network_asset_info_view import NetworkAssetView

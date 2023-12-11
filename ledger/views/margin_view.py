@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -10,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.models import SystemConfig
 from ledger.exceptions import InsufficientBalance
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, MarginLeverage
@@ -109,6 +111,20 @@ class MarginTransferSerializer(serializers.ModelSerializer):
         if attrs['type'] == MarginTransfer.SPOT_TO_MARGIN:
             if not self.context['request'].user.show_margin:
                 raise ValidationError('Dont Have allow to Transfer Margin')
+
+            user_total_equity = MarginPosition.objects.filter(
+                account=self.context['request'].user.get_account(),
+                status__in=[MarginPosition.TERMINATING, MarginPosition.OPEN],
+                symbol__base_asset__symbol=attrs.get('position_symbol').base_asset
+            ).annotate(base_asset_value=F('asset_wallet__balance') * F('symbol__last_trade_price')).\
+                aggregate(total_equity=Sum('base_asset_value') + Sum('base_wallet__balance'))['total_equity'] or 0
+
+            base = attrs.get('position_symbol').base_asset.symbol
+            sys_config = SystemConfig.get_system_config()
+
+            if (base == Asset.USDT and user_total_equity >= sys_config.total_user_margin_usdt_base) or \
+                    (base == Asset.IRT and user_total_equity >= sys_config.total_user_margin_irt_base):
+                raise ValidationError('Cant place margin order Due to reach total Equity limit')
 
         if attrs['type'] in [MarginTransfer.POSITION_TO_MARGIN, MarginTransfer.MARGIN_TO_POSITION]:
             if attrs['position_symbol'].base_asset != attrs['asset']:
@@ -243,4 +259,13 @@ class MarginLeverageView(APIView):
 
         return Response({
             "leverage": margin_leverage.leverage
+        }, 200)
+
+
+class MaxLeverageView(APIView):
+    def get(self, request):
+        from accounts.models import SystemConfig
+        sys_config = SystemConfig.get_system_config()
+        return Response({
+            "max_leverage": sys_config.max_margin_leverage
         }, 200)

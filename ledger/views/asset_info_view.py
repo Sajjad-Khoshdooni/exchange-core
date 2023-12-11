@@ -6,7 +6,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
-from rest_framework.generics import get_object_or_404
+from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -311,3 +311,14 @@ class AssetOverviewAPIView(APIView):
             'high_24h_change': high_24h_change,
             'newest': newest
         })
+
+
+class MarginAssetInterestSerializer(AssetSerializerMini):
+    class Meta:
+        model = Asset
+        fields = (*AssetSerializerMini.Meta.fields, 'symbol', 'margin_interest_fee',)
+
+
+class MarginAssetInterestView(ListAPIView):
+    serializer_class = MarginAssetInterestSerializer
+    queryset = Asset.objects.filter(pair__margin_enable=True).distinct().order_by('id')

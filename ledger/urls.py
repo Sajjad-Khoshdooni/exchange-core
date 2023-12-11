@@ -55,6 +55,7 @@ urlpatterns = [
         'get': 'list',
         'post': 'create'
     })),
+    path('v1/margin/asset/interest/', views.MarginAssetInterestView.as_view()),
 
     path('v2/margin/wallets/', views.MarginAssetViewSet.as_view({'get': 'list'})),
     path('v2/margin/balance/', views.MarginBalanceAPIView.as_view()),
@@ -65,6 +66,7 @@ urlpatterns = [
     path('v2/margin/position/info/', views.MarginPositionInfoView.as_view()),
     path('v2/margin/position/interest/', views.MarginPositionInterestHistoryView.as_view()),
     path('v2/margin/leverage/', views.MarginLeverageView.as_view()),
+    path('v2/margin/max_leverage/', views.MaxLeverageView.as_view()),
 
     path('v1/addressbook/<int:pk>/', views.AddressBookView.as_view({
         'get': 'retrieve',

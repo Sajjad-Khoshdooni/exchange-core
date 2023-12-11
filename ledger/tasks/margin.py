@@ -100,7 +100,7 @@ def collect_margin_interest():
     group_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"{now}:{int(now.hour) // 8}")
     interest_history = []
     with WalletPipeline() as pipeline:
-        for position in MarginPosition.objects.filter(status=MarginPosition.OPEN):
+        for position in MarginPosition.objects.filter(status=MarginPosition.OPEN).prefetch_related('loan_wallet__asset'):
             if position.debt_amount > Decimal('0'):
                 pipeline.new_trx(
                     position.loan_wallet,

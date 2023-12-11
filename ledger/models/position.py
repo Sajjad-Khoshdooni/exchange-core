@@ -23,8 +23,6 @@ logger = logging.getLogger(__name__)
 class MarginPosition(models.Model):
     DEFAULT_LIQUIDATION_LEVEL = Decimal('1.1')
     DEFAULT_INSURANCE_FEE_PERCENTAGE = Decimal('0.02')
-    DEFAULT_USDT_INTEREST_FEE_PERCENTAGE = Decimal('0.00015')
-    DEFAULT_IRT_INTEREST_FEE_PERCENTAGE = Decimal('0.00045')
 
     OPEN, CLOSED, TERMINATING = 'open', 'closed', 'terminating'
     STATUS_CHOICES = [(OPEN, OPEN), (CLOSED, CLOSED), (TERMINATING, TERMINATING)]
@@ -251,13 +249,9 @@ class MarginPosition(models.Model):
         return self.loan_wallet.asset.get_wallet(account=Account.objects.get(id=MARGIN_POOL_ACCOUNT))
 
     def get_interest_rate(self):
-        from ledger.models import Asset
+        return self.loan_wallet.asset.margin_interest_fee
 
-        if self.loan_wallet.asset.name == Asset.IRT:
-            return self.DEFAULT_IRT_INTEREST_FEE_PERCENTAGE
-        return self.DEFAULT_USDT_INTEREST_FEE_PERCENTAGE
-
-    def liquidate(self, pipeline, charge_insurance: bool = True):  # todo :: fix
+    def liquidate(self, pipeline, charge_insurance: bool = True):
         if self.status != self.OPEN:
             return
 
