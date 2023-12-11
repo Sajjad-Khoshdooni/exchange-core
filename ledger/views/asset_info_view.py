@@ -6,7 +6,9 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404, ListAPIView
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -320,5 +322,9 @@ class MarginAssetInterestSerializer(AssetSerializerMini):
 
 
 class MarginAssetInterestView(ListAPIView):
+    permission_classes = []
     serializer_class = MarginAssetInterestSerializer
     queryset = Asset.objects.filter(pair__margin_enable=True).distinct().order_by('id')
+    pagination_class = LimitOffsetPagination
+    search_fields = ['asset__symbol', 'asset__name', 'asset__name_fa']
+    filter_backends = [DjangoFilterBackend, SearchFilter]

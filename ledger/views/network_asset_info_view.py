@@ -36,7 +36,6 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
 
 class NetworkAssetView(ListAPIView):
-    authentication_classes = []
     permission_classes = []
     pagination_class = LimitOffsetPagination
     search_fields = ['asset__symbol', 'asset__name', 'asset__name_fa', 'network__symbol', 'network__name']
