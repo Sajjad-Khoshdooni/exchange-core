@@ -4,21 +4,23 @@ from dataclasses import dataclass
 from decimal import Decimal
 from uuid import UUID
 
+from decouple import config
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import UniqueConstraint, Q
 
 from accounts.models import Account
-from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT, MARGIN_POOL_ACCOUNT
 from ledger.models import Trx
 from ledger.utils.external_price import SHORT, LONG, BUY, SELL, get_other_side
 from ledger.utils.fields import get_amount_field
-from ledger.utils.margin import alert_liquidate
 from ledger.utils.precision import floor_precision, ceil_precision
 from ledger.utils.price import get_depth_price, get_base_depth_price
 from market.models import PairSymbol
 
 logger = logging.getLogger(__name__)
 
+MARGIN_INSURANCE_ACCOUNT = config('MARGIN_INSURANCE_ACCOUNT', cast=int)
+MARGIN_POOL_ACCOUNT = config('MARGIN_POOL_ACCOUNT', cast=int)
 
 class MarginPosition(models.Model):
     DEFAULT_LIQUIDATION_LEVEL = Decimal('1.1')
@@ -184,16 +186,23 @@ class MarginPosition(models.Model):
             return
 
         if amount > Decimal('0'):
+            group_id = uuid.uuid4()
             pipeline.new_trx(
                 sender=self.base_margin_wallet,
                 receiver=self.symbol.base_asset.get_wallet(self.account, Wallet.MARGIN, None),
                 amount=amount,
-                group_id=uuid.uuid4(),
+                group_id=group_id,
                 scope=Trx.MARGIN_TRANSFER
             )
 
-            self.net_amount -= amount
+            self.net_amount -= self.net_amount * amount / total_balance
             self.save(update_fields=['net_amount'])
+            self.create_history(
+                asset=self.symbol.base_asset,
+                amount=self.net_amount * amount / total_balance,
+                group_id=group_id,
+                type=MarginHistoryModel.PNL
+            )
 
     @classmethod
     def get_by(cls, symbol: PairSymbol, account: Account, order_side: str, is_open_position: bool):
@@ -295,6 +304,12 @@ class MarginPosition(models.Model):
                 Trx.MARGIN_INSURANCE,
                 group_id,
             )
+            self.create_history(
+                asset=self.symbol.base_asset,
+                amount=loss_amount,
+                group_id=group_id,
+                type=MarginHistoryModel.TRANSFER
+            )
             to_close_amount = ceil_precision(to_close_amount, self.symbol.step_size)
         else:
             if self.side == LONG:
@@ -328,6 +343,12 @@ class MarginPosition(models.Model):
                 Trx.MARGIN_INSURANCE,
                 group_id,
             )
+            self.create_history(
+                asset=self.symbol.base_asset,
+                amount=min(loss_amount, remaining_balance),
+                group_id=group_id,
+                type=MarginHistoryModel.TRANSFER
+            )
             remaining_balance -= min(loss_amount, remaining_balance)
 
         if remaining_balance > Decimal('0'):
@@ -340,6 +361,12 @@ class MarginPosition(models.Model):
                     insurance_fee_amount,
                     Trx.LIQUID,
                     group_id
+                )
+                self.create_history(
+                    asset=self.symbol.base_asset,
+                    amount=insurance_fee_amount,
+                    group_id=group_id,
+                    type=MarginHistoryModel.INSURANCE_FEE
                 )
                 remaining_balance -= insurance_fee_amount
             else:
@@ -366,6 +393,7 @@ class MarginPosition(models.Model):
         self.save(update_fields=['amount', 'status'])
         self.update_liquidation_price(pipeline, rebalance=False)
         if charge_insurance:
+            from ledger.utils.margin import alert_liquidate
             alert_liquidate(self)
 
     @classmethod
@@ -390,6 +418,17 @@ class MarginPosition(models.Model):
         for position in to_liquid_long_positions:
             position.liquidate(pipeline)
 
+    def create_history(self, asset, amount: Decimal, type: str, group_id: uuid = None):
+        assert type in MarginHistoryModel.type_list
+
+        MarginHistoryModel.objects.create(
+            position=self,
+            asset=asset,
+            amount=amount,
+            type=type,
+            group_id=group_id or uuid.uuid4()
+        )
+
 
 class MarginLeverage(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -401,18 +440,6 @@ class MarginLeverage(models.Model):
         return f'{self.account}-{self.leverage}'
 
 
-class MarginInterestHistory(models.Model):
-    created = models.DateTimeField()
-    position = models.ForeignKey('ledger.MarginPosition', on_delete=models.CASCADE)
-    group_id = models.UUIDField()
-    amount = get_amount_field()
-    asset = models.ForeignKey('ledger.Asset', on_delete=models.CASCADE)
-    debt = get_amount_field()
-
-    class Meta:
-        unique_together = ('position', 'group_id', 'created')
-
-
 @dataclass
 class MarginPositionTradeInfo:
     loan_type: str
@@ -421,3 +448,28 @@ class MarginPositionTradeInfo:
     trade_amount: Decimal = 0
     trade_price: Decimal = 0
     group_id: UUID = 0
+
+
+class MarginHistoryModel(models.Model):
+    PNL, TRANSFER, TRADE_FEE, INTEREST_FEE, INSURANCE_FEE = 'pnl', 'transfer', 'trade_fee', 'int_fee', 'ins_fee'
+    type_list = [PNL, TRANSFER, TRADE_FEE, INTEREST_FEE, INSURANCE_FEE]
+
+    created = models.DateTimeField(auto_now_add=True)
+    position = models.ForeignKey('ledger.MarginPosition', on_delete=models.CASCADE)
+    asset = models.ForeignKey('ledger.Asset', on_delete=models.CASCADE)
+    amount = get_amount_field()
+    type = models.CharField(
+        choices=[(PNL, PNL), (TRANSFER, TRANSFER), (TRADE_FEE, TRADE_FEE), (INTEREST_FEE, INTEREST_FEE),
+                 (INSURANCE_FEE, INSURANCE_FEE)],
+        max_length=12
+    )
+    group_id = models.UUIDField()
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['position', 'group_id', 'created'],
+                name="position_group_id_created_unique",
+                condition=Q(type='int_fee'),
+            ),
+        ]

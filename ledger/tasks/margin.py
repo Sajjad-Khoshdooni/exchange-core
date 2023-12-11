@@ -14,7 +14,7 @@ from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_T
     MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD, get_bulk_margin_info
 from ledger.models import Wallet, MarginPosition, Trx
 from ledger.models.margin import CloseRequest
-from ledger.models.position import MarginInterestHistory
+from ledger.models.position import MarginHistoryModel
 from ledger.utils.external_price import SHORT, LONG
 from ledger.utils.margin import alert_position_warning
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -110,18 +110,18 @@ def collect_margin_interest():
                     group_id,
                 )
                 interest_history.append(
-                    MarginInterestHistory(
+                    MarginHistoryModel(
                         created=now,
                         position=position,
                         amount=abs(position.debt_amount) * position.get_interest_rate(),
-                        debt=abs(position.debt_amount),
                         group_id=group_id,
-                        asset=position.loan_wallet.asset
+                        asset=position.loan_wallet.asset,
+                        type=MarginHistoryModel.INTEREST_FEE
                     )
                 )
                 position.update_liquidation_price(pipeline, rebalance=True)
 
-        MarginInterestHistory.objects.bulk_create(interest_history)
+        MarginHistoryModel.objects.bulk_create(interest_history)
 
     to_liquid_short_positions = MarginPosition.objects.filter(
         side=SHORT,

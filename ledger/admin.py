@@ -25,7 +25,8 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
-    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, MarginPosition
+    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, MarginPosition, \
+    MarginHistoryModel
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -35,7 +36,6 @@ from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
 from market.utils.fix import create_symbols_for_asset
 from .models import Asset, BalanceLock
-from .models.position import MarginInterestHistory
 from .utils.price import get_last_price
 from .utils.wallet_pipeline import WalletPipeline
 
@@ -947,9 +947,9 @@ class MarginPositionAdmin(admin.ModelAdmin):
     search_fields = ('symbol__name', 'status',)
 
 
-@admin.register(MarginInterestHistory)
-class MarginInterestHistoryAdmin(admin.ModelAdmin):
-    list_display = ('created', 'position', 'asset', 'amount', 'debt')
-    readonly_fields = ('created', 'position', 'asset', 'amount', 'debt', 'group_id')
-    search_fields = ('group_id', 'asset__symbol', 'position__symbol__name')
-    list_filter = ('asset',)
+@admin.register(MarginHistoryModel)
+class MarginHistoryModelAdmin(admin.ModelAdmin):
+    list_display = ('created', 'position', 'asset', 'amount', 'type')
+    readonly_fields = ('created', 'position', 'asset', 'amount', 'type', 'group_id')
+    search_fields = ('group_id', 'asset__symbol', 'position__symbol__name', 'type')
+    list_filter = ('type', 'asset')

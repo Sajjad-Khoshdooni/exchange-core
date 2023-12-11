@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from accounts.models import Referral
 from ledger.models import Wallet, Trx, Asset
+from ledger.models.position import MarginHistoryModel
 from ledger.utils.cache import cache_for
 from ledger.utils.external_price import BUY, SELL, LONG, SHORT
 from ledger.utils.precision import floor_precision, get_symbol_presentation_price
@@ -118,11 +119,18 @@ def _update_trading_positions(trading_positions, pipeline):
                 position.account, market=Wallet.MARGIN, variant=None)
             remaining_balance = position.base_margin_wallet.balance + pipeline.get_wallet_balance_diff(position.base_margin_wallet.id)
             if remaining_balance > Decimal('0'):
+                group_id = uuid4()
                 pipeline.new_trx(
                     position.base_margin_wallet, margin_cross_wallet, remaining_balance, Trx.MARGIN_TRANSFER,
-                    uuid4()
+                    group_id
                 )
                 position.net_amount -= remaining_balance
+                position.create_history(
+                    asset=position.base_margin_wallet.asset,
+                    amount=remaining_balance,
+                    group_id=group_id,
+                    type=MarginHistoryModel.TRANSFER
+                )
 
     MarginPosition.objects.bulk_update(
         to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status', 'net_amount']
@@ -217,12 +225,19 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                         raise_exception=True,
                         pipeline_balance_diff=pipeline.get_wallet_free_balance_diff(margin_cross_wallet.id),
                     )
+                    group_id = uuid4()
                     pipeline.new_trx(
-                        group_id=uuid4(),
+                        group_id=group_id,
                         sender=margin_cross_wallet,
                         receiver=order.base_wallet,
                         amount=trade_value,
                         scope=Trx.MARGIN_TRANSFER
+                    )
+                    position.create_history(
+                        asset=margin_cross_wallet.asset,
+                        amount=trade_value,
+                        group_id=group_id,
+                        type=MarginHistoryModel.TRANSFER
                     )
                     position.net_amount += trade_value
 
@@ -336,6 +351,14 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
         group_id=group_id,
         scope=Trx.COMMISSION
     )
+
+    if fee_payer.market == fee_payer.MARGIN and isinstance(trade, Trade) and trade.position:
+        trade.position.create_history(
+            asset=fee_payer.asset,
+            amount=fee_info.trader_fee_amount,
+            group_id=group_id,
+            type=MarginHistoryModel.TRADE_FEE
+        )
 
     return fee_info
 

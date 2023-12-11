@@ -1,12 +1,9 @@
 from decimal import Decimal
 
-from django.db.models import Sum
 from django.test import Client
 from django.test import TestCase
 from django.utils import timezone
 
-from accounting.models import Account
-from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Asset, Wallet, MarginPosition, MarginLeverage
 from ledger.utils.external_price import SELL, BUY, SHORT
 from ledger.utils.precision import floor_precision
@@ -279,6 +276,7 @@ class ShortIsolatedMarginTestCase(TestCase):
         self.assertEqual(mp.side, SHORT)
         self.assertTrue(mp.liquidation_price > Decimal('1818'))
 
+        print(f'order_amount: {loan_amount / 6}')
         self.place_order(amount=floor_precision(loan_amount/6, 4), side=BUY, market=Wallet.MARGIN, price=BTC_USDT_PRICE)
 
         with WalletPipeline() as pipeline:

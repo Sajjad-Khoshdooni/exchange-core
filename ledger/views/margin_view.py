@@ -17,7 +17,7 @@ from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, MarginLeverage
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
-from ledger.models.position import MarginInterestHistory
+from ledger.models.position import MarginHistoryModel
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_presentation_amount, get_margin_coin_presentation_balance
@@ -200,24 +200,27 @@ class MarginPositionInfoView(APIView):
         return Response(data)
 
 
-class MarginInterestTrxSerializer(serializers.ModelSerializer):
+class MarginHistorySerializer(serializers.ModelSerializer):
     symbol = serializers.SerializerMethodField()
 
     def get_symbol(self, instance):
         return instance.asset.symbol
 
     class Meta:
-        model = MarginInterestHistory
-        fields = ('created', 'amount', 'symbol')
+        model = MarginHistoryModel
+        fields = ('created', 'amount', 'symbol', 'type', 'position')
 
 
 class MarginPositionInterestHistoryView(ListAPIView):
-    serializer_class = MarginInterestTrxSerializer
+    serializer_class = MarginHistorySerializer
     pagination_class = LimitOffsetPagination
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['type']
 
     def get_queryset(self):
         account = self.request.user.get_account()
-        queryset = MarginInterestHistory.objects.filter(position__account=account)
+        queryset = MarginHistoryModel.objects.filter(position__account=account)
 
         id = self.request.query_params.get('id')
         if id:
