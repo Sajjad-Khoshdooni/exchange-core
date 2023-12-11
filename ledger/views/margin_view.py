@@ -202,7 +202,7 @@ class MarginPositionInterestHistoryView(ListAPIView):
         if id:
             queryset = queryset.filter(position__id=id)
 
-        return queryset.prefetch_related('sender__asset').order_by('-created')
+        return queryset.order_by('-created')
 
 
 class LeverageViewSerializer(serializers.ModelSerializer):

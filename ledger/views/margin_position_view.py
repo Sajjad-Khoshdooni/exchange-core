@@ -135,6 +135,8 @@ class MarginClosePositionView(APIView):
         try:
             with WalletPipeline() as pipeline:
                 position.liquidate(pipeline=pipeline, charge_insurance=False)
-        except (SmallDepthError, InsufficientBalance) as e:
-            return Response({'Error': f'{repr(e)}'}, 400)
+        except SmallDepthError:
+            return Response({'Error': 'به علت عمق کم بازار معامله انجام نشد'}, 400)
+        except InsufficientBalance:
+            return Response({'Error': 'Insufficient Balance'}, 400)
         return Response(200)
