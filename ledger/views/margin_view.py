@@ -185,9 +185,14 @@ class MarginPositionInfoView(APIView):
 
 
 class MarginInterestTrxSerializer(serializers.ModelSerializer):
-       class Meta:
+    symbol = serializers.SerializerMethodField()
+
+    def get_symbol(self, instance):
+        return instance.asset.symbol
+
+    class Meta:
         model = MarginInterestHistory
-        fields = ('created', 'amount', 'asset')
+        fields = ('created', 'amount', 'symbol')
 
 
 class MarginPositionInterestHistoryView(ListAPIView):
