@@ -115,7 +115,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
             user_total_equity = MarginPosition.objects.filter(
                 account=self.context['request'].user.get_account(),
                 status__in=[MarginPosition.TERMINATING, MarginPosition.OPEN],
-                symbol__base_asset__symbol=attrs.get('position_symbol').base_asset
+                symbol__base_asset=attrs.get('asset')
             ).annotate(base_asset_value=F('asset_wallet__balance') * F('symbol__last_trade_price')).\
                 aggregate(total_equity=Sum('base_asset_value') + Sum('base_wallet__balance'))['total_equity'] or 0
 

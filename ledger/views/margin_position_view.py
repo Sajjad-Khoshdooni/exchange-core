@@ -63,11 +63,8 @@ class MarginPositionSerializer(AssetSerializerMini):
         return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
 
     def get_pnl(self, instance: MarginPosition):
-        from ledger.models import MarginHistoryModel
-        cross_total_pnl = MarginHistoryModel.objects.filter(position=instance, type=MarginHistoryModel.PNL)\
-                              .aggregate(total_pnl=Sum('amount'))['total_pnl'] or 0
         unrealised_pnl = (instance.base_total_balance - abs(instance.base_debt_amount)) - instance.net_amount
-        return floor_precision(unrealised_pnl - cross_total_pnl, instance.symbol.tick_size)
+        return floor_precision(unrealised_pnl, instance.symbol.tick_size)
 
     def get_current_price(self, instance):
         return instance.symbol.last_trade_price
