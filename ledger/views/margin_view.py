@@ -119,7 +119,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
             ).annotate(base_asset_value=F('asset_wallet__balance') * F('symbol__last_trade_price')).\
                 aggregate(total_equity=Sum('base_asset_value') + Sum('base_wallet__balance'))['total_equity'] or 0
 
-            base = attrs.get('position_symbol').base_asset.symbol
+            base = attrs.get('asset').symbol
             sys_config = SystemConfig.get_system_config()
 
             if (base == Asset.USDT and user_total_equity >= sys_config.total_user_margin_usdt_base) or \
