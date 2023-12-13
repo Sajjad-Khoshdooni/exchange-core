@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.db.models import Sum
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
@@ -108,6 +110,9 @@ class StakeRequestAPIView(ModelViewSet):
     serializer_class = StakeRequestSerializer
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return StakeRequest.objects.none()
+
         is_bot = self.request.query_params.get('bot', '0') == '1'
 
         return StakeRequest.objects.filter(
