@@ -343,11 +343,6 @@ class ShortIsolatedMarginTestCase(TestCase):
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.net_amount)
         print('******************************************************')
-        cross_total_pnl = MarginHistoryModel.objects.filter(position=mp, type=MarginHistoryModel.PNL).aggregate(
-            total_pnl=Sum('amount'))['total_pnl'] or 0
-        unrealised_pnl = (mp.base_total_balance - abs(mp.base_debt_amount)) - mp.net_amount
-        print(unrealised_pnl - cross_total_pnl)
-
 
         with WalletPipeline() as pipeline:
             new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=floor_precision(loan_amount / 4, 2), market=Wallet.SPOT, price=floor_precision(BTC_USDT_PRICE/2, 2))
@@ -358,10 +353,9 @@ class ShortIsolatedMarginTestCase(TestCase):
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.net_amount)
         print('******************************************************')
-        cross_total_pnl = MarginHistoryModel.objects.filter(position=mp, type=MarginHistoryModel.PNL).aggregate(
-            total_pnl=Sum('amount'))['total_pnl'] or 0
-        unrealised_pnl = (mp.base_total_balance - abs(mp.base_debt_amount)) - mp.net_amount
-        print(unrealised_pnl - cross_total_pnl)
+
+        for i in MarginHistoryModel.objects.filter(position=mp):
+            print(i.amount, i.type)
 
 
 

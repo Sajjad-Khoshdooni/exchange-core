@@ -195,8 +195,6 @@ class MarginPosition(models.Model):
                 scope=Trx.MARGIN_TRANSFER
             )
 
-            self.net_amount -= amount
-            self.save(update_fields=['net_amount'])
             self.create_history(
                 asset=self.symbol.base_asset,
                 amount=amount,
@@ -209,6 +207,9 @@ class MarginPosition(models.Model):
                 group_id=group_id,
                 type=MarginHistoryModel.PNL
             )
+
+            self.net_amount -= amount
+            self.save(update_fields=['net_amount'])
 
     @classmethod
     def get_by(cls, symbol: PairSymbol, account: Account, order_side: str, is_open_position: bool):
