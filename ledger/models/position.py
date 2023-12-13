@@ -195,11 +195,17 @@ class MarginPosition(models.Model):
                 scope=Trx.MARGIN_TRANSFER
             )
 
-            self.net_amount -= self.net_amount * amount / total_balance
+            self.net_amount -= amount
             self.save(update_fields=['net_amount'])
             self.create_history(
                 asset=self.symbol.base_asset,
-                amount=self.net_amount * amount / total_balance,
+                amount=amount,
+                group_id=group_id,
+                type=MarginHistoryModel.TRANSFER
+            )
+            self.create_history(
+                asset=self.symbol.base_asset,
+                amount=amount - self.net_amount * (amount / total_balance),
                 group_id=group_id,
                 type=MarginHistoryModel.PNL
             )
@@ -345,7 +351,7 @@ class MarginPosition(models.Model):
             )
             self.create_history(
                 asset=self.symbol.base_asset,
-                amount=min(loss_amount, remaining_balance),
+                amount=-min(loss_amount, remaining_balance),
                 group_id=group_id,
                 type=MarginHistoryModel.TRANSFER
             )
@@ -364,7 +370,7 @@ class MarginPosition(models.Model):
                 )
                 self.create_history(
                     asset=self.symbol.base_asset,
-                    amount=insurance_fee_amount,
+                    amount=-insurance_fee_amount,
                     group_id=group_id,
                     type=MarginHistoryModel.INSURANCE_FEE
                 )
