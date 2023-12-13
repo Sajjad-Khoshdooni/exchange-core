@@ -21,6 +21,7 @@ class OTCRequestSerializer(AccountTradeSerializer):
     class Meta(AccountTradeSerializer.Meta):
         model = OTCRequest
         fields = (*AccountTradeSerializer.Meta.fields, 'from_asset', 'to_asset')
+        ref_name = 'OTCHistoryRequestSerializer'  # Unique name
 
 
 class OTCHistoryView(AccountTradeHistoryView):
@@ -28,6 +29,10 @@ class OTCHistoryView(AccountTradeHistoryView):
     serializer_class = OTCRequestSerializer
 
     def get_queryset(self):
+
+        if getattr(self, 'swagger_fake_view', False):
+            return OTCRequest.objects.none()
+
         return OTCRequest.objects.filter(
             otctrade__status=OTCTrade.DONE,
             account=self.request.user.get_account(),

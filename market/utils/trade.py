@@ -127,7 +127,7 @@ def _update_trading_positions(trading_positions, pipeline):
                 position.net_amount -= remaining_balance
                 position.create_history(
                     asset=position.base_margin_wallet.asset,
-                    amount=remaining_balance,
+                    amount=-remaining_balance,
                     group_id=group_id,
                     type=MarginHistoryModel.TRANSFER
                 )
@@ -355,7 +355,7 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
     if fee_payer.market == fee_payer.MARGIN and isinstance(trade, Trade) and trade.position:
         trade.position.create_history(
             asset=fee_payer.asset,
-            amount=fee_info.trader_fee_amount,
+            amount=-fee_info.trader_fee_amount,
             group_id=group_id,
             type=MarginHistoryModel.TRADE_FEE
         )

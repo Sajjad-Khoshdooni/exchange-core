@@ -57,11 +57,24 @@ class MarginTransfer(models.Model):
                 raise ValueError('No open position found for this symbol')
             position_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN, position.group_id)
 
+        from ledger.models import MarginHistoryModel
         if self.type == self.SPOT_TO_MARGIN:
             sender, receiver = spot_wallet, margin_wallet
+            MarginHistoryModel.objects.create(
+                asset=self.asset,
+                amount=self.amount,
+                group_id=self.group_id,
+                type=MarginHistoryModel.POSITION_TRANSFER
+            )
 
         elif self.type == self.MARGIN_TO_SPOT:
             sender, receiver = margin_wallet, spot_wallet
+            MarginHistoryModel.objects.create(
+                asset=self.asset,
+                amount=-self.amount,
+                group_id=self.group_id,
+                type=MarginHistoryModel.POSITION_TRANSFER
+            )
 
         elif self.type == self.MARGIN_TO_POSITION:
             sender, receiver = margin_wallet, position_wallet

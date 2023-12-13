@@ -77,8 +77,12 @@ class TradeHistoryView(ListAPIView):
     permission_classes = ()
     pagination_class = FastLimitOffsetPagination
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
+    serializer_class = TradeSerializer
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Trade.objects.none()
+
         symbol = self.request.query_params.get('symbol')
         my = self.request.query_params.get('my')
         pair_symbol = get_object_or_404(PairSymbol, name=symbol)
@@ -113,8 +117,12 @@ class TradePairsHistoryView(ListAPIView):
     permission_classes = (IsAuthenticated,)
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
+    serializer_class = TradePairSerializer
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Trade.objects.none()
+
         min_id = self.request.query_params.get('from_id')
         id_filter = {'id__gt': min_id} if min_id else {}
         return Trade.objects.filter(
