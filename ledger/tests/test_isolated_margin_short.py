@@ -333,7 +333,6 @@ class ShortIsolatedMarginTestCase(TestCase):
         print('******************************************************')
         print((mp.base_total_balance - abs(mp.base_debt_amount)) - mp.net_amount)
 
-
         with WalletPipeline() as pipeline:
             new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=floor_precision(loan_amount / 4, 2), market=Wallet.SPOT, price=floor_precision(BTC_USDT_PRICE/2, 2))
         self.place_order(amount=floor_precision(loan_amount / 4, 2), side=BUY, market=Wallet.MARGIN, price=floor_precision(BTC_USDT_PRICE / 2, 2))
@@ -343,6 +342,9 @@ class ShortIsolatedMarginTestCase(TestCase):
         mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.net_amount)
         print('******************************************************')
+
+        pnl_amount = MarginHistoryModel.objects.filter(position=mp, type=MarginHistoryModel.PNL).first().amount
+        self.assertGreaterEqual(pnl_amount, 7)
 
         with WalletPipeline() as pipeline:
             new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=floor_precision(loan_amount / 4, 2), market=Wallet.SPOT, price=floor_precision(BTC_USDT_PRICE/2, 2))

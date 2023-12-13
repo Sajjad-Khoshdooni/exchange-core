@@ -201,9 +201,12 @@ class MarginPosition(models.Model):
                 group_id=group_id,
                 type=MarginHistoryModel.TRANSFER
             )
+            if self.side == LONG:
+                total_balance *= self.symbol.last_trade_price
+
             self.create_history(
                 asset=self.symbol.base_asset,
-                amount=amount - self.net_amount * (amount / (total_balance)),
+                amount=amount - self.net_amount * (amount / total_balance),
                 group_id=group_id,
                 type=MarginHistoryModel.PNL
             )
@@ -458,16 +461,16 @@ class MarginPositionTradeInfo:
 
 
 class MarginHistoryModel(models.Model):
-    PNL, TRANSFER, TRADE_FEE, INTEREST_FEE, INSURANCE_FEE = 'pnl', 'transfer', 'trade_fee', 'int_fee', 'ins_fee'
+    PNL, TRANSFER, POSITION_TRANSFER, TRADE_FEE, INTEREST_FEE, INSURANCE_FEE = 'pnl', 'transfer', 'p_transfer', 'trade_fee', 'int_fee', 'ins_fee'
     type_list = [PNL, TRANSFER, TRADE_FEE, INTEREST_FEE, INSURANCE_FEE]
 
     created = models.DateTimeField(auto_now_add=True)
-    position = models.ForeignKey('ledger.MarginPosition', on_delete=models.CASCADE)
+    position = models.ForeignKey('ledger.MarginPosition', on_delete=models.CASCADE, null=True)
     asset = models.ForeignKey('ledger.Asset', on_delete=models.CASCADE)
     amount = get_amount_field()
     type = models.CharField(
         choices=[(PNL, PNL), (TRANSFER, TRANSFER), (TRADE_FEE, TRADE_FEE), (INTEREST_FEE, INTEREST_FEE),
-                 (INSURANCE_FEE, INSURANCE_FEE)],
+                 (INSURANCE_FEE, INSURANCE_FEE), (POSITION_TRANSFER, POSITION_TRANSFER)],
         max_length=12
     )
     group_id = models.UUIDField()

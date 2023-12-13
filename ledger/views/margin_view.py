@@ -1,9 +1,11 @@
 from decimal import Decimal
 
+import django_filters
 from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
@@ -201,32 +203,40 @@ class MarginPositionInfoView(APIView):
 
 
 class MarginHistorySerializer(serializers.ModelSerializer):
+    asset = serializers.SerializerMethodField()
     symbol = serializers.SerializerMethodField()
 
-    def get_symbol(self, instance):
+    def get_asset(self, instance):
         return instance.asset.symbol
+
+    def get_symbol(self, instance):
+        return instance.position and instance.position.symbol.name
 
     class Meta:
         model = MarginHistoryModel
-        fields = ('created', 'amount', 'symbol', 'type', 'position')
+        fields = ('created', 'amount', 'symbol', 'type', 'position', 'asset')
 
 
-class MarginPositionInterestHistoryView(ListAPIView):
+class PositionFilter(django_filters.FilterSet):
+    symbol = django_filters.CharFilter(field_name='position__symbol__name', lookup_expr='iexact')
+    asset = django_filters.CharFilter(field_name='asset__symbol', lookup_expr='iexact')
+    position = django_filters.CharFilter(field_name='position__id')
+
+    class Meta:
+        model = MarginHistoryModel
+        fields = ('symbol', 'asset', 'type', 'position')
+
+
+class MarginPositionHistoryView(ListAPIView):
     serializer_class = MarginHistorySerializer
     pagination_class = LimitOffsetPagination
 
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['type']
+    filter_class = PositionFilter
 
     def get_queryset(self):
         account = self.request.user.get_account()
-        queryset = MarginHistoryModel.objects.filter(position__account=account)
-
-        id = self.request.query_params.get('id')
-        if id:
-            queryset = queryset.filter(position__id=id)
-
-        return queryset.order_by('-created')
+        return MarginHistoryModel.objects.filter(position__account=account).order_by('-created')
 
 
 class LeverageViewSerializer(serializers.ModelSerializer):

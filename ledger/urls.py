@@ -64,7 +64,7 @@ urlpatterns = [
     path('v2/margin/close/', views.MarginClosePositionView.as_view()),
     path('v2/margin/info/', views.MarginInfoView.as_view()),
     path('v2/margin/position/info/', views.MarginPositionInfoView.as_view()),
-    path('v2/margin/position/interest/', views.MarginPositionInterestHistoryView.as_view()),
+    path('v2/margin/position/history/', views.MarginPositionHistoryView.as_view()),
     path('v2/margin/leverage/', views.MarginLeverageView.as_view()),
 
     path('v1/addressbook/<int:pk>/', views.AddressBookView.as_view({
