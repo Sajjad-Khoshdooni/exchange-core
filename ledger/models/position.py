@@ -205,7 +205,7 @@ class MarginPosition(models.Model):
             )
             self.create_history(
                 asset=self.symbol.base_asset,
-                amount=amount - self.net_amount * (amount / total_balance),
+                amount=amount - self.net_amount * (amount / (total_balance)),
                 group_id=group_id,
                 type=MarginHistoryModel.PNL
             )
