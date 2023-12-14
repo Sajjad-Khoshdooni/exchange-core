@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ledger', '0226_alter_trx_scope_tokenrebrand'),
+        ('ledger', '0228_alter_feedbackcategory_options_and_more'),
     ]
 
     operations = [
