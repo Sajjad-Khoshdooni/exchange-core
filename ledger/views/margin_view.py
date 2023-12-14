@@ -242,7 +242,10 @@ class MarginPositionHistoryView(ListAPIView):
 class LeverageViewSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
-        if not 1 <= Decimal(attrs.get('leverage')) <= 5 or Decimal(attrs.get('leverage')) - int(attrs.get('leverage')) != Decimal('0'):
+        max_leverage = SystemConfig.get_system_config().max_margin_leverage
+
+        if not 1 <= Decimal(attrs.get('leverage')) <= max_leverage or\
+                Decimal(attrs.get('leverage')) - int(attrs.get('leverage')) != Decimal('0'):
             raise ValidationError('ضریب باید عددی صحیحی بین ۱ و ۵ باشد.')
 
         return attrs
