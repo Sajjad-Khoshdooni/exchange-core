@@ -183,23 +183,33 @@ class MarginPosition(models.Model):
                 scope=Trx.MARGIN_TRANSFER
             )
 
-            self.create_history(
-                asset=self.symbol.base_asset,
-                amount=amount,
-                group_id=group_id,
-                type=MarginHistoryModel.TRANSFER
-            )
+            price = self.symbol.last_trade_price
+
             if self.side == LONG:
-                total_balance *= self.symbol.last_trade_price
+                total_value, debt_value = price * total_balance, debt_amount
+            else:
+                total_value, debt_value = total_balance, price * debt_amount
+
+            position_value = total_value - debt_value
+
+            to_transfer_equity = amount * (self.net_amount / position_value)
+            realized_pnl = amount - to_transfer_equity
 
             self.create_history(
                 asset=self.symbol.base_asset,
-                amount=amount - self.net_amount * (amount / total_balance),
+                amount=-to_transfer_equity,
+                group_id=group_id,
+                type=MarginHistoryModel.TRANSFER
+            )
+
+            self.create_history(
+                asset=self.symbol.base_asset,
+                amount=realized_pnl,
                 group_id=group_id,
                 type=MarginHistoryModel.PNL
             )
 
-            self.net_amount -= amount
+            self.net_amount -= to_transfer_equity
             self.save(update_fields=['net_amount'])
 
     @classmethod
