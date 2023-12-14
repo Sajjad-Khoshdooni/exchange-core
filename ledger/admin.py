@@ -18,15 +18,17 @@ from accounting.models import ReservedAsset
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
+from accounts.admin_guard.utils.html import get_table_html
 from accounts.models import Account
 from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
+from gamify.utils import clone_model
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
-    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, MarginPosition, \
-    MarginHistoryModel
+    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, TokenRebrand, \
+    MarginHistoryModel, MarginPosition
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -38,6 +40,11 @@ from market.utils.fix import create_symbols_for_asset
 from .models import Asset, BalanceLock
 from .utils.price import get_last_price
 from .utils.wallet_pipeline import WalletPipeline
+
+
+class CoinCategoryInline(admin.TabularInline):
+    model = CoinCategory.coins.through
+    extra = 1
 
 
 @admin.register(models.Asset)
@@ -53,12 +60,13 @@ class AssetAdmin(AdvancedAdmin):
         'order', 'trend', 'trade_enable', 'hedge',
         'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
     )
-    list_filter = ('enable', 'trend', 'spread_category')
+    list_filter = ('enable', 'trend', 'spread_category', 'coincategory', )
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'hedge', 'price_page')
     search_fields = ('symbol',)
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset',)
     readonly_fields = ('distribution_factor',)
+    inlines = (CoinCategoryInline, )
 
     def save_model(self, request, obj, form, change):
         if Asset.objects.filter(order=obj.order).exclude(id=obj.id).exists():
@@ -142,7 +150,7 @@ class AssetAdmin(AdvancedAdmin):
 
         return humanize_number(hedge_value_abs)
 
-    @admin.action(description='setup asset', permissions=['view'])
+    @admin.action(description='Setup Asset', permissions=['view'])
     def setup_asset(self, request, queryset):
         from ledger.models import NetworkAsset
         now = timezone.now()
@@ -179,13 +187,16 @@ class AssetAdmin(AdvancedAdmin):
 
 @admin.register(FeedbackCategory)
 class FeedbackCategoryAdmin(admin.ModelAdmin):
-    list_display = ('category',)
+    list_display = ('category', 'order')
+    list_editable = ('order', )
 
 
 @admin.register(WithdrawFeedback)
 class WithdrawFeedbackAdmin(admin.ModelAdmin):
-    list_display = ('category', 'description',)
-    readonly_fields = ('created',)
+    list_display = ('user', 'category', 'description')
+    readonly_fields = ('user',)
+    search_fields = ('user__phone', )
+    list_filter = ('category', )
 
 
 @admin.register(models.Network)
@@ -470,7 +481,7 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
-        'usdt_value', 'get_remaining_time_to_pass_48h', 'get_jalali_created', 'get_jalali_finished'
+        'usdt_value', 'get_remaining_time_to_pass_48h', 'get_jalali_created', 'get_jalali_finished', 'out_address',
     )
     search_fields = ('trx_hash', 'out_address', 'wallet__asset__symbol', 'wallet__account__user__phone')
     list_filter = ('deposit', 'status', 'source', TransferUserFilter,)
@@ -599,13 +610,19 @@ class CloseRequestAdmin(admin.ModelAdmin):
 class AddressBookAdmin(admin.ModelAdmin):
     list_display = ('name', 'get_username', 'network', 'address', 'asset',)
     search_fields = ('address', 'name')
-    readonly_fields = ('account', 'network', 'address', 'asset')
+    raw_id_fields = ('account', )
+    actions = ('clone', )
 
     @admin.display(description='user')
     def get_username(self, address_book: models.AddressBook):
         return mark_safe(
             f'<span dir="ltr">{address_book.account}</span>'
         )
+
+    @admin.action(description='Clone')
+    def clone(self, request, queryset):
+        for q in queryset:
+            clone_model(q)
 
 
 class PrizeUserFilter(admin.SimpleListFilter):
@@ -936,6 +953,34 @@ class DepositRecoveryRequestAdmin(admin.ModelAdmin):
         qs = queryset.filter(status=PROCESS)
         for req in qs:
             req.reject()
+
+
+@admin.register(TokenRebrand)
+class TokenRebrandAdmin(admin.ModelAdmin):
+    list_display = ('created', 'old_asset', 'new_asset', 'new_asset_multiplier', 'status')
+    readonly_fields = ('status', 'group_id', 'get_rebrand_info')
+    actions = ('accept_for_testers', 'accept', 'reject')
+
+    @admin.action(description='Accept', permissions=['change'])
+    def accept(self, request, queryset):
+        for rebrand in queryset.filter(status=PENDING):
+            rebrand.accept()
+
+    @admin.action(description='Test', permissions=['change'])
+    def accept_for_testers(self, request, queryset):
+        for rebrand in queryset.filter(status=PENDING):
+            with WalletPipeline() as pipeline:
+                rebrand.transfer_funds(pipeline, only_testers=True)
+
+    @admin.action(description='Reject', permissions=['change'])
+    def reject(self, request, queryset):
+        for rebrand in queryset.filter(status=PENDING):
+            rebrand.reject()
+
+    @admin.display(description='Rebrand Info')
+    def get_rebrand_info(self, token_rebrand: TokenRebrand):
+        rows = [{'name': k, 'value': v} for (k, v) in token_rebrand.get_rebrand_info().__dict__.items()]
+        return mark_safe(get_table_html(['name', 'value'], rows))
 
 
 @admin.register(MarginPosition)

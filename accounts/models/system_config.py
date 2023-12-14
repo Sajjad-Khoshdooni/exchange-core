@@ -13,6 +13,8 @@ class SystemConfig(models.Model):
     withdraw_fee_max = models.SmallIntegerField(default=5000)
     withdraw_fee_percent = get_amount_field(default=Decimal('5'))
 
+    hedge_irt_by_internal_market = models.BooleanField(default=False)
+
     max_margin_leverage = get_amount_field(default=Decimal('5'))
     total_margin_usdt_base = get_amount_field(default=Decimal('10_000'))
     total_margin_irt_base = get_amount_field(default=Decimal('500_000_000'))

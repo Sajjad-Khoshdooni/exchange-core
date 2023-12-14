@@ -7,11 +7,16 @@ from django.http import HttpResponse, HttpResponseForbidden, HttpResponseBadRequ
 from django.shortcuts import render
 from openpyxl import Workbook
 
-from accounts.models import TrafficSource
+from accounts.models import TrafficSource, User
+from analytics.models import ReportPermission
 
 
 @login_required
 def request_source_analytics(request):
+    report_permissions = ReportPermission.objects.filter(user=request.user)
+    if not report_permissions:
+        return HttpResponseForbidden('No permission!')
+
     correct_url = settings.HOST_URL + '/analytics/marketing/reports/download/'
     context = {
         'redirect_url': correct_url
@@ -26,24 +31,19 @@ def get_source_analytics(request):
 
     if start_date_str and end_date_str:
 
-        start_datetime = datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M').astimezone()
-        end_datetime = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M').astimezone()
+        start_datetime = datetime.strptime(start_date_str, '%Y-%m-%d').astimezone()
+        end_datetime = datetime.strptime(end_date_str, '%Y-%m-%d').astimezone()
 
         if start_datetime < end_datetime - timedelta(days=30):
             return HttpResponseBadRequest('Report time filter threshold must be less than 30 days')
 
         q = Q()
+        report_permissions = ReportPermission.objects.filter(user=request.user)
+        if not report_permissions:
+            return HttpResponseForbidden('No permission!')
 
-        if request.user.has_perm('accounts.has_marketing_adivery_reports'):
-            q = Q(
-                utm_source='yektanet',
-                utm_medium='mobile'
-            )
-
-        if request.user.has_perm('accounts.has_marketing_mediaad_reports'):
-            q = q | Q(utm_source='mediaad')
-        if not request.user.has_perm('accounts.has_marketing_adivery_reports') and not request.user.has_perm('accounts.has_marketing_mediaad_reports'):
-            return HttpResponseForbidden('You do not have permission to view this content')
+        for permission in report_permissions:
+            q = q | permission.q
 
         # generate Excel workbook from queryset
         if q is None:
@@ -73,20 +73,31 @@ def queryset_to_workbook(queryset, sheet_name='Sheet1'):
     sheet = workbook.active
     sheet.title = sheet_name
 
-    headers = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'users', 'depositors']
+    headers = ['date', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'users', 'verified',
+               'depositors']
 
     # write headers
     for col_num, header in enumerate(headers, 1):
         cell = sheet.cell(row=1, column=col_num)
         cell.value = header
 
-    groups = queryset.values('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term')\
+    groups = queryset.values('created__date', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term') \
         .annotate(
         user_count=Count('user__id', distinct=True),
-        depositor_count=Count('user__id', distinct=True,
-                              filter=Q(user__first_fiat_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1))) |
-                                     Q(user__first_crypto_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1))))
-    ).values_list('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'user_count', 'depositor_count')
+        verified_count=Count(
+            'user__id',
+            distinct=True,
+            filter=Q(user__level_2_verify_datetime__lte=F('user__date_joined') + Value(timedelta(days=1)))
+        ),
+        depositor_count=Count(
+            'user__id', distinct=True,
+            filter=Q(user__first_fiat_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1))) |
+                   Q(user__first_crypto_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1)))
+        )
+    ).values_list(
+        'created__date', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+        'user_count', 'verified_count', 'depositor_count',
+    )
 
     # write data
     for row_num, row in enumerate(groups, 1):

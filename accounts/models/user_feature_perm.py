@@ -4,7 +4,8 @@ from ledger.utils.fields import get_amount_field
 
 
 class UserFeaturePerm(models.Model):
-    FEATURES = PAY_ID, FIAT_DEPOSIT_DAILY_LIMIT, BANK_PAYMENT, UI = 'pay_id', 'fiat_deposit_daily_limit', 'bank_payment', 'ui'
+    FEATURES = PAY_ID, FIAT_DEPOSIT_DAILY_LIMIT, BANK_PAYMENT, UI, NO_SMS_FOR_CRYPTO_WITHDRAW = \
+        'pay_id', 'fiat_deposit_daily_limit', 'bank_payment', 'ui', 'no_crypto_withdraw_sms'
 
     DEFAULT_LIMITS = {
         FIAT_DEPOSIT_DAILY_LIMIT: 200_000_000

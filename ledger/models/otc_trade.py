@@ -8,7 +8,7 @@ from django.db.models import F, Sum
 
 from _base.settings import OTC_ACCOUNT_ID
 from accounting.models import TradeRevenue
-from accounts.models import Account
+from accounts.models import Account, SystemConfig
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_system_message
 from ledger.exceptions import HedgeError
@@ -247,7 +247,7 @@ class OTCTrade(models.Model):
                     scope=TRADE
                 )
 
-                if settings.ZERO_USDT_HEDGE and req.symbol.name != 'USDTIRT' and req.symbol.base_asset.symbol == Asset.IRT:
+                if SystemConfig.get_system_config().hedge_irt_by_internal_market and req.symbol.name != 'USDTIRT' and req.symbol.base_asset.symbol == Asset.IRT:
                     from market.models import Order
                     usdt_irt = PairSymbol.objects.get(name='USDTIRT')
 

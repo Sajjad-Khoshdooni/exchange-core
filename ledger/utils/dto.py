@@ -7,6 +7,7 @@ from pydantic.decorator import validate_arguments
 @validate_arguments
 @dataclass
 class MarketInfo:
+    id: int
     coin: str
     base_coin: str
     exchange: str

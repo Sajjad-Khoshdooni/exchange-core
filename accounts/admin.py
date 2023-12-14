@@ -236,7 +236,8 @@ class ChangePhoneAdmin(BaseChangeAdmin):
 @admin.register(SystemConfig)
 class SystemConfigAdmin(admin.ModelAdmin):
     list_display = ('active', 'is_consultation_available', 'withdraw_fee_min', 'withdraw_fee_max',
-                    'withdraw_fee_percent')
+                    'withdraw_fee_percent', 'hedge_irt_by_internal_market')
+    list_editable = ('hedge_irt_by_internal_market', )
     list_filter = ('active',)
 
 
@@ -248,20 +249,21 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'password': None,
         'first_name': True,
         'last_name': True,
-        'national_code': M.superuser | ~M('national_code_verified'),
+        'is_staff': M.has_perm('accounts.manage_users'),
+        'national_code': M.has_perm('accounts.manage_users') | ~M('national_code_verified'),
         'national_code_phone_verified': True,
-        'birth_date': M.superuser | ~M('birth_date_verified'),
-        'selfie_image_verified': M.superuser | M('selfie_image'),
-        'selfie_image_discard_text': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
-        'first_name_verified': M.superuser | M.is_none('first_name_verified'),
-        'last_name_verified': M.superuser | M.is_none('last_name_verified'),
-        'national_code_verified': M.superuser | ~M('national_code_verified'),
-        'birth_date_verified': M.superuser | M.is_none('birth_date_verified'),
+        'birth_date': M.has_perm('accounts.manage_users') | ~M('birth_date_verified'),
+        'selfie_image_verified': M.has_perm('accounts.manage_users') | M('selfie_image'),
+        'selfie_image_discard_text': M.has_perm('accounts.manage_users') | (M('selfie_image') & M.is_none('selfie_image_verified')),
+        'first_name_verified': M.has_perm('accounts.manage_users') | M.is_none('first_name_verified'),
+        'last_name_verified': M.has_perm('accounts.manage_users') | M.is_none('last_name_verified'),
+        'national_code_verified': M.has_perm('accounts.manage_users') | ~M('national_code_verified'),
+        'birth_date_verified': M.has_perm('accounts.manage_users') | M.is_none('birth_date_verified'),
         'can_withdraw': True,
         'can_withdraw_crypto': True,
         'can_trade': True,
-        'withdraw_limit_whitelist': True,
-        'withdraw_risk_level_multiplier': True,
+        'withdraw_limit_whitelist': M.has_perm('accounts.manage_users'),
+        'withdraw_risk_level_multiplier': M.has_perm('accounts.manage_users'),
     }
 
     fieldsets = (
@@ -782,11 +784,17 @@ class FinotechRequestUserFilter(SimpleListFilter):
 
 @admin.register(FinotechRequest)
 class FinotechRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'url', 'data', 'status_code')
+    list_display = ('created', 'get_username', 'url', 'status_code')
     list_filter = (FinotechRequestUserFilter, 'status_code')
     ordering = ('-created', )
-    readonly_fields = ('user', )
-    search_fields = ('url', )
+    search_fields = ('url', 'data')
+    raw_id_fields = ('user', )
+
+    @admin.display(description='user')
+    def get_username(self, req: FinotechRequest):
+        return mark_safe(
+            f'<span dir="ltr">{req.user}</span>'
+        )
 
 
 @admin.register(Notification)
@@ -854,9 +862,9 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(LoginActivity)
 class LoginActivityAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_username', 'ip', 'country', 'city', 'device', 'os', 'browser', 'device_type', 'is_sign_up',
-                    'native_app', 'session')
+                    'native_app', 'session', 'get_jalali_created')
     search_fields = ('user__phone', 'ip', 'session__session_key')
-    readonly_fields = ('user', 'session', 'ip', 'refresh_token')
+    readonly_fields = ('user', 'session', 'ip', 'refresh_token', 'get_jalali_created')
     list_filter = ('is_sign_up', 'native_app',)
 
     @admin.display(description='user')
@@ -864,6 +872,10 @@ class LoginActivityAdmin(admin.ModelAdmin):
         return mark_safe(
             f'<span dir="ltr">{login_activity.user}</span>'
         )
+
+    @admin.display(description='created jalali')
+    def get_jalali_created(self, login_activity: LoginActivity):
+        return gregorian_to_jalali_datetime_str(login_activity.created)
 
 
 @admin.register(FirebaseToken)

@@ -70,6 +70,8 @@ class Asset(models.Model):
 
     distribution_factor = models.FloatField(default=0)
 
+    stale_price = get_amount_field(null=True)
+
     margin_interest_fee = get_amount_field(default=Decimal('0.00015'))
 
     class Meta:

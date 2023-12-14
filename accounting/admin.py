@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Sum
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
@@ -52,10 +53,10 @@ class AccountTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(Vault)
 class VaultAdmin(admin.ModelAdmin):
-    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value', 'expected_base_balance')
+    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value', 'expected_max_value')
     ordering = ('-real_value', )
     list_filter = ('market', 'type')
-    list_editable = ('expected_base_balance', )
+    list_editable = ('expected_max_value', )
 
     @admin.display(description='usdt')
     def get_usdt(self, vault: Vault):
@@ -73,11 +74,12 @@ class VaultAdmin(admin.ModelAdmin):
 
 @admin.register(VaultItem)
 class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
-    list_display = ('coin', 'vault', 'balance', 'value_usdt', 'value_irt', 'updated')
+    list_display = ('coin', 'vault', 'balance', 'value_usdt', 'value_irt', 'expected_min_balance', 'updated')
     search_fields = ('coin', 'vault__name')
     list_filter = ('vault__name', 'vault__type', 'vault__market')
     ordering = ('-value_usdt', )
     readonly_fields = ('value_usdt', 'value_irt')
+    list_editable = ('expected_min_balance', )
 
     def save_model(self, request, obj, form, change):
         super(VaultItemAdmin, self).save_model(request, obj, form, change)
@@ -114,8 +116,8 @@ class GapFilledFilter(SimpleListFilter):
 @admin.register(TradeRevenue)
 class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = (
-        'created', 'symbol', 'source', 'account', 'side', 'amount', 'price', 'value', 'gap_revenue', 'fee_revenue', 'coin_price',
-        'coin_filled_price', 'hedge_key', 'value_is_fake')
+        'created', 'symbol', 'source', 'get_account', 'side', 'amount', 'price', 'value', 'gap_revenue', 'fee_revenue',
+        'coin_price', 'coin_filled_price', 'hedge_key', 'value_is_fake')
 
     search_fields = ('group_id', 'hedge_key', 'symbol__name', )
     list_filter = (GapFilledFilter, 'symbol', 'source',)
@@ -125,6 +127,12 @@ class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     @admin.action(description='Zero Gap Revenue')
     def zero_gap_revenue(self, request, queryset):
         queryset.filter(gap_revenue__isnull=True).update(gap_revenue=0)
+
+    @admin.display(description='account')
+    def get_account(self, trade_revenue: TradeRevenue):
+        return mark_safe(
+            f'<span dir="ltr">{trade_revenue.account}</span>'
+        )
 
 
 @admin.register(ProviderIncome)

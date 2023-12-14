@@ -12,7 +12,7 @@ from ledger.models.transfer import Transfer
 class AddressBook(models.Model):
     name = models.CharField(max_length=100, verbose_name='نام')
     address = models.CharField(max_length=100, verbose_name='آدرس')
-    account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='کاربر')
+    account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='حساب')
     network = models.ForeignKey(to=Network, on_delete=models.CASCADE, verbose_name='شبکه')
     asset = models.ForeignKey(to=Asset, blank=True, null=True, on_delete=models.CASCADE, verbose_name='رمزارز')
     deleted = models.BooleanField(default=False)

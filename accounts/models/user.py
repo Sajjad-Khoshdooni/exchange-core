@@ -148,7 +148,7 @@ class User(AbstractUser):
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
     show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
-    show_strategy_bot = models.BooleanField(default=False, verbose_name='امکان مشاهده ربات')
+    show_strategy_bot = models.BooleanField(default=True, verbose_name='امکان مشاهده ربات')
     show_community = models.BooleanField(default=False, verbose_name='امکان مشاهده کامیونیتی')
     show_staking = models.BooleanField(default=True, verbose_name='امکان مشاهده سرمایه‌گذاری')
 
@@ -267,6 +267,7 @@ class User(AbstractUser):
 
         permissions = [
             ("can_generate_notification", "Can Generate All Kind Of Notification"),
+            ("manage_users", "Manage Users Info"),
         ]
 
     def change_status(self, status: str, reason: str = ''):

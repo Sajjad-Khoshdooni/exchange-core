@@ -8,7 +8,7 @@ from stake.models import StakeRequest
 
 
 class StakeRevenue(models.Model):
-    created = models.DateField(auto_now_add=True)
+    created = models.DateField(db_index=True)
 
     stake_request = models.ForeignKey(StakeRequest, on_delete=models.CASCADE)
 

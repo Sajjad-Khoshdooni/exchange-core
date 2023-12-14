@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db.models import Sum
 from django.utils import timezone
@@ -31,12 +31,10 @@ def get_fiat_withdraw_irt_value(user: User):
 
 
 def get_crypto_withdraw_irt_value(user: User):
-    start_of_day = get_start_of_day()
-
     crypto_withdraws = Transfer.objects.filter(
         deposit=False,
         wallet__account__user=user,
-        created__gte=start_of_day
+        created__gte=timezone.now() - timedelta(days=1)
     ).exclude(
         status=Transfer.CANCELED
     ).values('wallet__asset__symbol').annotate(

@@ -14,10 +14,11 @@ from django.utils import timezone
 
 from accounting.models import TradeRevenue
 from accounts.models import Notification
+from accounts.models import SystemConfig
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
-from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE, SHORT, LONG
+from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -594,7 +595,7 @@ class Order(models.Model):
             any_proxy = taker_is_proxy or maker_is_proxy
 
             if symbol.name == USDT_IRT:
-                if settings.ZERO_USDT_HEDGE:
+                if SystemConfig.get_system_config().hedge_irt_by_internal_market:
                     hedger_account_id = settings.TRADER_ACCOUNT_ID
                     hedger_prefix = 'tr'
                 else:
@@ -623,9 +624,7 @@ class Order(models.Model):
                     )
 
             elif trades[0].account_id != trades[1].account_id:
-                if hedger_prefix == 'tr':
-                    hedge_key = f'{hedger_prefix}-{trades[0].id}'
-                elif hedger_prefix == 'mm':
+                if hedger_prefix:
                     taker = trades[1] if trades[0].is_maker else trades[0]
                     hedge_key = f'{hedger_prefix}-{taker.id}'
                 else:

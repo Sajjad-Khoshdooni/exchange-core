@@ -102,7 +102,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     )
     search_fields = ('bank_account__iban', 'bank_account__user__phone')
 
-    list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
+    list_display = ('created', 'bank_account', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
     actions = ('accept_withdraw_request', 'reject_withdraw_request', 'refund')
 
@@ -513,4 +513,5 @@ class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
     def clone_payment(self, request, queryset):
         for q in queryset:
             q.ref_id = ''
+            q.destination_id = ''
             clone_model(q)

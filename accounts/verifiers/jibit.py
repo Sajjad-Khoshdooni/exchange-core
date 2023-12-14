@@ -25,6 +25,7 @@ class JibitRequester:
         'mobileNumber.not_valid': 'INVALID_DATA',
         'nationalCode.not_valid': 'INVALID_DATA',
         'card.provider_is_not_active': 'PROVIDER_IS_NOT_ACTIVE',
+        'card.source_bank_is_not_active': 'PROVIDER_IS_NOT_ACTIVE',
         'iban.not_valid': 'INVALID_IBAN',
         'identity_info.not_found': 'INVALID_DATA',
         'matching.unknown': 'INVALID_DATA'
@@ -134,7 +135,7 @@ class JibitRequester:
         req_object.status_code = resp.status_code
 
         if resp.status_code not in (403, 401) and resp.status_code < 500 and \
-                resp_data.get('code') not in ['card.provider_is_not_active']:
+                resp_data.get('code') not in ['card.provider_is_not_active', 'card.source_bank_is_not_active']:
             req_object.search_key = search_key
 
         req_object.save()

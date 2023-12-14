@@ -7,6 +7,8 @@ from django.conf import settings
 from django.utils import timezone
 from redis import Redis
 
+from ledger.utils.cache import cache_for
+
 logger = logging.getLogger(__name__)
 
 price_redis = Redis.from_url(settings.PRICE_CACHE_LOCATION, decode_responses=True)
@@ -81,6 +83,12 @@ def fetch_external_price(symbol, side: str, allow_stale: bool = False) -> Decima
         return Decimal(price)
 
 
+@cache_for(60)
+def get_manual_staled_prices() -> dict:
+    from ledger.models import Asset
+    return dict(Asset.objects.filter(stale_price__isnull=False).values_list('symbol', 'stale_price'))
+
+
 def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow_stale: bool = False) -> List[Price]:
     results = []
 
@@ -98,6 +106,8 @@ def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow
         pipe.hgetall(key)
 
     prices = pipe.execute()
+
+    manual_staled = get_manual_staled_prices()
 
     for i, c in enumerate(coins):
         spot_price_dict = prices[2 * i] or {}
@@ -122,7 +132,10 @@ def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow
                 _prices.append(Decimal(futures_price))
 
             if not _prices:
-                continue
+                if allow_stale and c in manual_staled:
+                    _prices.append(Decimal(manual_staled[c]))
+                else:
+                    continue
 
             func = min if s == BUY else max
 

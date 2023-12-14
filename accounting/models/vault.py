@@ -35,7 +35,7 @@ class Vault(models.Model):
 
     real_value = get_amount_field(default=Decimal())
 
-    expected_base_balance = models.PositiveIntegerField(default=0)
+    expected_max_value = models.PositiveIntegerField(null=True, blank=True)
 
     def __str__(self):
         return '%s %s %s' % (self.type, self.name, self.market)
@@ -98,6 +98,8 @@ class VaultItem(models.Model):
     balance = get_amount_field(validators=())
     value_usdt = get_amount_field(validators=(), default=0)
     value_irt = get_amount_field(validators=(), default=0)
+
+    expected_min_balance = get_amount_field(null=True)
 
     class Meta:
         unique_together = ('vault', 'coin')

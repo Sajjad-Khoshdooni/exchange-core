@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from accounts.models import Account, LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError, LargeAmountTrade, \
-    SmallDepthError
+    SmallDepthError, NoPriceError
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
@@ -71,11 +71,14 @@ class OTCInfoView(APIView):
             side_verbose = SIDE_VERBOSE[pair.side]
 
             if max_amount == 0:
-                raise ValidationError(f'در حال حاضر امکان {side_verbose} این رمزارز وجود ندارد.')
+                raise ValidationError(f'در حال حاضر امکان {side_verbose} این ارز دیجیتال وجود ندارد.')
             else:
                 raise ValidationError(
-                    f'حداکثر مقدار قابل {side_verbose} این رمزارز {max_amount} {pair.coin} است.'
+                    f'حداکثر مقدار قابل {side_verbose} این ارز دیجیتال {max_amount} {pair.coin} است.'
                 )
+
+        except NoPriceError:
+            raise ValidationError('در حال حاضر امکان معامله این ارز دیجیتال وجود ندارد.')
 
         risky = False
         category = otc.symbol.asset.spread_category

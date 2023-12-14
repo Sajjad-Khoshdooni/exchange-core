@@ -1,9 +1,6 @@
 import logging
 
 from celery import shared_task
-from decouple import config
-from django.conf import settings
-from django.template.loader import render_to_string
 
 from accounts.models import Notification, BulkNotification, User, EmailNotification
 from accounts.models.sms_notification import SmsNotification

@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from accounts.models import Account
-from ledger.exceptions import SmallAmountTrade, LargeAmountTrade
+from ledger.exceptions import SmallAmountTrade, LargeAmountTrade, NoPriceError
 from ledger.models import Asset, Wallet
 from ledger.utils.external_price import get_other_side, BUY
 from ledger.utils.fields import get_amount_field
@@ -109,11 +109,18 @@ class OTCRequest(BaseTrade):
 
         if pair.coin_amount is None:
             price = get_price(symbol.name, side=other_side)
+
+            if price is None:
+                raise NoPriceError
+
             coin_amount = floor_precision(pair.base_amount / price, symbol.step_size)
         else:
             coin_amount = pair.coin_amount
 
         price = get_depth_price(symbol.name, side=other_side, amount=coin_amount)
+
+        if price is None:
+            raise NoPriceError
 
         if pair.coin_amount is None:
             coin_amount = floor_precision(pair.base_amount / price, symbol.step_size)

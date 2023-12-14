@@ -9,6 +9,7 @@ from accounting.models import Vault, VaultItem
 from financial.models import FiatWithdrawRequest
 from ledger.models import Transfer, OTCTrade, Asset, SystemSnapshot, NetworkAsset
 from ledger.requester.internal_assets_requester import get_hot_wallet_balances
+from ledger.utils.precision import get_presentation_amount
 
 
 @dataclass
@@ -173,20 +174,32 @@ class RiskyMarginRatioAlert(BaseAlertHandler):
 
 class VaultLowBaseBalanceAlert(BaseAlertHandler):
     NAME = 'vault_low_base_balance'
-    HELP = 'multiplier to Vault\'s expected_base_balance'
+    HELP = 'multiplier to VaultItem\'s expected_min_balance'
 
     def get_alerting(self, threshold: Decimal) -> list:
-        vaults = Vault.objects.filter(expected_base_balance__gt=0)
-
-        ok_vault_ids = list(
-            VaultItem.objects.filter(
-                vault__in=vaults,
-                coin='USDT',
-                balance__gte=F('vault__expected_base_balance') * threshold
-            ).values_list('vault', flat=True)
+        vault_items = VaultItem.objects.filter(
+            expected_min_balance__isnull=False,
+            balance__lt=F('expected_min_balance') * threshold
         )
 
-        return vaults.exclude(id__in=ok_vault_ids)
+        return [
+            f'{vi} ({int(vi.balance)} < {int(vi.expected_min_balance * threshold)})' for vi in vault_items
+        ]
+
+
+class VaultHighBalanceAlert(BaseAlertHandler):
+    NAME = 'vault_high_balance'
+    HELP = 'multiplier to Vault\'s expected_max_value (in usdt)'
+
+    def get_alerting(self, threshold: Decimal) -> list:
+        vaults = Vault.objects.filter(
+            expected_max_value__isnull=False,
+            real_value__gt=F('expected_max_value') * threshold
+        )
+
+        return [
+            f'{v} ({int(v.real_value)} > {int(v.expected_max_value * threshold)})' for v in vaults
+        ]
 
 
 class HotWalletLowBalanceAlert(BaseAlertHandler):
@@ -198,7 +211,12 @@ class HotWalletLowBalanceAlert(BaseAlertHandler):
 
         network_assets = NetworkAsset.objects.filter(expected_hw_balance__gt=0).prefetch_related('asset', 'network')
 
-        return list(filter(
+        network_assets = list(filter(
             lambda ns: hw_balances.get((ns.asset.symbol, ns.network.symbol), 0) < ns.expected_hw_balance * threshold,
             network_assets
         ))
+
+        return [
+            f'{ns} ({get_presentation_amount(hw_balances.get((ns.asset.symbol, ns.network.symbol), 0))} < {get_presentation_amount(ns.expected_hw_balance * threshold)})'
+            for ns in network_assets
+        ]

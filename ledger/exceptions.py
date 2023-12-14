@@ -29,3 +29,7 @@ class AbruptDecrease(Exception):
 
 class SmallDepthError(Exception):
     pass
+
+
+class NoPriceError(Exception):
+    pass

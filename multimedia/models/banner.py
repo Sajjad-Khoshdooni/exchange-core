@@ -18,7 +18,7 @@ class Banner(models.Model):
     )
 
     def __str__(self):
-        return self.image.url
+        return self.title
 
     class Meta:
         ordering = ('order',)
