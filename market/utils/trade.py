@@ -433,7 +433,3 @@ def get_markets_info(base: str):
             )
 
     return market_details
-
-
-def get_position_leverage(leverage, side, is_open_position):
-    return leverage

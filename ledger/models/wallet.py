@@ -80,32 +80,15 @@ class Wallet(models.Model):
                     pipeline_balance_diff=Decimal(0)) -> bool:
         assert amount >= 0 and self.market not in Wallet.NEGATIVE_MARKETS
 
-        free_balance = self.get_free() + pipeline_balance_diff
-
         if not check_system_wallets and not self.check_balance:
             can = True
         else:
-            can = free_balance - amount >= -self.credit
+            can = self.get_free() + pipeline_balance_diff - amount >= -self.credit
 
         if raise_exception and not can:
             raise InsufficientBalance()
 
         return can
-
-    @staticmethod
-    def get_base_from_asset(assets):
-        from ledger.models import Asset
-        if Asset.IRT in assets:
-            return Asset.IRT
-        elif Asset.USDT in assets:
-            return Asset.USDT
-        else:
-            raise NotImplementedError
-
-    @staticmethod
-    def get_margin_position_max_asset_by_wallet(a, b, price, side):
-        k = Decimal('0.5') if side == SELL else Decimal('2')
-        return Decimal(a * price + k * b) / Decimal((k - 1) * price)
 
     def has_debt(self, amount: Decimal, raise_exception: bool = False) -> bool:
         assert amount <= 0 and self.market in Wallet.NEGATIVE_MARKETS

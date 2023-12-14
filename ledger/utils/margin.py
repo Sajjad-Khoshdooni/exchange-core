@@ -16,9 +16,6 @@ def check_margin_view_permission(account: Account, symbol: PairSymbol = None):
 
     assert user
 
-    # if user.level < user.LEVEL3:
-    #     raise ValidationError('برا استفاده از حساب تعهدی باید احراز هویت سطح ۳ را انجام دهید.')
-
     if symbol and (not user.show_margin or not symbol.margin_enable):
         raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 

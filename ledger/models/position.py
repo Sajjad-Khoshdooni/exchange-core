@@ -120,15 +120,6 @@ class MarginPosition(models.Model):
         else:
             raise NotImplementedError
 
-    @property
-    def margin_vice_versa_wallet(self):
-        if self.side == LONG:
-            return self.base_margin_wallet
-        elif self.side == SHORT:
-            return self.asset_margin_wallet
-        else:
-            raise NotImplementedError
-
     def get_margin_ratio(self) -> Decimal:
         if self.side == SHORT:
             return 1 / self.DEFAULT_LIQUIDATION_LEVEL
@@ -137,7 +128,7 @@ class MarginPosition(models.Model):
         else:
             raise NotImplementedError
 
-    def update_liquidation_price(self, pipeline=None, save: bool = False, rebalance: bool = True):
+    def update_liquidation_price(self, pipeline=None, rebalance: bool = True):
         if rebalance and self.liquidation_price:
             assert pipeline
             self._rebalance(pipeline)
@@ -156,9 +147,6 @@ class MarginPosition(models.Model):
                 raise NotImplementedError
         else:
             self.liquidation_price = None
-
-        if save:
-            self.save(update_fields=['liquidation_price'])
 
     def _rebalance(self, pipeline):
         assert pipeline
