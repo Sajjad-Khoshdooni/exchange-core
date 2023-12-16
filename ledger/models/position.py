@@ -314,7 +314,7 @@ class MarginPosition(models.Model):
                 market=Wallet.MARGIN,
                 variant=self.group_id,
                 pass_min_notional=True,
-                order_type=Order.LIQUIDATION,
+                order_type=Order.LIQUIDATION if charge_insurance else Order.ORDINARY,
                 parent_lock_group_id=group_id
             )
 
