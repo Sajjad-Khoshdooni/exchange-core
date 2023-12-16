@@ -13,7 +13,6 @@ from accounts.utils.telegram import send_support_message
 from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
     MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD, get_bulk_margin_info
 from ledger.models import Wallet, MarginPosition, Trx
-from ledger.models.margin import CloseRequest
 from ledger.models.position import MarginHistoryModel
 from ledger.utils.external_price import SHORT, LONG
 from ledger.utils.margin import alert_position_warning
@@ -34,12 +33,7 @@ def check_margin_level():
 
         logger.info('margin_level for account=%d is %s' % (account.id, margin_level))
 
-        if margin_level <= LIQUIDATION_ML_THRESHOLD:
-            CloseRequest.close_margin(account, reason=CloseRequest.LIQUIDATION)
-            alert_liquidation(account)
-            status = 2
-
-        elif not account.margin_alerting and margin_level <= MARGIN_CALL_ML_THRESHOLD:
+        if not account.margin_alerting and margin_level <= MARGIN_CALL_ML_THRESHOLD:
             logger.warning('Send MARGIN_CALL_ML_THRESHOLD for account = %d' % account.id)
             warn_risky_level(account, margin_level)
 
@@ -119,7 +113,8 @@ def collect_margin_interest():
                         type=MarginHistoryModel.INTEREST_FEE
                     )
                 )
-                position.update_liquidation_price(pipeline, rebalance=True)
+                position.rebalance(pipeline)
+                position.set_liquidation_price(pipeline)
 
         MarginHistoryModel.objects.bulk_create(interest_history)
 

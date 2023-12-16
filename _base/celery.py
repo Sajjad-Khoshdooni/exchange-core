@@ -120,10 +120,10 @@ app.conf.beat_schedule = {
     },
     'alert_risky_position': {
         'task': 'ledger.tasks.margin.alert_risky_position',
-        'schedule': 120 * TASK_MULTIPLIER,
+        'schedule': 20 * TASK_MULTIPLIER,
         'options': {
             'queue': 'celery',
-            'expires': 120 * TASK_MULTIPLIER
+            'expires': 20 * TASK_MULTIPLIER
         },
     },
 

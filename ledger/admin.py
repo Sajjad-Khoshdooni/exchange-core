@@ -58,7 +58,7 @@ class AssetAdmin(AdvancedAdmin):
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
-        'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
+        'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor', 'margin_interest_fee'
     )
     list_filter = ('enable', 'trend', 'spread_category', 'coincategory', )
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'hedge', 'price_page')
@@ -592,20 +592,6 @@ class MarginTransferAdmin(admin.ModelAdmin):
     search_fields = ('group_id',)
 
 
-@admin.register(models.MarginLoan)
-class MarginLoanAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'amount', 'type', 'asset', 'status')
-    search_fields = ('group_id',)
-
-
-@admin.register(models.CloseRequest)
-class CloseRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
-    search_fields = ('group_id',)
-    list_filter = ('status',)
-    readonly_fields = ('account', 'created', 'group_id')
-
-
 @admin.register(models.AddressBook)
 class AddressBookAdmin(admin.ModelAdmin):
     list_display = ('name', 'get_username', 'network', 'address', 'asset',)
@@ -987,7 +973,7 @@ class TokenRebrandAdmin(admin.ModelAdmin):
 class MarginPositionAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'symbol', 'amount')
     readonly_fields = ('account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price', 'side',
-                       'liquidation_price', 'status', 'leverage', 'net_amount', 'group_id')
+                       'liquidation_price', 'status', 'leverage', 'equity', 'group_id')
     list_filter = ('status', 'side', 'symbol')
     search_fields = ('symbol__name', 'status',)
 

@@ -13,7 +13,7 @@ from .transfer import Transfer
 from .prize import Prize
 from .address_book import AddressBook
 from .coin_category import CoinCategory
-from .margin import MarginTransfer, MarginLoan, CloseRequest
+from .margin import MarginTransfer
 from .pnl import PNLHistory
 from .snapshot import AssetSnapshot, SystemSnapshot
 from .fast_buy_token import FastBuyToken

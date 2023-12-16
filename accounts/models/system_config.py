@@ -20,6 +20,9 @@ class SystemConfig(models.Model):
     total_margin_irt_base = get_amount_field(default=Decimal('500_000_000'))
     total_user_margin_usdt_base = get_amount_field(default=Decimal('10_000'))
     total_user_margin_irt_base = get_amount_field(default=Decimal('500_000_000'))
+    liquidation_level = get_amount_field(default=Decimal('1.1'))
+    insurance_fee_percentage = get_amount_field(default=Decimal('0.02'))
+    mean_leverage = get_amount_field(default=Decimal('3'))
 
     @classmethod
     def get_system_config(cls) -> 'SystemConfig':

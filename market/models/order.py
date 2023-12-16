@@ -234,7 +234,7 @@ class Order(models.Model):
                     account=wallet.account, symbol=symbol, is_open_position=is_open_position, order_side=side
                 )
 
-                return position.base_margin_wallet if side == BUY else position.asset_margin_wallet
+                return position.base_wallet if side == BUY else position.asset_wallet
 
         return base_wallet if side == BUY else wallet
 
