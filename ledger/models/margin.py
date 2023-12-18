@@ -77,7 +77,6 @@ class MarginTransfer(models.Model):
             sender, receiver = margin_wallet, position_wallet
 
             position.equity += self.amount
-            position.save(update_fields=['equity'])
 
         elif self.type == self.POSITION_TO_MARGIN:
             sender, receiver = position_wallet, margin_wallet
@@ -85,7 +84,6 @@ class MarginTransfer(models.Model):
                 raise InsufficientBalance
 
             position.equity -= self.amount
-            position.save(update_fields=['equity'])
         else:
             raise NotImplementedError
 
@@ -96,6 +94,7 @@ class MarginTransfer(models.Model):
             pipeline.new_trx(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
             if position:
                 position.set_liquidation_price(pipeline)
+                position.save(update_fields=['equity', 'liquidation_price'])
 
 
 class SymbolField(serializers.CharField):

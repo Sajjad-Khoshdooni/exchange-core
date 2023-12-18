@@ -11,7 +11,7 @@ from rest_framework.generics import get_object_or_404
 
 from accounts.models import LoginActivity
 from accounts.permissions import can_trade
-from ledger.exceptions import InsufficientBalance
+from ledger.exceptions import InsufficientBalance, SmallDepthError
 from ledger.models import Wallet, Asset, MarginLeverage
 from ledger.utils.external_price import IRT, BUY, SELL, LONG, SHORT
 from ledger.utils.margin import check_margin_view_permission, check_margin_order
@@ -109,6 +109,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
+        except SmallDepthError:
+            raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
         except Exception as e:
             logger.error('failed placing order', extra={'exp': e, 'order': validated_data})
             if settings.DEBUG_OR_TESTING_OR_STAGING:
