@@ -61,13 +61,8 @@ class MarginPosition(models.Model):
         return wallet
 
     @property
-    def total_balance(self):
-        if self.side == SHORT:
-            return self.base_wallet.balance
-        elif self.side == LONG:
-            return self.asset_wallet.balance
-        else:
-            raise NotImplementedError
+    def debt_amount(self):
+        return -self.loan_wallet.balance
 
     @property
     def base_debt_amount(self):
@@ -80,6 +75,21 @@ class MarginPosition(models.Model):
             raise NotImplementedError
 
     @property
+    def margin_wallet(self):
+        if self.side == SHORT:
+            wallet = self.base_wallet
+        elif self.side == LONG:
+            wallet = self.asset_wallet
+        else:
+            raise NotImplementedError
+        wallet.refresh_from_db()
+        return wallet
+
+    @property
+    def total_balance(self):
+        return self.margin_wallet.balance
+
+    @property
     def base_total_balance(self):
         wallet = self.margin_wallet
         if self.side == SHORT:
@@ -90,24 +100,9 @@ class MarginPosition(models.Model):
             raise NotImplementedError
 
     @property
-    def debt_amount(self):
-        return -self.loan_wallet.balance
-
-    @property
     def withdrawable_base_asset(self):
         base_total_balance = abs(Decimal('1.1') * self.base_debt_amount)
         return max(floor_precision(self.base_total_balance - base_total_balance, self.symbol.tick_size), Decimal('0'))
-
-    @property
-    def margin_wallet(self):
-        if self.side == SHORT:
-            wallet = self.base_wallet
-        elif self.side == LONG:
-            wallet = self.asset_wallet
-        else:
-            raise NotImplementedError
-        wallet.refresh_from_db()
-        return wallet
 
     def get_ratio(self) -> Decimal:
         from accounts.models import SystemConfig
@@ -121,8 +116,8 @@ class MarginPosition(models.Model):
             raise NotImplementedError
 
     def set_liquidation_price(self, pipeline=None):
-        debt_amount = self.debt_amount - pipeline.get_wallet_free_balance_diff(self.loan_wallet.id)
-        total_balance = self.total_balance + pipeline.get_wallet_free_balance_diff(self.margin_wallet.id)
+        debt_amount = self.debt_amount - pipeline.get_wallet_balance_diff(self.loan_wallet.id)
+        total_balance = self.total_balance + pipeline.get_wallet_balance_diff(self.margin_wallet.id)
 
         if debt_amount and total_balance:
             if self.side == SHORT:
