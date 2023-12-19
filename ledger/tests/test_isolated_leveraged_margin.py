@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.test import Client
 from django.test import TestCase
 from django.utils import timezone
@@ -133,10 +133,10 @@ class LeveragedIsolatedMarginTestCase(TestCase):
         mp = MarginPosition.objects.filter(account=account, symbol=symbol).first()
 
         negetive_wallets = Wallet.objects.filter(
+            Q(balance__lt=Decimal(0)) | Q(balance__gt=Decimal('0.000001')),
             account=account,
             market=Wallet.MARGIN,
             variant__isnull=False,
-            balance__lt=Decimal(0)
         ).count()
 
         if is_liquidate:

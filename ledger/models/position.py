@@ -295,7 +295,7 @@ class MarginPosition(models.Model):
                 )
                 to_close_amount = ceil_precision(to_close_amount, self.symbol.step_size)
         else:
-            to_close_amount = floor_precision(min(to_close_amount, free_amount), self.symbol.step_size)
+            to_close_amount = floor_precision(free_amount, self.symbol.step_size)
 
         liquidation_order = None
         if to_close_amount > Decimal('0'):
