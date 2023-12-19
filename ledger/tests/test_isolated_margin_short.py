@@ -152,6 +152,7 @@ class ShortIsolatedMarginTestCase(TestCase):
         with WalletPipeline() as pipeline:
             balance = self.usdt.get_wallet(self.account2).balance / BTC_USDT_PRICE
             new_order(pipeline, self.btcusdt, self.account2, side=BUY, amount=balance, market=Wallet.SPOT, price=BTC_USDT_PRICE)
+            new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=balance, market=Wallet.SPOT, price=BTC_USDT_PRICE)
 
         self.print_wallets(self.account)
 
@@ -162,8 +163,15 @@ class ShortIsolatedMarginTestCase(TestCase):
         self.assertEqual(mp.debt_amount, loan_amount)
         self.assertEqual(mp.side, SHORT)
         self.assertTrue(mp.liquidation_price > Decimal('1818'))
-
         self.transfer_usdt_api(1, type='mp', id=mp.id)
+
+        self.print_wallets(self.account)
+        with WalletPipeline() as pipeline:
+            mp.liquidate(pipeline, False)
+        self.assert_liquidation(self.account, self.btcusdt)
+
+
+        # self.transfer_usdt_api(1, type='mp', id=mp.id)
 
 
     def test_short_sell2(self):

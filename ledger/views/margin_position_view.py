@@ -46,7 +46,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         pnl = MarginHistoryModel.objects.filter(
             position=instance,
             type=MarginHistoryModel.PNL
-        ).aaggregate(s=Sum('amount'))['s'] or 0
+        ).aggregate(s=Sum('amount'))['s'] or 0
 
         return floor_precision(instance.equity - Decimal(pnl), instance.symbol.tick_size)
 
