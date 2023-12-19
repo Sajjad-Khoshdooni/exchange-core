@@ -6,6 +6,7 @@ from rest_framework import serializers
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Wallet, Trx
+from ledger.utils.external_price import LONG
 from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
@@ -41,6 +42,7 @@ class MarginTransfer(models.Model):
         spot_wallet = self.asset.get_wallet(self.account, Wallet.SPOT)
         margin_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN)
         position_wallet = None
+        pipeline_balance_diff = 0
 
         if self.type in (self.MARGIN_TO_POSITION, self.POSITION_TO_MARGIN):
             if not self.position_symbol:
@@ -63,6 +65,8 @@ class MarginTransfer(models.Model):
             )
 
         elif self.type == self.MARGIN_TO_SPOT:
+            # todo :: check margin positive equity
+
             sender, receiver = margin_wallet, spot_wallet
             MarginHistoryModel.objects.create(
                 asset=self.asset,
@@ -79,6 +83,10 @@ class MarginTransfer(models.Model):
 
         elif self.type == self.POSITION_TO_MARGIN:
             sender, receiver = position_wallet, margin_wallet
+            # todo :: check margin positive equity
+            if self.position.side == LONG:
+                pipeline_balance_diff = self.position.withdrawable_base_asset + self.position.debt_amount
+
             if self.position.withdrawable_base_asset < self.amount:
                 raise InsufficientBalance
 
@@ -86,7 +94,7 @@ class MarginTransfer(models.Model):
         else:
             raise NotImplementedError
 
-        sender.has_balance(self.amount, raise_exception=True)
+        sender.has_balance(self.amount, raise_exception=True, pipeline_balance_diff=pipeline_balance_diff)
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             super(MarginTransfer, self).save(*args)
