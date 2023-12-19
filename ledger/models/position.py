@@ -101,8 +101,13 @@ class MarginPosition(models.Model):
 
     @property
     def withdrawable_base_asset(self):
-        base_total_balance = abs(Decimal('2') * self.base_debt_amount)
-        return max(floor_precision(self.base_total_balance - base_total_balance, self.symbol.tick_size), Decimal('0'))
+        if self.side == SHORT:
+            base_total_balance = abs(Decimal('2') * self.base_debt_amount)
+            amount = max(self.base_total_balance - base_total_balance, Decimal('0'))
+        else:
+            total_debt = abs(Decimal('0.5') * self.base_total_balance)
+            amount = max(total_debt - self.base_debt_amount, 0)
+        return floor_precision(amount, self.symbol.tick_size)
 
     def get_ratio(self) -> Decimal:
         from accounts.models import SystemConfig
