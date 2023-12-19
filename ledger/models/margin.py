@@ -33,26 +33,23 @@ class MarginTransfer(models.Model):
 
     asset = models.ForeignKey(to=Asset, on_delete=models.PROTECT)
     position_symbol = models.ForeignKey(to=PairSymbol, null=True, blank=True, on_delete=models.PROTECT)
+    position = models.ForeignKey('ledger.MarginPosition', on_delete=models.CASCADE, blank=True, null=True)
 
     group_id = models.UUIDField(default=uuid4)
 
     def save(self, *args, **kwargs):
         spot_wallet = self.asset.get_wallet(self.account, Wallet.SPOT)
         margin_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN)
-        position_wallet = position = None
+        position_wallet = None
 
         if self.type in (self.MARGIN_TO_POSITION, self.POSITION_TO_MARGIN):
             if not self.position_symbol:
                 raise ValueError('position_symbol is required')
             from ledger.models import MarginPosition
-            position = MarginPosition.objects.filter(
-                account=self.account,
-                symbol=self.position_symbol,
-                status=MarginPosition.OPEN
-            ).first()
-            if not position:
+
+            if not self.position or self.position.status != MarginPosition.OPEN:
                 raise ValueError('No open position found for this symbol')
-            position_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN, position.group_id)
+            position_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN, self.position.group_id)
 
         from ledger.models import MarginHistoryModel
         if self.type == self.SPOT_TO_MARGIN:
@@ -78,14 +75,14 @@ class MarginTransfer(models.Model):
         elif self.type == self.MARGIN_TO_POSITION:
             sender, receiver = margin_wallet, position_wallet
 
-            position.equity += self.amount
+            self.position.equity += self.amount
 
         elif self.type == self.POSITION_TO_MARGIN:
             sender, receiver = position_wallet, margin_wallet
-            if position.withdrawable_base_asset < self.amount:
+            if self.position.withdrawable_base_asset < self.amount:
                 raise InsufficientBalance
 
-            position.equity -= self.amount
+            self.position.equity -= self.amount
         else:
             raise NotImplementedError
 
@@ -94,9 +91,9 @@ class MarginTransfer(models.Model):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             super(MarginTransfer, self).save(*args)
             pipeline.new_trx(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
-            if position:
-                position.set_liquidation_price(pipeline)
-                position.save(update_fields=['equity', 'liquidation_price'])
+            if self.position:
+                self.position.set_liquidation_price(pipeline)
+                self.position.save(update_fields=['equity', 'liquidation_price'])
 
 
 class SymbolField(serializers.CharField):

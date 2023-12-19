@@ -94,6 +94,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
     coin = CoinField(source='asset')
     symbol = SymbolField(source='position_symbol', required=False)
     asset = AssetSerializerMini(read_only=True)
+    id = serializers.IntegerField(write_only=True, required=False)
 
     def create(self, validated_data):
         user = self.context['request'].user
@@ -133,26 +134,31 @@ class MarginTransferSerializer(serializers.ModelSerializer):
                 asset = attrs['position_symbol'].base_asset.name_fa
                 raise ValidationError({'asset': f'فقط میتوانید {asset} انتقال دهید.'})
 
+            if not attrs.get('id'):
+                raise ValidationError({'id': 'id موقعیت را وارد کنید'})
+
             position = MarginPosition.objects.filter(
                 account=self.context['request'].user.get_account(),
                 symbol=attrs['position_symbol'],
                 status__in=[MarginPosition.OPEN],
+                id=attrs.pop('id')
             ).first()
 
             if not position:
                 raise ValidationError('There is no valid position to transfer margin')
+            attrs['position'] = position
 
             if attrs['type'] == MarginTransfer.POSITION_TO_MARGIN and position.withdrawable_base_asset < Decimal(attrs['amount']):
-                raise ValidationError(f'You can only transfer: {position.withdrawable_base_asset}')
+                raise ValidationError(f'فقط میتوانید {position.withdrawable_base_asset} انتقال دهید')
 
             if attrs['type'] == MarginTransfer.MARGIN_TO_POSITION and position.side == LONG and position.debt_amount < Decimal(attrs['amount']):
-                raise ValidationError(f'You can only transfer: {position.debt_amount}')
+                raise ValidationError(f'فقط میتوانید {position.debt_amount} انتقال دهید')
 
         return attrs
 
     class Meta:
         model = MarginTransfer
-        fields = ('created', 'amount', 'type', 'coin', 'asset', 'symbol')
+        fields = ('created', 'amount', 'type', 'coin', 'asset', 'symbol', 'id', 'position')
         read_only_fields = ('created', )
 
 

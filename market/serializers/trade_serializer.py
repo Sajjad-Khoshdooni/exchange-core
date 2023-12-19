@@ -18,7 +18,9 @@ class AccountTradeSerializer(serializers.ModelSerializer):
         return trade.price * trade.amount
 
     def get_leverage(self, trade: Trade):
-        return trade.position and trade.position.leverage
+        if isinstance(trade, Trade):
+            return trade.position and trade.position.leverage
+        return None
 
     def get_position_side(self, trade: Trade):
         return trade.position and trade.position.side

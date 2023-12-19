@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 import django_filters
+from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
@@ -8,7 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from ledger.exceptions import SmallDepthError, InsufficientBalance
-from ledger.models import MarginPosition
+from ledger.models import MarginPosition, MarginHistoryModel
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import floor_precision, get_margin_coin_presentation_balance
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -40,7 +43,12 @@ class MarginPositionSerializer(AssetSerializerMini):
         return None
 
     def get_balance(self, instance):
-        return floor_precision(instance.equity, instance.symbol.tick_size)
+        pnl = MarginHistoryModel.objects.filter(
+            position=instance,
+            type=MarginHistoryModel.PNL
+        ).aaggregate(s=Sum('amount'))['s'] or 0
+
+        return floor_precision(instance.equity - Decimal(pnl), instance.symbol.tick_size)
 
     def get_base_debt(self, instance):
         return instance.base_debt_amount

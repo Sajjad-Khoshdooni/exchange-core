@@ -111,6 +111,7 @@ class MarginAssetSerializer(AssetSerializerMini):
     available_margin = serializers.SerializerMethodField()
     equity = serializers.SerializerMethodField()
     locked_amount = serializers.SerializerMethodField()
+    pnl = serializers.SerializerMethodField()
 
     def get_asset(self, asset: Asset):
         return self.context.get(asset.symbol)
@@ -129,9 +130,9 @@ class MarginAssetSerializer(AssetSerializerMini):
         return get_margin_coin_presentation_balance(asset.symbol, cross_wallet.get_free())
 
     def get_equity(self, asset: Asset):
-        return get_margin_coin_presentation_balance(asset.symbol,
-                                             Decimal(self.get_available_margin(asset)) +
-                                             Decimal(self.get_margin_position(asset)))
+        equity = Decimal(self.get_available_margin(asset)) + Decimal(self.get_margin_position(asset))
+
+        return get_margin_coin_presentation_balance(asset.symbol, equity - Decimal(self.get_pnl(asset)))
 
     def get_locked_amount(self, asset: Asset):
         cross_wallet = self.get_asset(asset).get('cross_wallet')
@@ -140,9 +141,12 @@ class MarginAssetSerializer(AssetSerializerMini):
 
         return get_margin_coin_presentation_balance(asset.symbol, cross_wallet.locked)
 
+    def get_pnl(self, asset: Asset):
+        return get_margin_coin_presentation_balance(asset.symbol, self.get_asset(asset).get('pnl'))
+
     class Meta:
         model = Asset
-        fields = (*AssetSerializerMini.Meta.fields, 'equity', 'margin_position', 'available_margin', 'locked_amount')
+        fields = (*AssetSerializerMini.Meta.fields, 'equity', 'margin_position', 'available_margin', 'locked_amount', 'pnl')
         ref_name = 'margin assets'
 
 
@@ -157,18 +161,25 @@ class MarginAssetViewSet(ModelViewSet):
         cross_wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN, variant__isnull=True)
 
         positions = MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN)
+        irt_positions = positions.filter(base_wallet__asset__symbol=Asset.IRT).annotate(
+            position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance'),
+            pnl=F('position_amount') - F('equity')
+            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
 
         ctx[Asset.IRT] = {
-            'equity': positions.filter(base_wallet__asset__symbol=Asset.IRT).annotate(
-                position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance')
-            ).aggregate(s=Sum('position_amount'))['s'] or Decimal('0'),
+            'pnl': irt_positions['p'] or Decimal('0'),
+            'equity': irt_positions['s'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.IRT).first()
         }
 
+        usdt_positions = positions.filter(base_wallet__asset__symbol=Asset.USDT).annotate(
+            position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance'),
+            pnl=F('position_amount') - F('equity')
+            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
+
         ctx[Asset.USDT] = {
-            'equity': positions.filter(base_wallet__asset__symbol=Asset.USDT).annotate(
-                position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance')
-            ).aggregate(s=Sum('position_amount'))['s'] or Decimal('0'),
+            'pnl': usdt_positions['p'] or Decimal('0'),
+            'equity': usdt_positions['s'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.USDT).first()
         }
 

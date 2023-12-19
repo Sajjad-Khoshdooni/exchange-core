@@ -77,12 +77,13 @@ class ShortIsolatedMarginTestCase(TestCase):
             }
         )
 
-    def transfer_usdt_api(self, amount, type: str = 'sm', check_status=201):
+    def transfer_usdt_api(self, amount, type: str = 'sm', id='', check_status=201):
         resp = self.client.post('/api/v1/margin/transfer/', {
             'amount': amount,
             'type': type,
             'coin': 'USDT',
-            'symbol': 'BTCUSDT'
+            'symbol': 'BTCUSDT',
+            'id': id
         })
         print(resp.json())
         self.assertEqual(resp.status_code, check_status)
@@ -143,7 +144,7 @@ class ShortIsolatedMarginTestCase(TestCase):
         self.assertEqual(mp.status, MarginPosition.CLOSED)
 
     def test_short_sell(self):
-        self.transfer_usdt_api(TO_TRANSFER_USDT / 2)
+        self.transfer_usdt_api(TO_TRANSFER_USDT)
         loan_amount = TO_TRANSFER_USDT / BTC_USDT_PRICE / 2
         self.print_wallets(self.account)
         self.place_order(amount=loan_amount, side=SELL, market=Wallet.MARGIN, price=BTC_USDT_PRICE, is_open_position=True)
@@ -161,6 +162,9 @@ class ShortIsolatedMarginTestCase(TestCase):
         self.assertEqual(mp.debt_amount, loan_amount)
         self.assertEqual(mp.side, SHORT)
         self.assertTrue(mp.liquidation_price > Decimal('1818'))
+
+        self.transfer_usdt_api(1, type='mp', id=mp.id)
+
 
     def test_short_sell2(self):
         self.transfer_usdt_api(2 * TO_TRANSFER_USDT)

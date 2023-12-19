@@ -101,7 +101,7 @@ class MarginPosition(models.Model):
 
     @property
     def withdrawable_base_asset(self):
-        base_total_balance = abs(Decimal('1.1') * self.base_debt_amount)
+        base_total_balance = abs(Decimal('2') * self.base_debt_amount)
         return max(floor_precision(self.base_total_balance - base_total_balance, self.symbol.tick_size), Decimal('0'))
 
     def get_ratio(self) -> Decimal:
@@ -177,13 +177,6 @@ class MarginPosition(models.Model):
             to_transfer_equity = Decimal('0')
 
         realized_pnl = amount - to_transfer_equity
-
-        self.create_history(
-            asset=self.symbol.base_asset,
-            amount=-to_transfer_equity,
-            group_id=group_id,
-            type=MarginHistoryModel.TRANSFER
-        )
 
         self.create_history(
             asset=self.symbol.base_asset,
