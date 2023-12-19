@@ -61,7 +61,8 @@ class MarginTransfer(models.Model):
                 asset=self.asset,
                 amount=self.amount,
                 group_id=self.group_id,
-                type=MarginHistoryModel.POSITION_TRANSFER
+                type=MarginHistoryModel.POSITION_TRANSFER,
+                account=self.account
             )
 
         elif self.type == self.MARGIN_TO_SPOT:
@@ -70,7 +71,8 @@ class MarginTransfer(models.Model):
                 asset=self.asset,
                 amount=-self.amount,
                 group_id=self.group_id,
-                type=MarginHistoryModel.POSITION_TRANSFER
+                type=MarginHistoryModel.POSITION_TRANSFER,
+                account=self.account
             )
 
         elif self.type == self.MARGIN_TO_POSITION:

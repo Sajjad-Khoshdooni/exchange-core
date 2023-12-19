@@ -412,7 +412,8 @@ class MarginPosition(models.Model):
                 asset=asset,
                 amount=amount,
                 type=type,
-                group_id=group_id or uuid.uuid4()
+                group_id=group_id or uuid.uuid4(),
+                account=self.account
             )
 
 
@@ -442,6 +443,7 @@ class MarginHistoryModel(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
     position = models.ForeignKey('ledger.MarginPosition', on_delete=models.CASCADE, null=True)
+    account = models.ForeignKey('accounts.Account', on_delete=models.CASCADE, null=True)
     asset = models.ForeignKey('ledger.Asset', on_delete=models.CASCADE)
     amount = get_amount_field()
     type = models.CharField(

@@ -240,7 +240,7 @@ class MarginPositionHistoryView(ListAPIView):
 
     def get_queryset(self):
         account = self.request.user.get_account()
-        return MarginHistoryModel.objects.filter(position__account=account).order_by('-created')
+        return MarginHistoryModel.objects.filter(account=account).order_by('-created')
 
 
 class LeverageViewSerializer(serializers.ModelSerializer):
