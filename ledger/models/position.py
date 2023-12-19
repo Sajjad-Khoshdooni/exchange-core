@@ -262,10 +262,21 @@ class MarginPosition(models.Model):
                                          / (1 - self.symbol.get_fee_rate(self.account, is_maker=False)), self.symbol.step_size)
         if self.side == SHORT:
             side = BUY
-            price = get_depth_price(symbol=self.symbol.name, side=get_other_side(side), amount=to_close_amount)
+            price = get_depth_price(
+                symbol=self.symbol.name,
+                side=get_other_side(side),
+                amount=to_close_amount,
+                depth_check=False
+            )
         else:
             side = SELL
-            price = get_base_depth_price(symbol=self.symbol.name, side=get_other_side(side), amount=to_close_amount)
+            price = get_base_depth_price(
+                symbol=self.symbol.name,
+                side=get_other_side(side),
+                amount=to_close_amount,
+                depth_check=False
+            )
+
         free_amount = floor_precision(self.margin_wallet.get_free(), self.symbol.step_size)
 
         if self.side == SHORT:
