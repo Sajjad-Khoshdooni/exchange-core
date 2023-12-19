@@ -159,14 +159,14 @@ class MarginAssetViewSet(ModelViewSet):
 
         ctx[Asset.IRT] = {
             'equity': positions.filter(base_wallet__asset__symbol=Asset.IRT).annotate(
-                position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('asset_wallet__balance')
+                position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance')
             ).aggregate(s=Sum('position_amount'))['s'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.IRT).first()
         }
 
         ctx[Asset.USDT] = {
             'equity': positions.filter(base_wallet__asset__symbol=Asset.USDT).annotate(
-                position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('asset_wallet__balance')
+                position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance')
             ).aggregate(s=Sum('position_amount'))['s'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.USDT).first()
         }
