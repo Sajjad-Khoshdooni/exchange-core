@@ -245,7 +245,7 @@ class MarginTransferBalanceAPIView(APIView):
                     balance = get_margin_coin_presentation_balance(symbol.base_asset.symbol, margin_cross_wallet.get_free())
 
                     if position.side == LONG:
-                        balance = get_margin_coin_presentation_balance(symbol.base_asset.symbol, min(balance, position.debt_amount))
+                        balance = get_margin_coin_presentation_balance(symbol.base_asset.symbol, min(Decimal(balance), position.debt_amount))
 
                 return Response({
                     'asset': symbol.base_asset.symbol,
