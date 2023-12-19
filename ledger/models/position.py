@@ -251,10 +251,8 @@ class MarginPosition(models.Model):
 
         loan_wallet_balance_diff = pipeline.get_wallet_balance_diff(self.loan_wallet.id)
 
-        real_debt = self.debt_amount - loan_wallet_balance_diff
-        to_close_amount = real_debt * (1 + 1 / (1 - self.symbol.get_fee_rate(self.account, is_maker=False)) * self.symbol.get_fee_rate(self.account, is_maker=False))
-
-        to_close_amount = ceil_precision(to_close_amount, self.symbol.step_size)
+        to_close_amount = ceil_precision((self.debt_amount - loan_wallet_balance_diff)
+                                         / (1 - self.symbol.get_fee_rate(self.account, is_maker=False)), self.symbol.step_size)
         if self.side == SHORT:
             side = BUY
             price = get_depth_price(
