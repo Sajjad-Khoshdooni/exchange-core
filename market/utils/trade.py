@@ -100,25 +100,21 @@ def _update_trading_positions(trading_positions, pipeline):
         if short_amount > 0 and position.amount:
             position.average_price = (previous_amount * previous_price +
                                       short_amount * trade_info.trade_price) / position.amount
-        if trade_info.loan_type not in [Order.LIQUIDATION, OPEN]:
-            position.rebalance(pipeline)
-        position.set_liquidation_price(pipeline)
-
-        to_update_positions[position.id] = position
 
         if trade_info.loan_type == Order.LIQUIDATION or \
-                ((floor_precision(position.loan_wallet.balance + pipeline.get_wallet_free_balance_diff(position.loan_wallet.id),
+                ((floor_precision(position.loan_wallet.balance + pipeline.get_wallet_balance_diff(position.loan_wallet.id),
                                   position.symbol.step_size) >= Decimal('0') or
                   (floor_precision(
-                      position.asset_wallet.balance + pipeline.get_wallet_free_balance_diff(position.asset_wallet.id),
+                      position.asset_wallet.balance + pipeline.get_wallet_balance_diff(position.asset_wallet.id),
                       position.symbol.step_size) == Decimal('0'))
                  )
                  and trade_info.loan_type != BORROW):
 
             position.status = MarginPosition.CLOSED
+            position.base_wallet.refresh_from_db()
             margin_cross_wallet = position.base_wallet.asset.get_wallet(
                 position.account, market=Wallet.MARGIN, variant=None)
-            remaining_balance = position.base_wallet.balance + pipeline.get_wallet_free_balance_diff(position.base_wallet.id)
+            remaining_balance = position.base_wallet.balance + pipeline.get_wallet_balance_diff(position.base_wallet.id)
 
             insurance_fee_amount = max(Decimal('0'), remaining_balance * SystemConfig.get_system_config().insurance_fee_percentage)
             if insurance_fee_amount > Decimal(0) and trade_info.loan_type == Order.LIQUIDATION:
@@ -151,6 +147,12 @@ def _update_trading_positions(trading_positions, pipeline):
                     total_balance=position.total_balance + pipeline.get_wallet_balance_diff(position.margin_wallet.id),
                     group_id=group_id
                 )
+
+        if trade_info.loan_type not in [Order.LIQUIDATION, OPEN] and position.status == position.OPEN:
+            position.rebalance(pipeline)
+        position.set_liquidation_price(pipeline)
+
+        to_update_positions[position.id] = position
 
     MarginPosition.objects.bulk_update(
         to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status', 'equity']

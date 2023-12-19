@@ -138,6 +138,7 @@ class LongIsolatedMarginTestCase(TestCase):
         with WalletPipeline() as pipeline:
             balance = self.usdt.get_wallet(self.account2).balance / BTC_USDT_PRICE
             new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=balance, market=Wallet.SPOT, price=BTC_USDT_PRICE)
+            new_order(pipeline, self.btcusdt, self.account2, side=BUY, amount=balance, market=Wallet.SPOT, price=BTC_USDT_PRICE - 1)
 
         self.print_wallets(self.account)
 
@@ -146,6 +147,11 @@ class LongIsolatedMarginTestCase(TestCase):
         print('position', mp.debt_amount, mp.liquidation_price, mp.equity)
         self.assertTrue(mp.liquidation_price == Decimal('550'))
         self.assertEqual(mp.side, LONG)
+
+        with WalletPipeline() as pipeline:
+            mp.liquidate(pipeline, False)
+
+        self.assert_liquidation(self.account, self.btcusdt)
 
     def test_long_buy_market(self):
         self.transfer_usdt_api(TO_TRANSFER_USDT)
