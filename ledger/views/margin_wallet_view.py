@@ -4,6 +4,7 @@ from django.db.models import F, Sum, Q
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,7 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Wallet, MarginPosition
 from ledger.models.asset import Asset, AssetSerializerMini
-from ledger.utils.external_price import SELL, SHORT, LONG
+from ledger.utils.external_price import SELL, LONG
 from ledger.utils.precision import get_presentation_amount, get_margin_coin_presentation_balance
 from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import get_last_price
@@ -223,14 +224,22 @@ class MarginTransferBalanceAPIView(APIView):
 
         elif transfer_type in [MarginTransfer.POSITION_TO_MARGIN, MarginTransfer.MARGIN_TO_POSITION]:
             symbol_name = request.query_params.get('symbol')
+            position_id = request.query_params.get('id')
             symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, margin_enable=True).first()
 
             if not symbol:
                 raise ValidationError(_('{symbol} is not enable').format(symbol=symbol_name))
 
-            position = MarginPosition.objects.filter(
-                account=request.user.account, symbol=symbol, status=MarginPosition.OPEN
-            ).first()
+            if not position_id:
+                raise ValidationError(_('PositionNullError'))
+
+            position = get_object_or_404(
+                MarginPosition,
+                account=request.user.account,
+                id=position_id,
+                symbol=symbol,
+                status=MarginPosition.OPEN
+            )
 
             if not position or not position.status in [MarginPosition.CLOSED, MarginPosition.OPEN]:
                 return Response({
