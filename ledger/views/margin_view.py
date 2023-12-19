@@ -40,7 +40,7 @@ class MarginInfoView(APIView):
             total_irt_value += wallet.balance * price_irt
         return {
             'IRT': get_presentation_amount(floor_precision(total_irt_value)),
-            'USDT': get_presentation_amount(floor_precision(total_usdt_value))
+            'USDT': get_presentation_amount(floor_precision(total_usdt_value, 8))
         }
 
     def get(self, request: Request):
