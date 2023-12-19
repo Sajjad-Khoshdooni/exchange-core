@@ -43,12 +43,21 @@ class MarginPositionSerializer(AssetSerializerMini):
         return None
 
     def get_balance(self, instance):
-        pnl = MarginHistoryModel.objects.filter(
+        asset_pnl = Decimal(MarginHistoryModel.objects.filter(
             position=instance,
-            type=MarginHistoryModel.PNL
-        ).aggregate(s=Sum('amount'))['s'] or 0
+            type=MarginHistoryModel.PNL,
+            asset=instance.symbol.asset
+        ).aggregate(s=Sum('amount'))['s'] or 0)
 
-        return floor_precision(instance.equity - Decimal(pnl), instance.symbol.tick_size)
+        asset_pnl *= instance.symbol.last_trade_price
+
+        base_asset_pnl = Decimal(MarginHistoryModel.objects.filter(
+            position=instance,
+            type=MarginHistoryModel.PNL,
+            asset=instance.symbol.base_asset
+        ).aggregate(s=Sum('amount'))['s'] or 0)
+
+        return floor_precision(instance.equity - (asset_pnl + base_asset_pnl), instance.symbol.tick_size)
 
     def get_base_debt(self, instance):
         return instance.base_debt_amount
