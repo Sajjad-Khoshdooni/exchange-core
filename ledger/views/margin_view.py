@@ -5,7 +5,6 @@ from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
@@ -20,6 +19,7 @@ from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, MarginL
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
 from ledger.models.position import MarginHistoryModel
+from ledger.utils.external_price import LONG
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_presentation_amount, get_margin_coin_presentation_balance
@@ -144,6 +144,10 @@ class MarginTransferSerializer(serializers.ModelSerializer):
 
             if attrs['type'] == MarginTransfer.POSITION_TO_MARGIN and position.withdrawable_base_asset < Decimal(attrs['amount']):
                 raise ValidationError(f'You can only transfer: {position.withdrawable_base_asset}')
+
+            if attrs['type'] == MarginTransfer.MARGIN_TO_POSITION and position.side == LONG and position.debt_amount < Decimal(attrs['amount']):
+                raise ValidationError(f'You can only transfer: {position.debt_amount}')
+
         return attrs
 
     class Meta:

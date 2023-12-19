@@ -119,7 +119,7 @@ class MarginPosition(models.Model):
         debt_amount = self.debt_amount - pipeline.get_wallet_balance_diff(self.loan_wallet.id)
         total_balance = self.total_balance + pipeline.get_wallet_balance_diff(self.margin_wallet.id)
 
-        if debt_amount and total_balance:
+        if debt_amount > Decimal('0') and total_balance:
             if self.side == SHORT:
                 self.liquidation_price = total_balance / debt_amount * self.get_ratio()
             elif self.side == LONG:

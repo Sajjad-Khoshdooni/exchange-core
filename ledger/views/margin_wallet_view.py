@@ -11,7 +11,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Wallet, MarginPosition
 from ledger.models.asset import Asset, AssetSerializerMini
-from ledger.utils.external_price import SELL
+from ledger.utils.external_price import SELL, SHORT, LONG
 from ledger.utils.precision import get_presentation_amount, get_margin_coin_presentation_balance
 from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import get_last_price
@@ -212,7 +212,7 @@ class MarginTransferBalanceAPIView(APIView):
     def get(self, request: Request):
         transfer_type = request.query_params.get('transfer_type')
         from ledger.models import MarginTransfer
-        if transfer_type in (MarginTransfer.MARGIN_TO_POSITION, MarginTransfer.MARGIN_TO_SPOT):
+        if transfer_type in MarginTransfer.MARGIN_TO_SPOT:
             base_asset = Asset.get(request.query_params.get('symbol'))
             margin_cross_wallet = base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
 
@@ -221,7 +221,7 @@ class MarginTransferBalanceAPIView(APIView):
                 'balance': get_margin_coin_presentation_balance(base_asset.symbol, margin_cross_wallet.get_free())
             })
 
-        elif transfer_type == MarginTransfer.POSITION_TO_MARGIN:
+        elif transfer_type in [MarginTransfer.POSITION_TO_MARGIN, MarginTransfer.MARGIN_TO_POSITION]:
             symbol_name = request.query_params.get('symbol')
             symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, margin_enable=True).first()
 
@@ -238,9 +238,18 @@ class MarginTransferBalanceAPIView(APIView):
                     'balance': Decimal('0')
                 })
             else:
+                if transfer_type == MarginTransfer.POSITION_TO_MARGIN:
+                    balance = get_margin_coin_presentation_balance(symbol.base_asset.symbol, position.withdrawable_base_asset)
+                else:
+                    margin_cross_wallet = symbol.base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
+                    balance = get_margin_coin_presentation_balance(symbol.base_asset.symbol, margin_cross_wallet.get_free())
+
+                    if position.side == LONG:
+                        balance = get_margin_coin_presentation_balance(symbol.base_asset.symbol, min(balance, position.debt_amount))
+
                 return Response({
                     'asset': symbol.base_asset.symbol,
-                    'balance': get_margin_coin_presentation_balance(symbol.base_asset.symbol, position.withdrawable_base_asset)
+                    'balance': balance
                 })
 
         elif transfer_type == MarginTransfer.SPOT_TO_MARGIN:

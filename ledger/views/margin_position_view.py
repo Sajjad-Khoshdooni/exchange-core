@@ -34,7 +34,9 @@ class MarginPositionSerializer(AssetSerializerMini):
     def get_margin_ratio(self, instance: MarginPosition):
         if instance.base_debt_amount:
             ratio = instance.base_total_balance / instance.base_debt_amount
-            return floor_precision(abs(ratio), 2)
+            if ratio > 0:
+                return floor_precision(ratio, 2)
+            return 1000
         return None
 
     def get_balance(self, instance):
