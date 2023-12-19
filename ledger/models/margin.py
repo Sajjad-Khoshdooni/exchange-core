@@ -84,8 +84,6 @@ class MarginTransfer(models.Model):
         elif self.type == self.POSITION_TO_MARGIN:
             sender, receiver = position_wallet, margin_wallet
             # todo :: check margin positive equity
-            if self.position.side == LONG:
-                pipeline_balance_diff = self.position.withdrawable_base_asset + self.position.debt_amount
 
             if self.position.withdrawable_base_asset < self.amount:
                 raise InsufficientBalance
@@ -94,14 +92,22 @@ class MarginTransfer(models.Model):
         else:
             raise NotImplementedError
 
-        sender.has_balance(self.amount, raise_exception=True, pipeline_balance_diff=pipeline_balance_diff)
+        with WalletPipeline() as pipeline:
+            position = self.position
 
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            if self.type == self.POSITION_TO_MARGIN and position and position.side == LONG:  # todo :: add doc
+                from ledger.models import MarginPosition
+                position = MarginPosition.objects.select_for_update().get(id=position.id)
+                pipeline_balance_diff = position.withdrawable_base_asset + position.debt_amount
+
+            sender.has_balance(self.amount, raise_exception=True, pipeline_balance_diff=pipeline_balance_diff)
+
             super(MarginTransfer, self).save(*args)
+
             pipeline.new_trx(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
-            if self.position:
-                self.position.set_liquidation_price(pipeline)
-                self.position.save(update_fields=['equity', 'liquidation_price'])
+            if position:
+                position.set_liquidation_price(pipeline)
+                position.save(update_fields=['equity', 'liquidation_price'])
 
 
 class SymbolField(serializers.CharField):
