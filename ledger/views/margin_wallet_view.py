@@ -160,25 +160,35 @@ class MarginAssetViewSet(ModelViewSet):
         account = self.request.user.get_account()
         cross_wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN, variant__isnull=True)
 
-        positions = MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN)
-        irt_positions = positions.filter(base_wallet__asset__symbol=Asset.IRT).annotate(
+        positions = MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN).prefetch_related('symbol')
+        irt_queryset = positions.filter(base_wallet__asset__symbol=Asset.IRT)
+        irt_fee = Decimal('0')
+        for position in irt_queryset:
+            irt_fee += position.get_base_trade_fee()
+
+        irt_positions = irt_queryset.annotate(
             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance'),
             pnl=F('position_amount') - F('equity')
             ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
 
         ctx[Asset.IRT] = {
-            'pnl': irt_positions['p'] or Decimal('0'),
+            'pnl': (irt_positions['p'] or Decimal('0')) - irt_fee,
             'equity': irt_positions['s'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.IRT).first()
         }
 
-        usdt_positions = positions.filter(base_wallet__asset__symbol=Asset.USDT).annotate(
+        usdt_queryset = positions.filter(base_wallet__asset__symbol=Asset.USDT)
+        usdt_fee = Decimal('0')
+        for position in usdt_queryset:
+            usdt_fee += position.get_base_trade_fee()
+
+        usdt_positions = usdt_queryset.annotate(
             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance'),
             pnl=F('position_amount') - F('equity')
             ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
 
         ctx[Asset.USDT] = {
-            'pnl': usdt_positions['p'] or Decimal('0'),
+            'pnl': (usdt_positions['p'] or Decimal('0')) - usdt_fee,
             'equity': usdt_positions['s'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.USDT).first()
         }

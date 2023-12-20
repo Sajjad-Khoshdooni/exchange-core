@@ -7,7 +7,7 @@ from uuid import UUID
 from decouple import config
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import UniqueConstraint, Q
+from django.db.models import UniqueConstraint, Q, Sum
 
 from accounts.models import Account, SystemConfig
 from ledger.models import Trx
@@ -413,6 +413,22 @@ class MarginPosition(models.Model):
                 group_id=group_id or uuid.uuid4(),
                 account=self.account
             )
+
+    def get_base_trade_fee(self) -> Decimal:
+        asset_fee = Decimal(MarginHistoryModel.objects.filter(
+            position=self,
+            type=MarginHistoryModel.TRADE_FEE,
+            asset=self.symbol.asset
+        ).aggregate(s=Sum('amount'))['s'] or 0)
+
+        asset_fee *= self.symbol.last_trade_price
+
+        base_asset_fee = Decimal(MarginHistoryModel.objects.filter(
+            position=self,
+            type=MarginHistoryModel.TRADE_FEE,
+            asset=self.symbol.base_asset
+        ).aggregate(s=Sum('amount'))['s'] or 0)
+        return asset_fee + base_asset_fee
 
 
 class MarginLeverage(models.Model):
