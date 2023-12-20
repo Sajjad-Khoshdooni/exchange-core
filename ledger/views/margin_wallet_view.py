@@ -172,7 +172,7 @@ class MarginAssetViewSet(ModelViewSet):
             ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
 
         ctx[Asset.IRT] = {
-            'pnl': (irt_positions['p'] or Decimal('0')) - irt_fee,
+            'pnl': (irt_positions['p'] or Decimal('0')) + irt_fee,
             'equity': irt_positions['s'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.IRT).first()
         }
@@ -188,7 +188,7 @@ class MarginAssetViewSet(ModelViewSet):
             ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
 
         ctx[Asset.USDT] = {
-            'pnl': (usdt_positions['p'] or Decimal('0')) - usdt_fee,
+            'pnl': (usdt_positions['p'] or Decimal('0')) + usdt_fee,
             'equity': usdt_positions['s'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.USDT).first()
         }
