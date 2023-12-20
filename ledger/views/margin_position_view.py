@@ -15,7 +15,7 @@ from ledger.models import MarginPosition, MarginHistoryModel
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import floor_precision, get_margin_coin_presentation_balance
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order
+from market.models import Order, PairSymbol
 from market.serializers.symbol_serializer import SymbolSerializer
 
 
@@ -154,6 +154,7 @@ class MarginClosePositionView(APIView):
 
         try:
             with WalletPipeline() as pipeline:
+                PairSymbol.objects.select_for_update().get(id=position.symbol_id)
                 position.liquidate(pipeline=pipeline, charge_insurance=False)
         except SmallDepthError:
             return Response({'Error': 'به علت عمق کم بازار معامله انجام نشد'}, 400)

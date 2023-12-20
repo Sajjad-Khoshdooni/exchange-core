@@ -286,28 +286,29 @@ class MarginPosition(models.Model):
 
         loss_amount = Decimal('0')
         group_id = uuid.uuid4()
+
         if self.side == SHORT:
-            loss_amount = max((to_close_amount - free_amount) * Decimal('1.02') * price, Decimal('0'))
-            if loss_amount:
+            loss_amount = (to_close_amount - free_amount) * Decimal('1.05') * price
+            if loss_amount > 0:
                 pipeline.new_trx(
-                    self.get_insurance_wallet(),
-                    self.margin_wallet,
-                    loss_amount,
-                    Trx.MARGIN_INSURANCE,
-                    group_id,
+                    sender=self.get_insurance_wallet(),
+                    receiver=self.base_wallet,
+                    amount=loss_amount,
+                    scope=Trx.MARGIN_INSURANCE,
+                    group_id=group_id,
                 )
                 self.create_history(
                     asset=self.symbol.base_asset,
                     amount=loss_amount,
                     group_id=group_id,
-                    type=MarginHistoryModel.TRANSFER
+                    type=MarginHistoryModel.INSURANCE_FEE
                 )
                 to_close_amount = ceil_precision(to_close_amount, self.symbol.step_size)
         else:
             to_close_amount = floor_precision(free_amount, self.symbol.step_size)
 
         liquidation_order = None
-        if to_close_amount > Decimal('0'):
+        if to_close_amount > 0:
             liquidation_order = new_order(
                 pipeline=pipeline,
                 symbol=self.symbol,
@@ -325,8 +326,9 @@ class MarginPosition(models.Model):
         self.base_wallet.refresh_from_db()
         remaining_base_asset = self.base_wallet.balance + pipeline.get_wallet_balance_diff(self.base_wallet.id)
 
+        # todo: alert error on insurance triggering when charge_insurance is false
         if self.side == SHORT:
-            if remaining_base_asset > Decimal('0') and loss_amount > Decimal('0'):
+            if remaining_base_asset > 0 and loss_amount > 0:
                 pipeline.new_trx(
                     self.base_wallet,
                     self.get_insurance_wallet(),
@@ -339,28 +341,28 @@ class MarginPosition(models.Model):
                     amount=-min(loss_amount, remaining_base_asset),
                     group_id=group_id,
                     type=MarginHistoryModel.TRANSFER
-                )
+                )  # todo: merge this with backward history and make its type as INSURANCE_FEE
         else:
-            if remaining_base_asset < Decimal('0'):
+            if remaining_base_asset < 0:
                 pipeline.new_trx(
-                    self.get_insurance_wallet(),
-                    self.base_wallet,
-                    abs(remaining_base_asset),
-                    Trx.MARGIN_INSURANCE,
-                    group_id,
+                    sender=self.get_insurance_wallet(),
+                    receiver=self.base_wallet,
+                    amount=-remaining_base_asset,
+                    scope=Trx.MARGIN_INSURANCE,
+                    group_id=group_id,
                 )
                 self.create_history(
                     asset=self.symbol.base_asset,
-                    amount=abs(remaining_base_asset),
+                    amount=-remaining_base_asset,
                     group_id=group_id,
-                    type=MarginHistoryModel.TRANSFER
+                    type=MarginHistoryModel.INSURANCE_FEE
                 )
 
         if liquidation_order:
             liquidation_order.refresh_from_db()
 
             if liquidation_order.filled_amount >= to_close_amount:
-                self.amount = Decimal(0)
+                self.amount = 0
                 self.status = self.CLOSED
             else:
                 filled_amount = liquidation_order.filled_amount if self.side == SHORT else liquidation_order.filled_amount * liquidation_order.price
@@ -368,10 +370,11 @@ class MarginPosition(models.Model):
                 logger.warning(f'Position:{self.id} doesnt close in Liquidation Process Due to Order'
                                f' filled amount{liquidation_order.filled_amount}/{self.debt_amount}')
 
-            if liquidation_order.filled_amount == Decimal('0') and liquidation_order.status == Order.CANCELED:
+            if liquidation_order.filled_amount == 0 and liquidation_order.status == Order.CANCELED:
                 self.status = self.OPEN
+                # todo add error log
         else:
-            self.amount = Decimal(0)
+            self.amount = 0
             self.status = self.CLOSED
 
         self.save(update_fields=['amount', 'status'])
