@@ -290,18 +290,15 @@ class MarginPosition(models.Model):
         if self.side == SHORT:
             loss_amount = (to_close_amount - free_amount) * Decimal('1.05') * price
             if loss_amount > 0:
+                if not charge_insurance:
+                    logger.warning(f"Position:{self.id} charged in close mode !!!")
+
                 pipeline.new_trx(
                     sender=self.get_insurance_wallet(),
                     receiver=self.base_wallet,
                     amount=loss_amount,
                     scope=Trx.MARGIN_INSURANCE,
                     group_id=group_id,
-                )
-                self.create_history(
-                    asset=self.symbol.base_asset,
-                    amount=loss_amount,
-                    group_id=group_id,
-                    type=MarginHistoryModel.INSURANCE_FEE
                 )
                 to_close_amount = ceil_precision(to_close_amount, self.symbol.step_size)
         else:
@@ -326,7 +323,7 @@ class MarginPosition(models.Model):
         self.base_wallet.refresh_from_db()
         remaining_base_asset = self.base_wallet.balance + pipeline.get_wallet_balance_diff(self.base_wallet.id)
 
-        # todo: alert error on insurance triggering when charge_insurance is false
+        charged_amount = 0
         if self.side == SHORT:
             if remaining_base_asset > 0 and loss_amount > 0:
                 pipeline.new_trx(
@@ -336,12 +333,7 @@ class MarginPosition(models.Model):
                     Trx.MARGIN_INSURANCE,
                     group_id,
                 )
-                self.create_history(
-                    asset=self.symbol.base_asset,
-                    amount=-min(loss_amount, remaining_base_asset),
-                    group_id=group_id,
-                    type=MarginHistoryModel.TRANSFER
-                )  # todo: merge this with backward history and make its type as INSURANCE_FEE
+                charged_amount = min(loss_amount, remaining_base_asset) - loss_amount
         else:
             if remaining_base_asset < 0:
                 pipeline.new_trx(
@@ -351,12 +343,15 @@ class MarginPosition(models.Model):
                     scope=Trx.MARGIN_INSURANCE,
                     group_id=group_id,
                 )
-                self.create_history(
-                    asset=self.symbol.base_asset,
-                    amount=-remaining_base_asset,
-                    group_id=group_id,
-                    type=MarginHistoryModel.INSURANCE_FEE
-                )
+                charged_amount = -remaining_base_asset
+
+        if charged_amount != 0:
+            self.create_history(
+                asset=self.symbol.base_asset,
+                amount=charged_amount,
+                group_id=group_id,
+                type=MarginHistoryModel.INSURANCE_FEE
+            )
 
         if liquidation_order:
             liquidation_order.refresh_from_db()
@@ -372,7 +367,7 @@ class MarginPosition(models.Model):
 
             if liquidation_order.filled_amount == 0 and liquidation_order.status == Order.CANCELED:
                 self.status = self.OPEN
-                # todo add error log
+                logger.warning(f"Position:{self.id} liquidation order:{liquidation_order.id} didnt fill")
         else:
             self.amount = 0
             self.status = self.CLOSED
