@@ -5,6 +5,7 @@ from django.test import Client
 from django.test import TestCase
 from django.utils import timezone
 
+from accounts.models import SystemConfig
 from ledger.models import Asset, Wallet, MarginPosition
 from ledger.utils.external_price import SELL, BUY, SHORT, LONG
 from ledger.utils.test import new_account, set_price
@@ -21,6 +22,11 @@ TO_TRANSFER_USDT = 100
 class LeveragedIsolatedMarginTestCase(TestCase):
 
     def setUp(self) -> None:
+        sys = SystemConfig.get_system_config()
+        sys.active = True
+        sys.max_margin_leverage = 8
+        sys.save()
+
         self.insurance_account = new_account()
 
         self.account = new_account()
@@ -222,3 +228,23 @@ class LeveragedIsolatedMarginTestCase(TestCase):
             new_order(pipeline, self.btcusdt, self.account2, side=BUY, amount=4 * loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE - 2)
             new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=4 * loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE + 2)
             mp.liquidate(pipeline, False)
+
+    def test_long_buy_8x(self):
+        self.transfer_usdt_api(TO_TRANSFER_USDT / 2)
+        loan_amount = TO_TRANSFER_USDT / BTC_USDT_PRICE / 2
+        leverage = Decimal('8')
+        self.set_leverage(leverage)
+
+        self.print_wallets(self.account)
+        self.place_order(amount=leverage * loan_amount, side=BUY, market=Wallet.MARGIN, price=BTC_USDT_PRICE, is_open_position=True)
+
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcusdt, self.account2, side=SELL, amount=leverage * loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE)
+            new_order(pipeline, self.btcusdt, self.account2, side=BUY, amount=leverage * loan_amount, market=Wallet.SPOT, price=BTC_USDT_PRICE - 1)
+
+        self.print_wallets(self.account)
+
+        mp = MarginPosition.objects.filter(account=self.account, symbol=self.btcusdt).first()
+        print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side)
+        self.assertEqual(mp.debt_amount, loan_amount * (leverage - 1) * BTC_USDT_PRICE)
+        self.assertEqual(mp.side, LONG)

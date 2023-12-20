@@ -119,7 +119,7 @@ class MarginAssetSerializer(AssetSerializerMini):
     def get_margin_position(self, asset: Asset):
         asset_data = self.get_asset(asset)
 
-        return get_margin_coin_presentation_balance(asset.symbol, asset_data.get('equity', Decimal('0')))
+        return get_margin_coin_presentation_balance(asset.symbol, Decimal(asset_data.get('equity', 0)) - Decimal(self.get_pnl(asset)))
 
     def get_available_margin(self, asset: Asset):
         cross_wallet = self.get_asset(asset).get('cross_wallet')
@@ -132,7 +132,7 @@ class MarginAssetSerializer(AssetSerializerMini):
     def get_equity(self, asset: Asset):
         equity = Decimal(self.get_available_margin(asset)) + Decimal(self.get_margin_position(asset))
 
-        return get_margin_coin_presentation_balance(asset.symbol, equity - Decimal(self.get_pnl(asset)))
+        return get_margin_coin_presentation_balance(asset.symbol, equity)
 
     def get_locked_amount(self, asset: Asset):
         cross_wallet = self.get_asset(asset).get('cross_wallet')
