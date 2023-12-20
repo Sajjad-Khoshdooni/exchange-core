@@ -234,7 +234,7 @@ def get_withdraw_system_risks(transfer: Transfer) -> list:
     return risks
 
 
-def can_withdraw(account: Account, request) -> bool:
+def can_withdraw(account: Account, request) -> bool:  # todo :: check margin positive equity
     withdraw_conditions = check_withdraw_conditions(account)
 
     if not withdraw_conditions:
