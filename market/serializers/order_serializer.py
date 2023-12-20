@@ -142,7 +142,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 self.context['account'], order_side=validated_data['side'],
                 is_open_position=validated_data['is_open_position']
             )
-            if position.liquidation_price and\
+            if validated_data.get('is_open_position') and position.liquidation_price and\
                     position.leverage != MarginLeverage.objects.get(account=self.context['account']).leverage:
                 raise ValidationError(_(f'برای افزایش موقعیت فعلی باید ضریب را به {position.leverage} برگردانید.')
                                       .format(symbol=symbol))

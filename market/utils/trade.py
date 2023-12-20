@@ -144,7 +144,7 @@ def _update_trading_positions(trading_positions, pipeline):
                 position.create_transfer_equity_history(
                     amount=remaining_balance,
                     debt_amount=position.debt_amount - pipeline.get_wallet_balance_diff(position.loan_wallet.id),
-                    total_balance=position.total_balance + pipeline.get_wallet_balance_diff(position.margin_wallet.id),
+                    total_balance=position.total_balance + pipeline.get_wallet_balance_diff(position.margin_wallet.id) + remaining_balance,
                     group_id=group_id
                 )
 
