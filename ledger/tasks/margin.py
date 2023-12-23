@@ -107,7 +107,7 @@ def collect_margin_interest():
                     MarginHistoryModel(
                         created=now,
                         position=position,
-                        amount=abs(position.debt_amount) * position.get_interest_rate(),
+                        amount=-position.debt_amount * position.get_interest_rate(),
                         group_id=group_id,
                         asset=position.loan_wallet.asset,
                         type=MarginHistoryModel.INTEREST_FEE,
