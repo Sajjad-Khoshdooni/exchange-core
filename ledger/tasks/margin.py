@@ -110,7 +110,8 @@ def collect_margin_interest():
                         amount=abs(position.debt_amount) * position.get_interest_rate(),
                         group_id=group_id,
                         asset=position.loan_wallet.asset,
-                        type=MarginHistoryModel.INTEREST_FEE
+                        type=MarginHistoryModel.INTEREST_FEE,
+                        account=position.account
                     )
                 )
                 position.rebalance(pipeline)
