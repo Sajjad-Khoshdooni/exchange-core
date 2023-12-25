@@ -18,7 +18,7 @@ from ledger.utils.margin import check_margin_view_permission, check_margin_order
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, PairSymbol
+from market.models import Order, PairSymbol, Trade
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ class OrderSerializer(serializers.ModelSerializer):
     is_open_position = serializers.BooleanField(allow_null=True, required=False)
     leverage = serializers.SerializerMethodField()
     position_side = serializers.SerializerMethodField()
+    trades = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -245,12 +246,22 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_position_side(self, instance: Order):
         return instance.position and instance.position.side
 
+    def get_trades(self, instance: Order):
+        queryset = Trade.objects.filter(order_id=instance.id)
+
+        if queryset:
+            from market.serializers.trade_serializer import AccountTradeSerializer
+
+            return AccountTradeSerializer(queryset, many=Trade).data
+
+        return []
+
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
                   'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel', 'is_oco',
-                  'time_in_force', 'client_order_id', 'is_open_position', 'leverage', 'position_side')
-        read_only_fields = ('id', 'created', 'status')
+                  'time_in_force', 'client_order_id', 'is_open_position', 'leverage', 'position_side', 'trades')
+        read_only_fields = ('id', 'created', 'status', 'trades')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
             'price': {'required': False},

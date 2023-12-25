@@ -441,8 +441,7 @@ class JibitChannel(FiatWithdraw):
             if balance_type == 'STL':
                 free = d['amount']
 
-            if balance_type in ('STL', 'WLT'):
-                balance += d['amount']
+            balance += d['amount']
 
         return Wallet(
             id=0,
