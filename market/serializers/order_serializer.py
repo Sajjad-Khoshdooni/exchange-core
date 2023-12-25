@@ -18,7 +18,7 @@ from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, PairSymbol
+from market.models import Order, PairSymbol, Trade
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,7 @@ class OrderSerializer(serializers.ModelSerializer):
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
     is_oco = serializers.SerializerMethodField()
+    trades = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -210,12 +211,22 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_is_oco(self, instance: Order):
         return bool(instance.oco)
 
+    def get_trades(self, instance: Order):
+        queryset = Trade.objects.filter(order_id=instance.id)
+
+        if queryset:
+            from market.serializers.trade_serializer import AccountTradeSerializer
+
+            return AccountTradeSerializer(queryset, many=Trade).data
+
+        return []
+
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
                   'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel', 'is_oco',
-                  'time_in_force', 'client_order_id')
-        read_only_fields = ('id', 'created', 'status')
+                  'time_in_force', 'client_order_id', 'trades')
+        read_only_fields = ('id', 'created', 'status', 'trades')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
             'price': {'required': False},
