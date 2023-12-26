@@ -218,7 +218,7 @@ class MarginPosition(models.Model):
             margin_leverage, _ = MarginLeverage.objects.get_or_create(
                 account=account,
                 defaults={
-                    'leverage': SystemConfig.get_system_config().mean_leverage
+                    'leverage': SystemConfig.get_system_config().default_margin_leverage
                 }
             )
 
