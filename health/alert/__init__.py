@@ -2,7 +2,7 @@ from health.alert.types import *
 
 _ALERT_TYPES = [
     UnhandledCryptoWithdrawAlert, CryptoLongConfirmationAlert, UnhandledFiatWithdrawAlert, LongPendingFiatWithdrawAlert,
-    CanceledOTCAlert, AssetHedgeAlert, TotalHedgeAlert, RiskyMarginRatioAlert, VaultLowBaseBalanceAlert,
+    CanceledOTCAlert, AssetHedgeAlert, TotalHedgeAlert, FiatHedgeAlert, RiskyMarginRatioAlert, VaultLowBaseBalanceAlert,
     VaultHighBalanceAlert, HotWalletLowBalanceAlert
 ]
 

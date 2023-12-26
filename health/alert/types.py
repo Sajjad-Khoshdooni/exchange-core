@@ -160,6 +160,18 @@ class TotalHedgeAlert(BaseAlertHandler):
             return [f'system: {int(hedge)}']
 
 
+class FiatHedgeAlert(BaseAlertHandler):
+    NAME = 'fiat_hedge'
+    HELP = 'max fiat hedge'
+
+    def get_alerting(self, threshold: Decimal) -> list:
+        assets = Asset.live_objects.filter(symbol=Asset.IRT).annotate(
+            hedge_value_abs=F('assetsnapshot__hedge_value_abs'),
+        ).filter(hedge_value_abs__gte=threshold)
+
+        return [f'{a.symbol}: {int(a.hedge_value_abs)}$' for a in assets]
+
+
 class RiskyMarginRatioAlert(BaseAlertHandler):
     NAME = 'risky_margin_ratio'
     HELP = 'min margin ratio'
