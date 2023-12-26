@@ -953,5 +953,4 @@ class CompanyAdmin(admin.ModelAdmin):
 @admin.register(LevelGrants)
 class LevelGrantsAdmin(admin.ModelAdmin):
     list_display = ('level', 'max_daily_crypto_withdraw', 'max_daily_fiat_withdraw', 'max_daily_fiat_deposit')
-    list_editable = ('max_daily_crypto_withdraw', 'max_daily_fiat_withdraw', 'max_daily_fiat_deposit')
     ordering = ('level',)
