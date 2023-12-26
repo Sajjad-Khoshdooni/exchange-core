@@ -41,7 +41,7 @@ class MarginPosition(models.Model):
     liquidation_price = get_amount_field(null=True)
     side = models.CharField(max_length=8, choices=SIDE_CHOICES)
     status = models.CharField(default=OPEN, max_length=12, choices=STATUS_CHOICES)
-    leverage = models.IntegerField(default=1)
+    leverage = models.PositiveSmallIntegerField()
     alert_mode = models.BooleanField(default=False, db_index=True)
 
     class Meta:
@@ -433,7 +433,7 @@ class MarginLeverage(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     account = models.ForeignKey('accounts.Account', on_delete=models.CASCADE)
-    leverage = get_amount_field(default=Decimal('1'), validators=(MinValueValidator(1),))
+    leverage = models.PositiveSmallIntegerField(default=3, validators=(MinValueValidator(1),))
 
     def __str__(self):
         return f'{self.account}-{self.leverage}'

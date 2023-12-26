@@ -254,9 +254,8 @@ class LeverageViewSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         max_leverage = SystemConfig.get_system_config().max_margin_leverage
 
-        if not 1 <= Decimal(attrs.get('leverage')) <= max_leverage or\
-                Decimal(attrs.get('leverage')) - int(attrs.get('leverage')) != Decimal('0'):
-            raise ValidationError('ضریب باید عددی صحیحی بین ۱ و ۵ باشد.')
+        if not 1 <= Decimal(attrs.get('leverage')) <= max_leverage:
+            raise ValidationError(f'ضریب باید عددی صحیحی بین 1 و {max_leverage} باشد.')
 
         return attrs
 
