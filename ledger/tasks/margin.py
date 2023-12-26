@@ -88,7 +88,7 @@ def alert_liquidation(account: Account):
     )
 
 
-@shared_task(queue='margin')
+@shared_task(queue='celery')
 def collect_margin_interest():
     now = timezone.now().replace(minute=0, second=0, microsecond=0)
     group_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"{now}:{int(now.hour) // 8}")
@@ -107,10 +107,11 @@ def collect_margin_interest():
                     MarginHistoryModel(
                         created=now,
                         position=position,
-                        amount=abs(position.debt_amount) * position.get_interest_rate(),
+                        amount=-position.debt_amount * position.get_interest_rate(),
                         group_id=group_id,
                         asset=position.loan_wallet.asset,
-                        type=MarginHistoryModel.INTEREST_FEE
+                        type=MarginHistoryModel.INTEREST_FEE,
+                        account=position.account
                     )
                 )
                 position.rebalance(pipeline)
@@ -137,7 +138,7 @@ def collect_margin_interest():
         position.liquidate(pipeline)
 
 
-@shared_task(queue='margin')
+@shared_task(queue='celery')
 def alert_risky_position():
     queryset = MarginPosition.objects.filter(alert_mode=False)
 
@@ -153,3 +154,12 @@ def alert_risky_position():
     queryset.filter(side=LONG,
                     base_wallet__balance__lte=F('asset_wallet__balance') * F('symbol__last_trade_price') * Decimal('1.2'))\
         .update(alert_mode=False)
+
+
+@shared_task(queue='celery')
+def check_position_health():
+    for position in MarginPosition.objects.filter(status=MarginPosition.OPEN) \
+            .prefetch_related('asset_wallet', 'base_wallet', 'symbol'):
+        margin = position.base_debt_amount + position.base_total_balance
+        if margin < 0:
+            logger.warning(f"Position{position.id} margin:{margin} is negative !!!")

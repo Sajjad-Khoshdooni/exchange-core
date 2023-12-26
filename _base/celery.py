@@ -126,6 +126,14 @@ app.conf.beat_schedule = {
             'expires': 20 * TASK_MULTIPLIER
         },
     },
+    'check_position_health': {
+        'task': 'ledger.tasks.margin.check_position_health',
+        'schedule': 600 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expires': 600 * TASK_MULTIPLIER
+        },
+    },
 
     'fill_trades_revenue': {
         'task': 'accounting.tasks.revenue.fill_revenue_filled_prices',

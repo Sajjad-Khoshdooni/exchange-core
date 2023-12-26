@@ -121,7 +121,7 @@ class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
     search_fields = ('group_id', 'hedge_key', 'symbol__name', )
     list_filter = (GapFilledFilter, 'symbol', 'source',)
-    readonly_fields = ('account', 'symbol', 'group_id')
+    readonly_fields = ('account', 'symbol', 'group_id', 'login_activity')
     actions = ('zero_gap_revenue', )
 
     @admin.action(description='Zero Gap Revenue')
