@@ -76,9 +76,10 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             status=FiatWithdrawRequest.CANCELED
         ).aggregate(amount=Sum('amount'))['amount'] or 0
 
-        if amount + today_withdraws > MAX_WITHDRAW:
-            logger.info('FiatRequest rejected due to large amount. user=%s' % user.id)
-            raise ValidationError({'amount': 'حداکثر میزان برداشت به حساب بانکی در روز ۱۰۰ میلیون تومان است.'})
+        # todo: move to gateway model
+        # if amount + today_withdraws > MAX_WITHDRAW:
+        #     logger.info('FiatRequest rejected due to large amount. user=%s' % user.id)
+        #     raise ValidationError({'amount': 'حداکثر میزان برداشت به حساب بانکی در روز ۱۰۰ میلیون تومان است.'})
 
         asset = Asset.get(Asset.IRT)
         wallet = asset.get_wallet(account)

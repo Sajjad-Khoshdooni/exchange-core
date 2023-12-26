@@ -24,7 +24,7 @@ def get_fiat_withdraw_irt_value(user: User):
     ).exclude(
         status=CANCELED
     ).aggregate(
-        amount=Sum('amount')
+        amount=Sum('amount') + Sum('fee_amount')
     )['amount'] or 0
 
     return fiat_amount
