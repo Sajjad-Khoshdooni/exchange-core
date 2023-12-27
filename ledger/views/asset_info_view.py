@@ -18,7 +18,7 @@ from ledger.models.asset import AssetSerializerMini
 from ledger.utils.coins_info import get_coins_info
 from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.precision import get_symbol_presentation_price
+from ledger.utils.precision import get_symbol_presentation_price, get_presentation_amount
 from ledger.utils.price import get_prices, get_coins_symbols, get_price
 from ledger.utils.provider import CoinInfo
 from multimedia.models import CoinPriceContent
@@ -316,6 +316,11 @@ class AssetOverviewAPIView(APIView):
 
 
 class MarginAssetInterestSerializer(AssetSerializerMini):
+    margin_interest_fee = serializers.SerializerMethodField()
+
+    def get_margin_interest_fee(self, asset: Asset):
+        return get_presentation_amount(asset.margin_interest_fee * 100)
+
     class Meta:
         model = Asset
         fields = (*AssetSerializerMini.Meta.fields, 'symbol', 'margin_interest_fee',)
@@ -324,7 +329,9 @@ class MarginAssetInterestSerializer(AssetSerializerMini):
 class MarginAssetInterestView(ListAPIView):
     permission_classes = []
     serializer_class = MarginAssetInterestSerializer
-    queryset = Asset.objects.filter(pair__margin_enable=True).distinct().order_by('id')
+    queryset = Asset.objects.filter(
+        Q(pair__margin_enable=True) | Q(symbol__in=[Asset.IRT, Asset.USDT])
+    ).distinct().order_by('id')
     pagination_class = LimitOffsetPagination
     search_fields = ['asset__symbol', 'asset__name', 'asset__name_fa']
     filter_backends = [DjangoFilterBackend, SearchFilter]
