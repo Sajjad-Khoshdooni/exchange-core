@@ -13,6 +13,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.exceptions import SmallDepthError, InsufficientBalance
 from ledger.models import MarginPosition, MarginHistoryModel
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.external_price import SHORT
 from ledger.utils.precision import floor_precision, get_margin_coin_presentation_balance
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
@@ -66,7 +67,9 @@ class MarginPositionSerializer(AssetSerializerMini):
         return instance.loan_wallet.balance
 
     def get_amount(self, instance):
-        return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
+        amount = floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
+        amount *= -1 if instance.side == SHORT else 1
+        return amount
 
     def get_free_amount(self, instance):
         return floor_precision(abs(instance.asset_wallet.get_free()), instance.symbol.step_size)
