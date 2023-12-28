@@ -130,7 +130,7 @@ class MarginAssetSerializer(AssetSerializerMini):
         return get_margin_coin_presentation_balance(asset.symbol, cross_wallet.get_free())
 
     def get_equity(self, asset: Asset):
-        equity = Decimal(self.get_available_margin(asset)) + Decimal(self.get_margin_position(asset))
+        equity = Decimal(self.get_available_margin(asset)) + Decimal(self.get_margin_position(asset)) + Decimal(self.get_pnl(asset))
 
         return get_margin_coin_presentation_balance(asset.symbol, equity)
 
