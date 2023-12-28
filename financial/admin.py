@@ -513,5 +513,5 @@ class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
     def clone_payment(self, request, queryset):
         for q in queryset:
             q.ref_id = ''
-            q.destination_id = ''
+            q.destination_id = None
             clone_model(q)

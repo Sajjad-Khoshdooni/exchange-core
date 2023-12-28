@@ -164,7 +164,7 @@ def get_last_price(symbol: str) -> Decimal:
     return prices.get(symbol)
 
 
-def get_depth_price(symbol: str, side: str, amount: Decimal) -> Decimal:
+def get_depth_price(symbol: str, side: str, amount: Decimal, depth_check: bool = True) -> Decimal:
     from market.models import Order, PairSymbol
 
     pair_symbol = PairSymbol.objects.filter(name=symbol).first()
@@ -177,7 +177,7 @@ def get_depth_price(symbol: str, side: str, amount: Decimal) -> Decimal:
         ).order_by('price' if side == SELL else '-price'))
 
         for order in open_orders:
-            if abs(order.price / open_orders[0].price - 1) > Decimal('0.05'):
+            if depth_check and abs(order.price / open_orders[0].price - 1) > Decimal('0.05'):
                 raise SmallDepthError(cumulative_sum)
 
             cumulative_sum += order.remaining
@@ -185,7 +185,10 @@ def get_depth_price(symbol: str, side: str, amount: Decimal) -> Decimal:
             if cumulative_sum >= amount:
                 return order.price
         else:
-            raise SmallDepthError(cumulative_sum)
+            if depth_check or not open_orders:
+                raise SmallDepthError(cumulative_sum)
+            else:
+                return open_orders[-1].price
 
     else:
         coin, base = get_symbol_parts(symbol)
@@ -225,3 +228,30 @@ def get_depth_price(symbol: str, side: str, amount: Decimal) -> Decimal:
         price = price * base_price * (1 + spread + extra_spread)
 
         return tick_size_fitter(price, pair_symbol.tick_size)
+
+
+def get_base_depth_price(symbol: str, side: str, amount: Decimal, depth_check: bool = True) -> Decimal:
+    from market.models import Order, PairSymbol
+
+    pair_symbol = PairSymbol.objects.filter(name=symbol).first()
+
+    if pair_symbol.enable:
+        cumulative_sum = Decimal(0)
+
+        open_orders = list(Order.open_objects.filter(symbol=pair_symbol, side=side).annotate(
+            remaining=(F('amount') - F('filled_amount')) * F('price')
+        ).order_by('price' if side == SELL else '-price'))
+
+        for order in open_orders:
+            if abs(order.price / open_orders[0].price - 1) > Decimal('0.05'):
+                raise SmallDepthError(cumulative_sum)
+
+            cumulative_sum += order.remaining
+
+            if cumulative_sum >= amount:
+                return order.price
+        else:
+            if depth_check or not open_orders:
+                raise SmallDepthError(cumulative_sum)
+            else:
+                return open_orders[-1].price

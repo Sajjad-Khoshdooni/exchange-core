@@ -112,7 +112,7 @@ class StakeOptionAPIView(ListAPIView):
     permission_classes = []
 
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['landing']
+    filterset_fields = ['landing', 'type']
 
     serializer_class = StakeOptionSerializer
     queryset = StakeOption.objects.filter(enable=True).order_by('-apr')

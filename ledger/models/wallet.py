@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models import CheckConstraint, Q, F, UniqueConstraint
 
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
+from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -32,7 +33,7 @@ class Wallet(models.Model):
     balance = get_amount_field(default=Decimal(0), validators=())
     locked = get_amount_field(default=Decimal(0))
 
-    variant = get_group_id_field(null=True, default=None)
+    variant = get_group_id_field(null=True, default=None, db_index=True)
     expiration = models.DateTimeField(null=True, blank=True)
     credit = get_amount_field(default=0)
 
@@ -61,8 +62,10 @@ class Wallet(models.Model):
             CheckConstraint(
                 name='valid_balance_constraint',
                 check=Q(check_balance=False) |
-                      (~Q(market__in=('loan', 'debt')) & Q(balance__gte=F('locked') - F('credit'))) |
-                      (Q(market__in=('loan', 'debt')) & Q(balance__lte=0) & Q(locked=0)),
+                      (~Q(market__in=('loan', 'debt', 'margin')) & Q(balance__gte=F('locked') - F('credit'))) |
+                      (Q(market__in=('loan', 'debt')) & Q(balance__lte=0) & Q(locked=0)) |
+                      (Q(market='margin') & Q(variant__isnull=True) & Q(balance__gte=F('locked') - F('credit'))) |
+                      (Q(market='margin') & Q(variant__isnull=False))
             ),
             CheckConstraint(
                 name='valid_locked_constraint',

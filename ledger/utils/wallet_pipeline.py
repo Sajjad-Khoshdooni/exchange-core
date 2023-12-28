@@ -48,6 +48,12 @@ class WalletPipeline(Atomic):
     def get_wallet_balance_diff(self, wallet_id):
         return self._wallet_balances[wallet_id]
 
+    def get_wallet_lock_diff(self, wallet_id):
+        return self._wallet_locks[wallet_id]
+
+    def get_wallet_free_balance_diff(self, wallet_id):
+        return self.get_wallet_balance_diff(wallet_id) - self.get_wallet_lock_diff(wallet_id)
+
     def new_lock(self, key: UUID, wallet, amount: Union[int, Decimal], reason: str):
         from ledger.models import BalanceLock
         from ledger.models import Wallet

@@ -6,7 +6,9 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
-from rest_framework.generics import get_object_or_404
+from rest_framework.filters import SearchFilter
+from rest_framework.generics import get_object_or_404, ListAPIView
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -16,7 +18,7 @@ from ledger.models.asset import AssetSerializerMini
 from ledger.utils.coins_info import get_coins_info
 from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.precision import get_symbol_presentation_price
+from ledger.utils.precision import get_symbol_presentation_price, get_presentation_amount
 from ledger.utils.price import get_prices, get_coins_symbols, get_price
 from ledger.utils.provider import CoinInfo
 from multimedia.models import CoinPriceContent
@@ -162,7 +164,6 @@ class AssetsViewSet(ModelViewSet):
     authentication_classes = ()
     permission_classes = ()
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['margin_enable']
 
     def get_serializer_context(self):
 
@@ -225,9 +226,6 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
-
-        if self.get_options('market') == Wallet.MARGIN:
-            queryset = queryset.filter(margin_enable=True)
 
         if self.get_options('coin'):
             queryset = queryset.exclude(symbol=Asset.IRT)
@@ -315,3 +313,25 @@ class AssetOverviewAPIView(APIView):
             'high_24h_change': high_24h_change,
             'newest': newest
         })
+
+
+class MarginAssetInterestSerializer(AssetSerializerMini):
+    margin_interest_fee = serializers.SerializerMethodField()
+
+    def get_margin_interest_fee(self, asset: Asset):
+        return get_presentation_amount(asset.margin_interest_fee * 100)
+
+    class Meta:
+        model = Asset
+        fields = (*AssetSerializerMini.Meta.fields, 'symbol', 'margin_interest_fee',)
+
+
+class MarginAssetInterestView(ListAPIView):
+    permission_classes = []
+    serializer_class = MarginAssetInterestSerializer
+    queryset = Asset.objects.filter(
+        Q(pair__margin_enable=True) | Q(symbol__in=[Asset.IRT, Asset.USDT])
+    ).distinct().order_by('id')
+    pagination_class = LimitOffsetPagination
+    search_fields = ['symbol', 'name', 'name_fa']
+    filter_backends = [DjangoFilterBackend, SearchFilter]

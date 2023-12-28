@@ -16,7 +16,6 @@ class DepositRecoveryRequest(models.Model):
     trx_hash = models.CharField(max_length=128)
     amount = get_amount_field()
     receiver_address = get_address_field()
-    sender_address = models.CharField(max_length=256, blank=True)
     description = models.TextField(blank=True)
 
     image = models.OneToOneField(
@@ -51,7 +50,7 @@ class DepositRecoveryRequest(models.Model):
                 amount=self.amount,
                 wallet=wallet,
                 source=Transfer.MANUAL,
-                out_address=self.sender_address,
+                out_address='',
                 deposit=True,
                 price_usdt=self.amount * price_usdt,
                 price_irt=self.amount * price_irt

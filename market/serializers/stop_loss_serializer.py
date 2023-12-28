@@ -68,6 +68,8 @@ class StopLossSerializer(OrderSerializer):
             raise ValidationError(_('Insufficient Balance'))
 
     def validate(self, attrs):
+        if attrs.get('market') == Wallet.MARGIN:
+            raise ValidationError(_('در بازار تعهدی امکان سفارش oco وجود ندارد'))
         return super(OrderSerializer, self).validate(attrs)
 
     class Meta:

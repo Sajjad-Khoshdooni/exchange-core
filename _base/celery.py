@@ -110,6 +110,31 @@ app.conf.beat_schedule = {
         },
     },
 
+    'collect_margin_interest': {
+        'task': 'ledger.tasks.margin.collect_margin_interest',
+        'schedule': crontab(hour='4,12,20', minute=30),
+        'options': {
+            'queue': 'celery',
+            'expires': 3600
+        },
+    },
+    'alert_risky_position': {
+        'task': 'ledger.tasks.margin.alert_risky_position',
+        'schedule': 20 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expires': 20 * TASK_MULTIPLIER
+        },
+    },
+    'check_position_health': {
+        'task': 'ledger.tasks.margin.check_position_health',
+        'schedule': 600 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expires': 600 * TASK_MULTIPLIER
+        },
+    },
+
     'fill_trades_revenue': {
         'task': 'accounting.tasks.revenue.fill_revenue_filled_prices',
         'schedule': 120 * TASK_MULTIPLIER,

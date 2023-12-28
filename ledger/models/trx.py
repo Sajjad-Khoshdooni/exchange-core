@@ -14,6 +14,8 @@ class Trx(models.Model):
     TRANSFER = 'f'
     MARGIN_TRANSFER = 'm'
     MARGIN_BORROW = 'b'
+    MARGIN_INSURANCE = 'mi'
+    MARGIN_INTEREST = 'in'
     FAST_LIQUID = 'fl'
     LIQUID = 'l'
     COMMISSION = 'c'
@@ -48,7 +50,8 @@ class Trx(models.Model):
             (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
             (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'),
             (STAKE, 'stake'), (STAKE_REVENUE, 'stake revenue'), (STAKE_FEE, 'stake fee'), (RESERVE, 'reserve'),
-            (DUST, 'dust'), (MANUAL, 'manual'), (DELIST, 'delist'), (REBRAND, 'rebrand')
+            (DUST, 'dust'), (MANUAL, 'manual'), (DELIST, 'delist'), (REBRAND, 'rebrand'),
+            (MARGIN_INSURANCE, 'margin_insurance'), (MARGIN_INTEREST, 'margin_interest')
         )
     )
 
@@ -65,6 +68,9 @@ class Trx(models.Model):
         unique_together = ('group_id', 'sender', 'receiver', 'scope')
         constraints = [
             CheckConstraint(check=Q(amount__gt=0), name='check_ledger_trx_amount', ),
+        ]
+        indexes = [
+            models.Index(fields=['scope', 'sender', 'created'], name="trx_margin_idx")
         ]
 
     def save(self, *args, **kwargs):

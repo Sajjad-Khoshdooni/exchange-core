@@ -1,54 +1,72 @@
 from decimal import Decimal
 
-from django.utils.translation import gettext_lazy as _
+import django_filters
+from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import get_object_or_404
+from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds, HedgeError
+from accounts.models import SystemConfig
+from ledger.exceptions import InsufficientBalance
 from ledger.margin.margin_info import MarginInfo
-from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
+from ledger.models import MarginTransfer, Asset, Wallet, MarginPosition, MarginLeverage
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
+from ledger.models.position import MarginHistoryModel
+from ledger.utils.external_price import LONG
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
-from ledger.utils.price import get_last_price
-from ledger.utils.wallet_pipeline import WalletPipeline
+from ledger.utils.precision import floor_precision, get_presentation_amount, get_margin_coin_presentation_balance
+from ledger.utils.price import get_last_price, get_last_prices, get_coins_symbols
 
 
 class MarginInfoView(APIView):
+
+    @staticmethod
+    def aggregate_wallets_values(wallets, prices):
+        total_irt_value = total_usdt_value = Decimal(0)
+        for wallet in wallets:
+            coin = wallet.asset.symbol
+            price_usdt = prices.get(coin + Asset.USDT, 0)
+            price_irt = prices.get(coin + Asset.IRT, 0)
+
+            total_usdt_value += wallet.balance * price_usdt
+            total_irt_value += wallet.balance * price_irt
+        return {
+            'IRT': get_presentation_amount(floor_precision(total_irt_value)),
+            'USDT': get_presentation_amount(floor_precision(total_usdt_value, 8))
+        }
+
     def get(self, request: Request):
         account = request.user.get_account()
-        margin_info = MarginInfo.get(account)
 
-        margin_level = min(margin_info.get_margin_level(), Decimal(999))
+        user_margin_wallets = Wallet.objects.filter(market=Wallet.MARGIN, account=account)
 
-        if margin_level > 10:
-            margin_level_precision = 0
-        elif margin_level > 2:
-            margin_level_precision = 1
-        else:
-            margin_level_precision = 3
+        coins = list(user_margin_wallets.values_list('asset__symbol', flat=True))
+        prices = get_last_prices(get_coins_symbols(coins))
+
+        total_asset = self.aggregate_wallets_values(user_margin_wallets.filter(balance__gt=Decimal('0')), prices)
+        total_debt = self.aggregate_wallets_values(user_margin_wallets.filter(balance__lt=Decimal('0')), prices)
 
         return Response({
-            'total_assets': round(Decimal(margin_info.total_assets), 2),
-            'total_debt': round(Decimal(margin_info.total_debt), 2),
-            'margin_level': round(margin_level, margin_level_precision),
-            'total_equity': round(Decimal(margin_info.get_total_equity()), 2),
-            'has_position': Wallet.objects.filter(account=account, market=Wallet.LOAN, balance__lt=0).exists()
+            'total_assets': total_asset,
+            'total_equity': {
+                'IRT': get_margin_coin_presentation_balance('IRT', Decimal(total_asset['IRT']) + Decimal(total_debt['IRT'])),
+                'USDT': get_margin_coin_presentation_balance('USDT', Decimal(total_asset['USDT']) + Decimal(total_debt['USDT'])),
+            }
         })
 
 
 class AssetMarginInfoView(APIView):
     def get(self, request: Request, symbol):
         account = request.user.get_account()
-        asset = get_object_or_404(Asset, symbol=symbol.upper(), margin_enable=True)
+        asset = get_object_or_404(Asset, symbol=symbol.upper())
 
         margin_info = MarginInfo.get(account)
 
@@ -74,27 +92,73 @@ class AssetMarginInfoView(APIView):
 class MarginTransferSerializer(serializers.ModelSerializer):
     amount = get_serializer_amount_field()
     coin = CoinField(source='asset')
-    symbol = SymbolField(source='position_symbol')
+    symbol = SymbolField(source='position_symbol', required=False)
     asset = AssetSerializerMini(read_only=True)
-
-    @staticmethod
-    def validate_coin(coin):
-        if coin.symbol not in (Asset.USDT, Asset.IRT):
-            raise ValidationError(_('Invalid coin to transfer'))
-        return coin
+    id = serializers.IntegerField(write_only=True, required=False)
 
     def create(self, validated_data):
         user = self.context['request'].user
 
-        asset = validated_data['asset']
-        check_margin_view_permission(user.get_account(), asset)
-        print(validated_data)
+        symbol = validated_data.get('position_symbol')
+        check_margin_view_permission(user.get_account(), symbol)
 
         return super(MarginTransferSerializer, self).create(validated_data)
 
+    def validate(self, attrs):
+        if attrs['asset'] not in Asset.objects.filter(symbol__in=[Asset.IRT, Asset.USDT]):
+            raise ValidationError({'asset': 'فقط میتوانید ریال و تتر انتقال دهید.'})
+
+        if attrs['type'] not in [MarginTransfer.SPOT_TO_MARGIN, MarginTransfer.MARGIN_TO_SPOT] and not attrs.get('position_symbol'):
+            raise ValidationError({'position_symbol': 'بازار را وارد کنید'})
+
+        if attrs['type'] == MarginTransfer.SPOT_TO_MARGIN:
+            if not self.context['request'].user.show_margin:
+                raise ValidationError('Dont Have allow to Transfer Margin')
+
+            user_total_equity = MarginPosition.objects.filter(
+                account=self.context['request'].user.get_account(),
+                status__in=[MarginPosition.TERMINATING, MarginPosition.OPEN],
+                symbol__base_asset=attrs.get('asset')
+            ).annotate(base_asset_value=F('asset_wallet__balance') * F('symbol__last_trade_price')).\
+                aggregate(total_equity=Sum('base_asset_value') + Sum('base_wallet__balance'))['total_equity'] or 0
+
+            base = attrs.get('asset').symbol
+            sys_config = SystemConfig.get_system_config()
+
+            if (base == Asset.USDT and user_total_equity >= sys_config.total_user_margin_usdt_base) or \
+                    (base == Asset.IRT and user_total_equity >= sys_config.total_user_margin_irt_base):
+                raise ValidationError('Cant place margin order Due to reach total Equity limit')
+
+        if attrs['type'] in [MarginTransfer.POSITION_TO_MARGIN, MarginTransfer.MARGIN_TO_POSITION]:
+            if attrs['position_symbol'].base_asset != attrs['asset']:
+                asset = attrs['position_symbol'].base_asset.name_fa
+                raise ValidationError({'asset': f'فقط میتوانید {asset} انتقال دهید.'})
+
+            if not attrs.get('id'):
+                raise ValidationError({'id': 'id موقعیت را وارد کنید'})
+
+            position = MarginPosition.objects.filter(
+                account=self.context['request'].user.get_account(),
+                symbol=attrs['position_symbol'],
+                status__in=[MarginPosition.OPEN],
+                id=attrs.pop('id')
+            ).first()
+
+            if not position:
+                raise ValidationError('There is no valid position to transfer margin')
+            attrs['position'] = position
+
+            if attrs['type'] == MarginTransfer.POSITION_TO_MARGIN and position.withdrawable_base_asset < Decimal(attrs['amount']):
+                raise ValidationError(f'فقط میتوانید {position.withdrawable_base_asset} انتقال دهید')
+
+            if attrs['type'] == MarginTransfer.MARGIN_TO_POSITION and position.side == LONG and position.debt_amount < Decimal(attrs['amount']):
+                raise ValidationError(f'فقط میتوانید {position.debt_amount} انتقال دهید')
+
+        return attrs
+
     class Meta:
         model = MarginTransfer
-        fields = ('created', 'amount', 'type', 'coin', 'asset', 'symbol')
+        fields = ('created', 'amount', 'type', 'coin', 'asset', 'symbol', 'id', 'position')
         read_only_fields = ('created', )
 
 
@@ -117,61 +181,110 @@ class MarginTransferViewSet(ModelViewSet):
         ).order_by('-created')
 
 
-class MarginLoanSerializer(serializers.ModelSerializer):
-    coin = CoinField(source='asset')
-    amount = get_serializer_amount_field()
-    asset = AssetSerializerMini(read_only=True)
+class MarginPositionInfoView(APIView):
+    def get(self, request: Request):
+        account = request.user.get_account()
+        symbol = request.GET.get('symbol')
+        side = request.GET.get('side')
 
-    def create(self, validated_data):
-        user = self.context['request'].user
-        asset = validated_data['asset']
+        if not symbol:
+            return Response({'Error': 'need symbol'}, 400)
+        if not side:
+            return Response({'Error': 'need position side'}, 400)
 
-        check_margin_view_permission(user.get_account(), asset)
+        from market.models import PairSymbol
+        symbol_model = get_object_or_404(PairSymbol, name=symbol)
 
-        validated_data['loan_type'] = validated_data.pop('type')
+        free = symbol_model.base_asset.get_wallet(
+            account, Wallet.MARGIN, None
+        ).get_free()
+        margin_leverage, _ = MarginLeverage.objects.get_or_create(account=account)
 
-        if validated_data['amount'] <= 0:
-            raise ValidationError('مقداری بزرگتر از صفر انتخاب کنید.')
+        data = {
+            'max_buy_volume': free * margin_leverage.leverage,
+            'max_sell_volume': free * margin_leverage.leverage / symbol_model.last_trade_price
+        }
 
-        try:
-            with WalletPipeline() as pipeline:
-                return MarginLoan.new_loan(
-                    **validated_data,
-                    pipeline=pipeline
-                )
-        except InsufficientDebt:
-            raise ValidationError('میزان بدهی کمتر از مقدار بازپرداخت است.')
-        except MaxBorrowableExceeds:
-            raise ValidationError('میزان بدهی بیشتر از حد مجاز است.')
-        except HedgeError:
-            raise ValidationError('مشکلی در پردازش اطلاعات به وجود آمد.')
+        data["max_buy_volume"] = get_margin_coin_presentation_balance(symbol_model.base_asset.symbol,
+                                                               max(Decimal('0'), data['max_buy_volume']) * Decimal('0.99'))
+        data["max_sell_volume"] = get_margin_coin_presentation_balance(symbol_model.asset.symbol,
+                                                                max(Decimal('0'), data['max_sell_volume']) * Decimal('0.99'))
+        return Response(data)
+
+
+class MarginHistorySerializer(serializers.ModelSerializer):
+    asset = serializers.SerializerMethodField()
+    symbol = serializers.SerializerMethodField()
+
+    def get_asset(self, instance):
+        return instance.asset.symbol
+
+    def get_symbol(self, instance):
+        return instance.position and instance.position.symbol.name
 
     class Meta:
-        fields = ('created', 'amount', 'type', 'coin', 'asset', 'status')
-        read_only_fields = ('created', 'status')
-        model = MarginLoan
+        model = MarginHistoryModel
+        fields = ('created', 'amount', 'symbol', 'type', 'position', 'asset')
 
 
-class MarginLoanViewSet(ModelViewSet):
-    serializer_class = MarginLoanSerializer
+class PositionFilter(django_filters.FilterSet):
+    symbol = django_filters.CharFilter(field_name='position__symbol__name', lookup_expr='iexact')
+    asset = django_filters.CharFilter(field_name='asset__symbol', lookup_expr='iexact')
+    position = django_filters.CharFilter(field_name='position__id')
+
+    class Meta:
+        model = MarginHistoryModel
+        fields = ('symbol', 'asset', 'type', 'position')
+
+
+class MarginPositionHistoryView(ListAPIView):
+    serializer_class = MarginHistorySerializer
     pagination_class = LimitOffsetPagination
 
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['status', 'type']
-
-    def perform_create(self, serializer):
-        serializer.save(account=self.request.user.get_account())
+    filter_class = PositionFilter
 
     def get_queryset(self):
-        return MarginLoan.objects.filter(
-            account=self.request.user.get_account()
-        ).order_by('-created')
+        account = self.request.user.get_account()
+        return MarginHistoryModel.objects.filter(account=account).order_by('-created')
 
 
-class MarginClosePositionView(APIView):
-    def post(self, request: Request):
-        account = request.user.get_account()
+class LeverageViewSerializer(serializers.ModelSerializer):
 
-        CloseRequest.close_margin(account, reason=CloseRequest.USER)
+    def validate(self, attrs):
+        max_leverage = SystemConfig.get_system_config().max_margin_leverage
 
-        return Response('ok', status=201)
+        if not 1 <= Decimal(attrs.get('leverage')) <= max_leverage:
+            raise ValidationError(f'ضریب باید عددی صحیحی بین 1 و {max_leverage} باشد.')
+
+        return attrs
+
+    class Meta:
+        model = MarginLeverage
+        fields = ('leverage',)
+
+
+class MarginLeverageView(APIView):
+    def post(self, request):
+        serializer = LeverageViewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+
+        MarginLeverage.objects.update_or_create(
+            account=request.user.account,
+            defaults={
+                'leverage': data['leverage']
+            }
+        )
+
+        return Response(200)
+
+    def get(self, request):
+        margin_leverage, _ = MarginLeverage.objects.get_or_create(account=request.user.account)
+        sys_config = SystemConfig.get_system_config()
+
+        return Response({
+            "leverage": margin_leverage.leverage,
+            "max_leverage": sys_config.max_margin_leverage
+        }, 200)
+

@@ -27,7 +27,8 @@ from financial.models import Payment
 from gamify.utils import clone_model
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
-    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, TokenRebrand
+    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, TokenRebrand, \
+    MarginHistoryModel, MarginPosition
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -57,10 +58,10 @@ class AssetAdmin(AdvancedAdmin):
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
-        'margin_enable', 'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
+        'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor', 'margin_interest_fee'
     )
-    list_filter = ('enable', 'trend', 'margin_enable', 'spread_category', 'coincategory', )
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge', 'price_page')
+    list_filter = ('enable', 'trend', 'spread_category', 'coincategory', )
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'hedge', 'price_page')
     search_fields = ('symbol',)
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset',)
@@ -405,7 +406,7 @@ class BalanceLockInline(admin.TabularInline):
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_username', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
-                    'credit')
+                    'credit', 'variant')
     inlines = [BalanceLockInline]
     list_filter = [
         ('asset', RelatedDropdownFilter),
@@ -589,20 +590,6 @@ class CryptoAccountTypeFilter(SimpleListFilter):
 class MarginTransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'amount', 'type',)
     search_fields = ('group_id',)
-
-
-@admin.register(models.MarginLoan)
-class MarginLoanAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'amount', 'type', 'asset', 'status')
-    search_fields = ('group_id',)
-
-
-@admin.register(models.CloseRequest)
-class CloseRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
-    search_fields = ('group_id',)
-    list_filter = ('status',)
-    readonly_fields = ('account', 'created', 'group_id')
 
 
 @admin.register(models.AddressBook)
@@ -980,3 +967,20 @@ class TokenRebrandAdmin(admin.ModelAdmin):
     def get_rebrand_info(self, token_rebrand: TokenRebrand):
         rows = [{'name': k, 'value': v} for (k, v) in token_rebrand.get_rebrand_info().__dict__.items()]
         return mark_safe(get_table_html(['name', 'value'], rows))
+
+
+@admin.register(MarginPosition)
+class MarginPositionAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'symbol', 'amount')
+    readonly_fields = ('account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price', 'side',
+                       'liquidation_price', 'status', 'leverage', 'equity', 'group_id')
+    list_filter = ('status', 'side', 'symbol')
+    search_fields = ('symbol__name', 'status',)
+
+
+@admin.register(MarginHistoryModel)
+class MarginHistoryModelAdmin(admin.ModelAdmin):
+    list_display = ('created', 'position', 'asset', 'amount', 'type')
+    readonly_fields = ('created', 'position', 'asset', 'amount', 'type', 'group_id')
+    search_fields = ('group_id', 'asset__symbol', 'position__symbol__name', 'type')
+    list_filter = ('type', 'asset')

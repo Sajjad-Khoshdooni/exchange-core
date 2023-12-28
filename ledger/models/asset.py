@@ -1,10 +1,12 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Union
 from uuid import UUID
 
 from django.conf import settings
 from django.db import models
 from rest_framework import serializers
+from rest_framework.generics import get_object_or_404
 
 from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
 from ledger.models import Wallet
@@ -52,7 +54,6 @@ class Asset(models.Model):
     trade_enable = models.BooleanField(default=True)
     hedge = models.BooleanField(default=True)
 
-    margin_enable = models.BooleanField(default=False)
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.SET_NULL, null=True, blank=True)
 
     publish_date = models.DateTimeField(null=True, blank=True)
@@ -70,6 +71,8 @@ class Asset(models.Model):
     distribution_factor = models.FloatField(default=0)
 
     stale_price = get_amount_field(null=True)
+
+    margin_interest_fee = get_amount_field(default=Decimal('0.00015'))
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order',)
@@ -177,7 +180,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'margin_enable', 'precision', 'step_size', 'name', 'name_fa', 'logo', 'original_symbol',
+        fields = ('symbol', 'precision', 'step_size', 'name', 'name_fa', 'logo', 'original_symbol',
                   'original_name_fa')
 
 
@@ -190,4 +193,4 @@ class CoinField(serializers.CharField):
         if not data:
             return
         else:
-            return Asset.get(symbol=data)
+            return get_object_or_404(Asset, symbol=data)

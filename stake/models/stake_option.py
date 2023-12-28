@@ -8,9 +8,14 @@ from accounts.models import User
 
 
 class StakeOption(models.Model):
+    DEFI, STAKE, BOT = 'defi', 'stake', 'bot'
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     apr = models.DecimalField(max_digits=6, decimal_places=3, blank=True)
-    is_bot = models.BooleanField(default=False)
+    type = models.CharField(
+        default=DEFI,
+        max_length=6,
+        choices=[(DEFI, DEFI), (STAKE, STAKE), (BOT, BOT)]
+    )
 
     user_max_amount = get_amount_field()
     user_min_amount = get_amount_field()

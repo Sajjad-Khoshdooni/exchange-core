@@ -1,6 +1,4 @@
 from django.urls import path
-from ledger import views
-from django.urls import path
 
 from ledger import views
 
@@ -53,24 +51,21 @@ urlpatterns = [
     path('v1/trade/otc/info/', views.OTCInfoView.as_view()),
     path('v1/trade/otc/myTrades/', views.OTCHistoryView.as_view()),
 
-    path('v1/margin/info/', views.MarginInfoView.as_view()),
-    path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
     path('v1/margin/transfer/', views.MarginTransferViewSet.as_view({
         'get': 'list',
         'post': 'create'
     })),
-
-    path('v1/margin/wallets/', views.MarginWalletViewSet.as_view({'get': 'list'})),
-    path('v1/margin/close/', views.MarginClosePositionView.as_view()),
-    path('v1/margin/loan/', views.MarginLoanViewSet.as_view({
-        'get': 'list',
-        'post': 'create'
-    })),
+    path('v1/margin/asset/interest/', views.MarginAssetInterestView.as_view()),
 
     path('v2/margin/wallets/', views.MarginAssetViewSet.as_view({'get': 'list'})),
     path('v2/margin/balance/', views.MarginBalanceAPIView.as_view()),
     path('v2/margin/transfer-balance/', views.MarginTransferBalanceAPIView.as_view()),
     path('v2/margin/positions/', views.MarginPositionViewSet.as_view({'get': 'list'})),
+    path('v2/margin/close/', views.MarginClosePositionView.as_view()),
+    path('v2/margin/info/', views.MarginInfoView.as_view()),
+    path('v2/margin/position/info/', views.MarginPositionInfoView.as_view()),
+    path('v2/margin/position/history/', views.MarginPositionHistoryView.as_view()),
+    path('v2/margin/leverage/', views.MarginLeverageView.as_view()),
 
     path('v1/addressbook/<int:pk>/', views.AddressBookView.as_view({
         'get': 'retrieve',
@@ -99,4 +94,6 @@ urlpatterns = [
     path('v1/fast_buy/', views.FastBuyTokenAPI.as_view()),
 
     path('v1/transactions/recent/', views.RecentTransactionsView.as_view()),
+
+    path('v1/deposit/recover/', views.DepositRecoveryView.as_view()),
 ]

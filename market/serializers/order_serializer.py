@@ -11,10 +11,10 @@ from rest_framework.generics import get_object_or_404
 
 from accounts.models import LoginActivity
 from accounts.permissions import can_trade
-from ledger.exceptions import InsufficientBalance
-from ledger.models import Wallet, Asset
-from ledger.utils.external_price import IRT
-from ledger.utils.margin import check_margin_view_permission
+from ledger.exceptions import InsufficientBalance, SmallDepthError
+from ledger.models import Wallet, Asset, MarginLeverage
+from ledger.utils.external_price import IRT, BUY, SELL, LONG, SHORT
+from ledger.utils.margin import check_margin_view_permission, check_margin_order
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -39,12 +39,20 @@ class OrderSerializer(serializers.ModelSerializer):
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
     is_oco = serializers.SerializerMethodField()
+    is_open_position = serializers.BooleanField(allow_null=True, required=False)
+    leverage = serializers.SerializerMethodField()
+    position_side = serializers.SerializerMethodField()
     trades = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
         data['amount'] = decimal_to_str(floor_precision(Decimal(data['amount']), order.symbol.step_size))
-        data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), order.symbol.tick_size))
+
+        if order.fill_type == Order.MARKET:
+            data['price'] = None
+        else:
+            data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), order.symbol.tick_size))
+
         data['symbol'] = order.symbol.name
         return data
 
@@ -75,14 +83,19 @@ class OrderSerializer(serializers.ModelSerializer):
         wallet = self.post_validate(symbol, validated_data)
 
         matched_trades = None
+        position = None
+        if wallet.market == wallet.MARGIN:
+            position = symbol.get_margin_position(self.context['account'], order_side=validated_data['side'],
+                                                  is_open_position=validated_data['is_open_position'])
+
         login_activity = LoginActivity.from_request(self.context['request'])
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol,
-                     'login_activity': login_activity}
+                     'login_activity': login_activity, 'position': position}
                 )
-                matched_trades = created_order.submit(pipeline)
+                matched_trades = created_order.submit(pipeline, is_open_position=validated_data.get('is_open_position'))
 
                 extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
                 pipeline.add_market_cache_data(
@@ -97,6 +110,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
+        except SmallDepthError:
+            raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
         except Exception as e:
             logger.error('failed placing order', extra={'exp': e, 'order': validated_data})
             if settings.DEBUG_OR_TESTING_OR_STAGING:
@@ -118,19 +133,27 @@ class OrderSerializer(serializers.ModelSerializer):
         if not symbol.enable and self.context['account'].id != settings.MARKET_MAKER_ACCOUNT_ID:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
 
-        position = types.SimpleNamespace(variant=None)
+        validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
+
+        position = types.SimpleNamespace(group_id=None)
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
-            check_margin_view_permission(self.context['account'], symbol.asset)
-            position = symbol.get_margin_position(self.context['account'])
+            check_margin_view_permission(self.context['account'], symbol)
+            position = symbol.get_margin_position(
+                self.context['account'], order_side=validated_data['side'],
+                is_open_position=validated_data['is_open_position']
+            )
+            if validated_data.get('is_open_position') and position.liquidation_price and\
+                    position.leverage != MarginLeverage.objects.get(account=self.context['account']).leverage:
+                raise ValidationError(_(f'برای افزایش موقعیت فعلی باید ضریب را به {position.leverage} برگردانید.')
+                                      .format(symbol=symbol))
 
-        validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
         wallet = symbol.asset.get_wallet(
-            self.context['account'], market=market, variant=position.variant or self.context['variant']
+            self.context['account'], market=market, variant=position.group_id or self.context['variant']
         )
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
         self.validate_order_size(
-            validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol
+            validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol, market, validated_data.get('is_open_position')
         )
         return wallet
 
@@ -154,7 +177,10 @@ class OrderSerializer(serializers.ModelSerializer):
         return quantize_amount
 
     @staticmethod
-    def validate_order_size(amount: Decimal, price: Decimal, min_order_size: Decimal, base_asset: str):
+    def validate_order_size(amount: Decimal, price: Decimal, min_order_size: Decimal, base_asset: str, market, is_open_position=None):
+        if market == Wallet.MARGIN and not is_open_position:
+            return
+
         if (amount * price) < min_order_size:
             msg = _('Small order size {min_order_size} {base_asset}').format(
                 min_order_size=humanize_number(min_order_size),
@@ -178,6 +204,9 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 {'price': _('price is mandatory in limit order.')}
             )
+        if attrs['wallet']['market'] == Wallet.MARGIN:
+            check_margin_order(attrs=attrs, account=self.context['request'].user.get_account())
+
         return attrs
 
     def get_filled_amount(self, order: Order):
@@ -211,6 +240,12 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_is_oco(self, instance: Order):
         return bool(instance.oco)
 
+    def get_leverage(self, instance: Order):
+        return instance.position and instance.position.leverage
+
+    def get_position_side(self, instance: Order):
+        return instance.position and instance.position.side
+
     def get_trades(self, instance: Order):
         queryset = Trade.objects.filter(order_id=instance.id)
 
@@ -225,7 +260,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
                   'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel', 'is_oco',
-                  'time_in_force', 'client_order_id', 'trades')
+                  'time_in_force', 'client_order_id', 'is_open_position', 'leverage', 'position_side', 'trades')
         read_only_fields = ('id', 'created', 'status', 'trades')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
