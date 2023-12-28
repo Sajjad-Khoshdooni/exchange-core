@@ -326,5 +326,5 @@ class MarginAssetInterestView(ListAPIView):
     serializer_class = MarginAssetInterestSerializer
     queryset = Asset.objects.filter(pair__margin_enable=True).distinct().order_by('id')
     pagination_class = LimitOffsetPagination
-    search_fields = ['asset__symbol', 'asset__name', 'asset__name_fa']
+    search_fields = ['symbol', 'name', 'name_fa']
     filter_backends = [DjangoFilterBackend, SearchFilter]
