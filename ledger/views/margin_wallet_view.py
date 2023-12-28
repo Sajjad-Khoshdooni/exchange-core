@@ -169,11 +169,11 @@ class MarginAssetViewSet(ModelViewSet):
         irt_positions = irt_queryset.annotate(
             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance'),
             pnl=F('position_amount') - F('equity')
-            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
+            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'), e=Sum('equity'))
 
         ctx[Asset.IRT] = {
             'pnl': (irt_positions['p'] or Decimal('0')) + irt_fee,
-            'equity': irt_positions['s'] or Decimal('0'),
+            'equity': irt_positions['e'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.IRT).first()
         }
 
@@ -185,11 +185,11 @@ class MarginAssetViewSet(ModelViewSet):
         usdt_positions = usdt_queryset.annotate(
             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance'),
             pnl=F('position_amount') - F('equity')
-            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
+            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'), e=Sum('equity'))
 
         ctx[Asset.USDT] = {
             'pnl': (usdt_positions['p'] or Decimal('0')) + usdt_fee,
-            'equity': usdt_positions['s'] or Decimal('0'),
+            'equity': usdt_positions['e'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.USDT).first()
         }
 
