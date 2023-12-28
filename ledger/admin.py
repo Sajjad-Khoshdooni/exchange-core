@@ -28,7 +28,7 @@ from gamify.utils import clone_model
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
     ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback, DepositRecoveryRequest, TokenRebrand, \
-    MarginHistoryModel, MarginPosition
+    MarginHistoryModel, MarginPosition, MarginLeverage
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -984,3 +984,9 @@ class MarginHistoryModelAdmin(admin.ModelAdmin):
     readonly_fields = ('created', 'position', 'asset', 'amount', 'type', 'group_id')
     search_fields = ('group_id', 'asset__symbol', 'position__symbol__name', 'type')
     list_filter = ('type', 'asset')
+
+
+@admin.register(MarginLeverage)
+class MarginLeverageAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'leverage')
+

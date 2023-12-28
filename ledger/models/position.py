@@ -432,7 +432,7 @@ class MarginPosition(models.Model):
 class MarginLeverage(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
-    account = models.ForeignKey('accounts.Account', on_delete=models.CASCADE)
+    account = models.ForeignKey('accounts.Account', on_delete=models.CASCADE, unique=True)
     leverage = models.PositiveSmallIntegerField(default=3, validators=(MinValueValidator(1),))
 
     def __str__(self):
