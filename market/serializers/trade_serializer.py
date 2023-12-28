@@ -23,7 +23,9 @@ class AccountTradeSerializer(serializers.ModelSerializer):
         return None
 
     def get_position_side(self, trade: Trade):
-        return trade.position and trade.position.side
+        if isinstance(trade, Trade):
+            return trade.position and trade.position.side
+        return None
 
     def to_representation(self, trade: Trade):
         data = super(AccountTradeSerializer, self).to_representation(trade)
