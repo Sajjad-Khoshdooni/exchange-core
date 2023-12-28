@@ -116,7 +116,7 @@ def _update_trading_positions(trading_positions, pipeline):
                 position.account, market=Wallet.MARGIN, variant=None)
             remaining_balance = position.base_wallet.balance + pipeline.get_wallet_balance_diff(position.base_wallet.id)
 
-            insurance_fee_amount = max(Decimal('0'), remaining_balance * SystemConfig.get_system_config().insurance_fee_percentage)
+            insurance_fee_amount = max(Decimal('0'), remaining_balance * SystemConfig.get_system_config().insurance_fee)
             if insurance_fee_amount > Decimal(0) and trade_info.loan_type == Order.LIQUIDATION:
                 group_id=uuid4()
                 pipeline.new_trx(
