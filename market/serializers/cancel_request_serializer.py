@@ -43,15 +43,19 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             client_order_id = validated_data.pop('client_order_id', None)
         if not (instance_id or client_order_id):
             raise NotFound(_('Order id is missing in input'))
+
         if instance_id and instance_id.startswith('sl-'):
             stop_loss = StopLoss.open_objects.filter(
                 wallet__account=self.context['account'],
                 id=instance_id.split('sl-')[1],
             ).first()
+
             if not stop_loss:
                 raise NotFound(_('StopLoss not found'))
+
             if stop_loss.wallet.is_for_strategy and not self.context['allow_cancel_strategy_orders']:
                 raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
+
             with WalletPipeline() as pipeline:
                 stop_loss.delete()
                 order = stop_loss.order_set.first()
