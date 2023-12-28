@@ -119,7 +119,7 @@ class MarginAssetSerializer(AssetSerializerMini):
     def get_margin_position(self, asset: Asset):
         asset_data = self.get_asset(asset)
 
-        return get_margin_coin_presentation_balance(asset.symbol, Decimal(asset_data.get('equity', 0)) - Decimal(self.get_pnl(asset)))
+        return get_margin_coin_presentation_balance(asset.symbol, Decimal(asset_data.get('equity', 0)))
 
     def get_available_margin(self, asset: Asset):
         cross_wallet = self.get_asset(asset).get('cross_wallet')
@@ -130,7 +130,7 @@ class MarginAssetSerializer(AssetSerializerMini):
         return get_margin_coin_presentation_balance(asset.symbol, cross_wallet.get_free())
 
     def get_equity(self, asset: Asset):
-        equity = Decimal(self.get_available_margin(asset)) + Decimal(self.get_margin_position(asset))
+        equity = Decimal(self.get_available_margin(asset)) + Decimal(self.get_margin_position(asset)) + Decimal(self.get_pnl(asset))
 
         return get_margin_coin_presentation_balance(asset.symbol, equity)
 
@@ -161,35 +161,28 @@ class MarginAssetViewSet(ModelViewSet):
         cross_wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN, variant__isnull=True)
 
         positions = MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN).prefetch_related('symbol')
-        irt_queryset = positions.filter(base_wallet__asset__symbol=Asset.IRT)
-        irt_fee = Decimal('0')
-        for position in irt_queryset:
-            irt_fee += position.get_base_trade_fee()
 
+        irt_queryset = positions.filter(base_wallet__asset__symbol=Asset.IRT)
         irt_positions = irt_queryset.annotate(
             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance'),
             pnl=F('position_amount') - F('equity')
-            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
+            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'), e=Sum('equity'))
 
         ctx[Asset.IRT] = {
-            'pnl': (irt_positions['p'] or Decimal('0')) + irt_fee,
-            'equity': irt_positions['s'] or Decimal('0'),
+            'pnl': (irt_positions['p'] or Decimal('0')),
+            'equity': irt_positions['e'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.IRT).first()
         }
 
         usdt_queryset = positions.filter(base_wallet__asset__symbol=Asset.USDT)
-        usdt_fee = Decimal('0')
-        for position in usdt_queryset:
-            usdt_fee += position.get_base_trade_fee()
-
         usdt_positions = usdt_queryset.annotate(
             position_amount=F('asset_wallet__balance') * F('symbol__last_trade_price') + F('base_wallet__balance'),
             pnl=F('position_amount') - F('equity')
-            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'))
+            ).aggregate(s=Sum('position_amount'), p=Sum('pnl'), e=Sum('equity'))
 
         ctx[Asset.USDT] = {
-            'pnl': (usdt_positions['p'] or Decimal('0')) + usdt_fee,
-            'equity': usdt_positions['s'] or Decimal('0'),
+            'pnl': (usdt_positions['p'] or Decimal('0')),
+            'equity': usdt_positions['e'] or Decimal('0'),
             'cross_wallet': cross_wallets.filter(asset__symbol=Asset.USDT).first()
         }
 

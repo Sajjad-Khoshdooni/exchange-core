@@ -44,21 +44,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         return None
 
     def get_balance(self, instance):
-        asset_pnl = Decimal(MarginHistoryModel.objects.filter(
-            position=instance,
-            type=MarginHistoryModel.PNL,
-            asset=instance.symbol.asset
-        ).aggregate(s=Sum('amount'))['s'] or 0)
-
-        asset_pnl *= instance.symbol.last_trade_price
-
-        base_asset_pnl = Decimal(MarginHistoryModel.objects.filter(
-            position=instance,
-            type=MarginHistoryModel.PNL,
-            asset=instance.symbol.base_asset
-        ).aggregate(s=Sum('amount'))['s'] or 0)
-
-        return floor_precision(instance.equity - (asset_pnl + base_asset_pnl), instance.symbol.tick_size)
+        return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, instance.equity)
 
     def get_base_debt(self, instance):
         return instance.base_debt_amount
@@ -84,8 +70,7 @@ class MarginPositionSerializer(AssetSerializerMini):
         return floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
 
     def get_pnl(self, instance: MarginPosition):
-        unrealised_pnl = (instance.base_total_balance + instance.base_debt_amount) - instance.equity + \
-                         instance.get_base_trade_fee()
+        unrealised_pnl = (instance.base_total_balance + instance.base_debt_amount) - instance.equity
         return floor_precision(unrealised_pnl, instance.symbol.tick_size)
 
     def get_current_price(self, instance):
