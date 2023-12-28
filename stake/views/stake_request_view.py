@@ -1,6 +1,4 @@
-from unittest.mock import patch
-
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
@@ -113,11 +111,14 @@ class StakeRequestAPIView(ModelViewSet):
         if getattr(self, 'swagger_fake_view', False):
             return StakeRequest.objects.none()
 
-        is_bot = self.request.query_params.get('bot', '0') == '1'
+        q = Q()
+
+        if self.request.query_params.get('bot', '0') == '1':
+            q = Q(stake_option__type=StakeOption.BOT)
 
         return StakeRequest.objects.filter(
+            q,
             account=self.request.user.get_account(),
-            stake_option__is_bot=is_bot
         ).order_by('-created')
 
     def destroy(self, request, *args, **kwargs):
