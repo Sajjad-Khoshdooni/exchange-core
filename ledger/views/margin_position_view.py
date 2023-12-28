@@ -71,7 +71,7 @@ class MarginPositionSerializer(AssetSerializerMini):
 
     def get_pnl(self, instance: MarginPosition):
         unrealised_pnl = (instance.base_total_balance + instance.base_debt_amount) - instance.equity
-        return floor_precision(unrealised_pnl, instance.symbol.tick_size)
+        return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, unrealised_pnl)
 
     def get_current_price(self, instance):
         return instance.symbol.last_trade_price

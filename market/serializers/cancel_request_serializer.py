@@ -70,7 +70,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
 
                     release_amount = Order.get_to_lock_amount(
                         stop_loss.unfilled_amount, order_price, stop_loss.side, stop_loss.wallet.market,
-                        is_open_position=order.is_open_position, leverage=order.get_position_leverage()
+                        is_open_position=False, leverage=order.get_position_leverage()
                     )
                     pipeline.release_lock(key=stop_loss.group_id, amount=release_amount)
                     # faking cancel request creation
