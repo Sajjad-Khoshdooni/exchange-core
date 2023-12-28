@@ -88,7 +88,7 @@ def alert_liquidation(account: Account):
     )
 
 
-@shared_task(queue='celery')
+@shared_task(queue='margin')
 def collect_margin_interest():
     now = timezone.now().replace(minute=0, second=0, microsecond=0)
     group_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"{now}:{int(now.hour) // 8}")
@@ -138,7 +138,7 @@ def collect_margin_interest():
         position.liquidate(pipeline)
 
 
-@shared_task(queue='celery')
+@shared_task(queue='margin')
 def alert_risky_position():
     queryset = MarginPosition.objects.filter(alert_mode=False)
 
@@ -156,7 +156,7 @@ def alert_risky_position():
         .update(alert_mode=False)
 
 
-@shared_task(queue='celery')
+@shared_task(queue='margin')
 def check_position_health():
     for position in MarginPosition.objects.filter(status=MarginPosition.OPEN) \
             .prefetch_related('asset_wallet', 'base_wallet', 'symbol'):

@@ -114,7 +114,7 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.margin.collect_margin_interest',
         'schedule': crontab(hour='4,12,20', minute=30),
         'options': {
-            'queue': 'celery',
+            'queue': 'margin',
             'expires': 3600
         },
     },
@@ -122,7 +122,7 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.margin.alert_risky_position',
         'schedule': 20 * TASK_MULTIPLIER,
         'options': {
-            'queue': 'celery',
+            'queue': 'margin',
             'expires': 20 * TASK_MULTIPLIER
         },
     },
@@ -130,7 +130,7 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.margin.check_position_health',
         'schedule': 600 * TASK_MULTIPLIER,
         'options': {
-            'queue': 'celery',
+            'queue': 'margin',
             'expires': 600 * TASK_MULTIPLIER
         },
     },
