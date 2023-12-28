@@ -106,8 +106,8 @@ class MarginPosition(models.Model):
             amount = max(self.base_total_balance - base_total_balance, Decimal('0'))
         else:
             total_debt = abs(Decimal('0.5') * self.base_total_balance)
-            amount = max(total_debt + self.base_debt_amount, 0)
-        return floor_precision(amount, self.symbol.tick_size)
+            amount = max(total_debt + self.base_debt_amount, Decimal('0'))
+        return floor_precision(Decimal(amount), self.symbol.tick_size)
 
     def get_ratio(self) -> Decimal:
         from accounts.models import SystemConfig
