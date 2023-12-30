@@ -49,16 +49,16 @@ class MarginPositionSerializer(AssetSerializerMini):
         return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, instance.equity)
 
     def get_base_debt(self, instance):
-        return instance.base_debt_amount
+        return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, instance.base_debt_amount)
 
     def get_asset_debt(self, instance):
-        return instance.loan_wallet.balance
+        return get_margin_coin_presentation_balance(instance.symbol.asset.symbol, instance.loan_wallet.balance)
 
     def get_base_total(self, instance):
-        return instance.base_total_balance
+        return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, instance.base_total_balance)
 
     def get_asset_total(self, instance):
-        return instance.total_balance
+        return get_margin_coin_presentation_balance(instance.symbol.asset.symbol, instance.total_balance)
 
     def get_amount(self, instance):
         amount = floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
