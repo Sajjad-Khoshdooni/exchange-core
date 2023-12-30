@@ -6,8 +6,10 @@ from uuid import UUID
 from django.db.models import F
 from django.db.transaction import Atomic
 
-from ledger.utils.precision import is_zero_by_precision
+from ledger.utils.precision import floor_precision
 from market.utils.redis import MarketStreamCache
+
+DECIMAL = 8
 
 
 def sorted_flatten_dict(data: dict) -> list:
@@ -58,6 +60,8 @@ class WalletPipeline(Atomic):
         from ledger.models import BalanceLock
         from ledger.models import Wallet
 
+        amount = floor_precision(Decimal(amount), DECIMAL)
+
         assert amount > 0
 
         if isinstance(key, str):
@@ -91,6 +95,9 @@ class WalletPipeline(Atomic):
 
     def release_lock(self, key: UUID, amount: Union[Decimal, int] = None):
         from ledger.models import BalanceLock
+
+        if amount:
+            amount = floor_precision(Decimal(amount), DECIMAL)
 
         assert amount is None or amount >= 0
 
@@ -128,8 +135,9 @@ class WalletPipeline(Atomic):
     def new_trx(self, sender, receiver, amount: Union[Decimal, int], scope: str, group_id: UUID):
         from ledger.models.trx import Trx
         assert sender.asset == receiver.asset
+        amount = floor_precision(Decimal(amount), DECIMAL)
 
-        if is_zero_by_precision(amount) or sender == receiver:
+        if not amount or sender == receiver:
             return
 
         # ignore system vs system trx

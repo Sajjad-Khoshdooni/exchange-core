@@ -249,7 +249,7 @@ class ShortIsolatedMarginTestCase(TestCase):
         mp.refresh_from_db()
         print('mp', mp.debt_amount, mp.total_balance, mp.liquidation_price, mp.side, mp.equity)
 
-        self.assertTrue(mp.liquidation_price == liquidation_price)
+        self.assertAlmostEqual(mp.liquidation_price, liquidation_price, 2)
         self.assertEqual(mp.side, SHORT)
 
         print('***************************MP_PNL***************************')
