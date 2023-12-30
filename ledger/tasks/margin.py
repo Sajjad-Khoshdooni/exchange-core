@@ -96,6 +96,7 @@ def collect_margin_interest():
     with WalletPipeline() as pipeline:
         for position in MarginPosition.objects.filter(status=MarginPosition.OPEN).prefetch_related('loan_wallet__asset'):
             if position.debt_amount > Decimal('0'):
+                logger.info(f"Collect position:{position.id} Interest fee")
                 pipeline.new_trx(
                     position.loan_wallet,
                     position.get_margin_pool_wallet(),

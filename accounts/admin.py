@@ -262,6 +262,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'can_withdraw': True,
         'can_withdraw_crypto': True,
         'can_trade': True,
+        'show_margin': True,
         'withdraw_limit_whitelist': M.has_perm('accounts.manage_users'),
         'withdraw_risk_level_multiplier': M.has_perm('accounts.manage_users'),
     }

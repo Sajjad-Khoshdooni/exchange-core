@@ -49,6 +49,9 @@ class MarginPosition(models.Model):
             models.Index(fields=['status', 'symbol', 'liquidation_price'], name="position_idx")
         ]
 
+    def __str__(self):
+        return f'{self.side} {self.symbol} X{self.leverage} (eq={self.equity})'
+
     @property
     def loan_wallet(self):
         if self.side == SHORT:
