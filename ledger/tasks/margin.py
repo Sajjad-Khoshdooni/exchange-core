@@ -96,6 +96,7 @@ def collect_margin_interest():
     with WalletPipeline() as pipeline:
         for position in MarginPosition.objects.filter(status=MarginPosition.OPEN).prefetch_related('loan_wallet__asset'):
             if position.debt_amount > Decimal('0'):
+                logger.info(f"Collect position:{position.id} Interest fee")
                 pipeline.new_trx(
                     position.loan_wallet,
                     position.get_margin_pool_wallet(),
@@ -143,7 +144,7 @@ def alert_risky_position():
     queryset = MarginPosition.objects.filter(alert_mode=False)
 
     alert_position_warning(queryset.filter(side=SHORT, base_wallet__balance__lte=F('asset_wallet__balance') * F('symbol__last_trade_price') * Decimal('1.15')))
-    alert_position_warning(queryset.filter(side=LONG, base_wallet__balance__gte=F('asset_wallet__balance') * F('symbol__last_trade_price') * Decimal('1.15')))
+    alert_position_warning(queryset.filter(side=LONG, base_wallet__balance__gte=F('asset_wallet__balance') * F('symbol__last_trade_price') / Decimal('1.15')))
 
     queryset = MarginPosition.objects.filter(alert_mode=True)
 
@@ -152,7 +153,7 @@ def alert_risky_position():
         .update(alert_mode=False)
 
     queryset.filter(side=LONG,
-                    base_wallet__balance__lte=F('asset_wallet__balance') * F('symbol__last_trade_price') * Decimal('1.2'))\
+                    base_wallet__balance__lte=F('asset_wallet__balance') * F('symbol__last_trade_price') / Decimal('1.2'))\
         .update(alert_mode=False)
 
 
