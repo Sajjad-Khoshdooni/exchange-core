@@ -141,7 +141,7 @@ def collect_margin_interest():
 
 @shared_task(queue='margin')
 def alert_risky_position():
-    queryset = MarginPosition.objects.filter(alert_mode=False)
+    queryset = MarginPosition.objects.filter(alert_mode=False, liquidation_price__isnull=False)
 
     alert_position_warning(queryset.filter(side=SHORT, base_wallet__balance__lte=F('asset_wallet__balance') * F('symbol__last_trade_price') * Decimal('1.15')))
     alert_position_warning(queryset.filter(side=LONG, base_wallet__balance__gte=F('asset_wallet__balance') * F('symbol__last_trade_price') / Decimal('1.15')))
