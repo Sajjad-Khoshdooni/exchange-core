@@ -26,6 +26,8 @@ class MarginPositionSerializer(AssetSerializerMini):
     balance = serializers.SerializerMethodField()
     base_debt = serializers.SerializerMethodField()
     asset_debt = serializers.SerializerMethodField()
+    base_total = serializers.SerializerMethodField()
+    asset_total = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
     free_amount = serializers.SerializerMethodField()
     coin_amount = serializers.SerializerMethodField()
@@ -51,6 +53,12 @@ class MarginPositionSerializer(AssetSerializerMini):
 
     def get_asset_debt(self, instance):
         return instance.loan_wallet.balance
+
+    def get_base_total(self, instance):
+        return instance.base_total_balance
+
+    def get_asset_total(self, instance):
+        return instance.total_balance
 
     def get_amount(self, instance):
         amount = floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
@@ -83,7 +91,8 @@ class MarginPositionSerializer(AssetSerializerMini):
         model = MarginPosition
         fields = ('created', 'account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'free_amount',
                   'average_price', 'liquidation_price', 'side', 'status', 'id', 'margin_ratio', 'balance', 'base_debt',
-                  'asset_debt', 'leverage', 'coin_amount', 'pnl', 'current_price', 'volume', 'equity')
+                  'asset_debt', 'leverage', 'coin_amount', 'pnl', 'current_price', 'volume', 'equity', 'base_total',
+                  'asset_total')
 
 
 class MarginPositionFilter(django_filters.FilterSet):
