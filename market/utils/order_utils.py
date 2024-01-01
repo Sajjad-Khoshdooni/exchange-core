@@ -37,7 +37,7 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
               parent_lock_group_id: Union[UUID, None] = None, stop_loss_id: Union[int, None] = None,
               time_in_force: str = Order.GTC, pass_min_notional: bool = False,
               variant: Union[str, None] = None, oco_id: Union[int, None] = None,
-              client_order_id: str = None) -> Union[Order, None]:
+              client_order_id: str = None, margin_position=None) -> Union[Order, None]:
 
     assert price or fill_type == Order.MARKET
 
@@ -88,6 +88,9 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
         additional_params['stop_loss_id'] = stop_loss_id
     if oco_id:
         additional_params['oco_id'] = oco_id
+
+    if margin_position:
+        additional_params['position'] = margin_position
 
     order = Order.objects.create(
         account=account,
