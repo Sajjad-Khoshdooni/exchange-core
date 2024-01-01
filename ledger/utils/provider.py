@@ -77,8 +77,8 @@ class ProviderRequester:
 
         return Response(data=resp_json, success=resp.ok, status_code=resp.status_code)
 
-    def get_market_info(self, asset: Asset) -> MarketInfo:
-        resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol}, cache_timeout=300)
+    def get_market_info(self, asset: Asset, side: str) -> MarketInfo:
+        resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol, 'side': side}, cache_timeout=300)
         return MarketInfo(coin=asset.symbol, **resp.data)
 
     def get_spot_balance_map(self, exchange: str, market: str = 'trade') -> dict:
@@ -114,7 +114,9 @@ class ProviderRequester:
             logger.info('ignored due to no hedge method')
             return
 
-        market_info = self.get_market_info(asset)
+        side = BUY if buy_amount > 0 else SELL
+
+        market_info = self.get_market_info(asset, side=side)
 
         step_size = market_info.step_size
 
@@ -303,10 +305,11 @@ class MockProviderRequester(ProviderRequester):
             time.sleep(60)
             raise requests.exceptions.Timeout
 
-    def get_market_info(self, asset: Asset) -> MarketInfo:
+    def get_market_info(self, asset: Asset, side: str) -> MarketInfo:
         self._collect_api('/')
 
         return MarketInfo(
+            id=1,
             coin=asset.symbol,
             base_coin=Asset.USDT,
             exchange='binance',
