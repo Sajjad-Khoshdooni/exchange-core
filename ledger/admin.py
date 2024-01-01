@@ -264,7 +264,7 @@ class DepositAddressAdmin(admin.ModelAdmin):
     def get_memo(self, deposit_address: models.DepositAddress):
         return deposit_address.address_key.memo
 
-    @admin.display(description='deleted', ordering='address_key__deleted')
+    @admin.display(description='deleted', ordering='address_key__deleted', boolean=True)
     def get_deleted(self, deposit_address: models.DepositAddress):
         return deposit_address.address_key.deleted
 
