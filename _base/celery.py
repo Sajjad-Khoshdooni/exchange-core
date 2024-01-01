@@ -188,6 +188,14 @@ app.conf.beat_schedule = {
         }
     },
 
+    'fill_ads_reports': {
+        'task': 'marketing.tasks.fill_ads_reports',
+        'schedule': crontab(hour=20, minute=30),
+        'options': {
+            'queue': 'marketing',
+        }
+    },
+
     'create_analytics': {
         'task': 'analytics.tasks.create_analytics',
         'schedule': crontab(hour=21, minute=0),

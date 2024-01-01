@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class PeriodicFetcher(models.Model):
-    name = models.CharField(max_length=16, unique=True)
+    name = models.CharField(max_length=64, unique=True)
     end = models.DateTimeField()
 
     @classmethod
@@ -19,7 +19,7 @@ class PeriodicFetcher(models.Model):
         if f:
             start = f.end
         else:
-            start = now.replace(microsecond=0, second=0, minute=0, hour=0)
+            start = now.replace(microsecond=0, second=0, minute=0, hour=0) - interval
 
         end = start + interval
 
