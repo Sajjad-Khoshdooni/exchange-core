@@ -1,3 +1,4 @@
+import time
 from datetime import timedelta, datetime
 
 import requests
@@ -13,7 +14,10 @@ def yektanet_requester(path: str, params: dict):
     header = {
         'Authorization': 'Token ' + config('YEKTANET_TOKEN')
     }
-    return requests.get(url=url, params=params, headers=header, timeout=60).json()
+    resp = requests.get(url=url, params=params, headers=header, timeout=60)
+
+    if resp.ok:
+        return resp.json()
 
 
 UTM_TERM_PREFIX = {
@@ -30,6 +34,10 @@ def yektanet_ads_fetcher(start: datetime, end: datetime):
             'start_date': str(start.date()),
             'end_date': str(end.date()),
         })
+
+
+        if resp is None:
+            return
 
         for data in resp:
             AdsReport.objects.update_or_create(
@@ -52,6 +60,9 @@ def yektanet_ads_fetcher(start: datetime, end: datetime):
             'end_date': str(end.date()),
         })
 
+        if resp is None:
+            return
+
         for data in resp:
             CampaignPublisherReport.objects.update_or_create(
                 created=start,
@@ -66,6 +77,8 @@ def yektanet_ads_fetcher(start: datetime, end: datetime):
                     'cost': data['cost'],
                 }
             )
+
+        time.sleep(1)
 
 
 @shared_task()
