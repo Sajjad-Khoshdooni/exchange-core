@@ -35,7 +35,6 @@ def yektanet_ads_fetcher(start: datetime, end: datetime):
             'end_date': str(end.date()),
         })
 
-
         if resp is None:
             return
 
