@@ -312,13 +312,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred'
         )}),
         (_('اطلاعات اضافی'), {'fields': (
-            'is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_2fa_active'
+            'is_price_notif_on', 'get_suspended', 'suspended_until', 'suspension_reason', 'is_2fa_active'
         )})
     )
 
     list_display = ('get_date_joined_jalali', 'get_username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
                     'verify_status', 'promotion', 'get_source_medium', 'get_referrer_user', 'is_price_notif_on',
-                    'is_suspended',)
+                    'get_suspended',)
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'national_code_phone_verified', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
@@ -342,7 +342,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended',
+        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'get_suspended',
         'suspension_reason', 'get_bots_link', 'is_2fa_active'
     )
     preserve_filters = ('archived', )
@@ -404,6 +404,10 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return mark_safe(
             f'<span dir="ltr">{get_masked_phone(user.username)}</span>'
         )
+
+    @admin.display(description='suspended', boolean=True)
+    def get_suspended(self, user: User):
+        return user.is_suspended
 
     def save_model(self, request, user: User, form, change):
         old_user = User.objects.filter(id=user.id).first()
