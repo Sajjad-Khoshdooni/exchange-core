@@ -6,6 +6,7 @@ from celery import shared_task
 from decouple import config
 
 from accounting.models import PeriodicFetcher
+from accounting.models.periodic_fetcher import FetchError
 from marketing.models import AdsReport, CampaignPublisherReport
 
 
@@ -16,8 +17,10 @@ def yektanet_requester(path: str, params: dict):
     }
     resp = requests.get(url=url, params=params, headers=header, timeout=60)
 
-    if resp.ok:
-        return resp.json()
+    if not resp.ok:
+        raise FetchError
+
+    return resp.json()
 
 
 UTM_TERM_PREFIX = {
@@ -28,7 +31,8 @@ UTM_TERM_PREFIX = {
 
 
 def yektanet_ads_fetcher(start: datetime, end: datetime):
-    for ad_type in ('native', 'banner', 'push', 'mobile', 'video', 'universal'):
+    # for ad_type in ('native', 'banner', 'push', 'mobile', 'video', 'universal'):
+    for ad_type in ('native', 'banner'):
         resp = yektanet_requester('/campaigns-ad-report/', params={
             'type': ad_type,
             'start_date': str(start.date()),
@@ -77,7 +81,7 @@ def yektanet_ads_fetcher(start: datetime, end: datetime):
                 }
             )
 
-        time.sleep(1)
+        time.sleep(2)
 
 
 @shared_task()

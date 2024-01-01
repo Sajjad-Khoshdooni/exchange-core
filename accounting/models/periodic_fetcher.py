@@ -7,6 +7,10 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
+class FetchError(Exception):
+    pass
+
+
 class PeriodicFetcher(models.Model):
     name = models.CharField(max_length=64, unique=True)
     end = models.DateTimeField()
@@ -50,7 +54,12 @@ class PeriodicFetcher(models.Model):
 
             logger.info('   fetching %s data (%s, %s)' % (name, start.astimezone(), end.astimezone()))
 
-            fetcher(start, end)
+            try:
+                fetcher(start, end)
+            except FetchError:
+                logger.info('   Error in fetching %s data (%s, %s)!' % (name, start.astimezone(), end.astimezone()))
+                return
+
             PeriodicFetcher.confirm_range(name, end)
 
     def __str__(self):

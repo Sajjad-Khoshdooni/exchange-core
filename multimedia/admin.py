@@ -6,7 +6,6 @@ from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
 from multimedia.models import Image, Banner, CoinPriceContent, Article, Section, File
-from multimedia.utils.custom_tags import post_render_html, get_text_of_html
 
 
 @admin.register(Image)
@@ -45,7 +44,7 @@ class CoinPriceContentAdmin(SimpleHistoryAdmin):
 
 
 @admin.register(Article)
-class ArticleAdmin(admin.ModelAdmin):
+class ArticleAdmin(SimpleHistoryAdmin):
     list_display = ('title', 'title_en', 'parent', 'order', 'is_pinned')
     list_editable = ('order', 'is_pinned')
     list_filter = ('parent', 'is_pinned')
@@ -54,6 +53,7 @@ class ArticleAdmin(admin.ModelAdmin):
     }
     actions = ('refresh_article', )
     exclude = ('_content_html', '_content_text')
+    readonly_fields = ('slug', )
 
     def save_model(self, request, obj: Article, form, change):
         obj.save()
@@ -66,7 +66,7 @@ class ArticleAdmin(admin.ModelAdmin):
 
 
 @admin.register(Section)
-class SectionAdmin(admin.ModelAdmin):
+class SectionAdmin(SimpleHistoryAdmin):
     list_display = ('title', 'slug', 'order', 'parent')
     list_editable = ('order', )
     list_filter = ('parent', )
