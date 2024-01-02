@@ -25,7 +25,7 @@ def parse_table(content: str):
 
 
 def post_render_html(html: str) -> str:
-    html = html.replace('color: rgb(0, 0, 0);', '').replace('background-color: transparent;', '')
+    html = html.replace('color: rgb(0, 0, 0);', '').replace('background-color: transparent;', '').replace(' ', ' ')
     html = EMPTY_STYLE_REGEX.sub("", html)
     tree = BeautifulSoup(html, 'html.parser')
     for node in tree.findAll('pre'):
