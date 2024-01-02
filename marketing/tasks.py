@@ -65,7 +65,7 @@ def yektanet_ads_fetcher(start: datetime, end: datetime):
                 created=start,
                 type=ad_type,
                 utm_campaign=data['utm_campaign'],
-                utm_content=data['publisher_name'],
+                utm_content=data['publisher_name'] or '',
                 campaign_id=data['campaign_id'],
                 publisher_id=data['publisher_id'],
                 defaults={
