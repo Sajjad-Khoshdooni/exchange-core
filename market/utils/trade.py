@@ -101,14 +101,16 @@ def _update_trading_positions(trading_positions, pipeline):
             position.average_price = (previous_amount * previous_price +
                                       short_amount * trade_info.trade_price) / position.amount
 
-        if trade_info.loan_type == Order.LIQUIDATION or \
-                ((floor_precision(position.loan_wallet.balance + pipeline.get_wallet_balance_diff(position.loan_wallet.id),
-                                  position.symbol.step_size) >= Decimal('0') or
-                  (floor_precision(
-                      position.asset_wallet.balance + pipeline.get_wallet_balance_diff(position.asset_wallet.id),
-                      position.symbol.step_size) == Decimal('0'))
-                 )
-                 and trade_info.loan_type != BORROW):
+        is_close_position = (trade_info.loan_type == Order.LIQUIDATION or
+                             (floor_precision(position.asset_wallet.balance +
+                                              pipeline.get_wallet_balance_diff(position.asset_wallet.id),
+                                              position.symbol.step_size) == Decimal('0') and
+                              trade_info.loan_type != BORROW)) and \
+                            floor_precision(position.loan_wallet.balance
+                                            + pipeline.get_wallet_balance_diff(position.loan_wallet.id),
+                                            position.symbol.step_size) >= Decimal('0')
+
+        if is_close_position:
 
             position.status = MarginPosition.CLOSED
             position.base_wallet.refresh_from_db()
@@ -143,13 +145,15 @@ def _update_trading_positions(trading_positions, pipeline):
 
                 position.create_transfer_equity_history(
                     amount=remaining_balance,
-                    debt_amount=position.debt_amount - pipeline.get_wallet_balance_diff(position.loan_wallet.id),
-                    total_balance=position.total_balance + pipeline.get_wallet_balance_diff(position.margin_wallet.id) + remaining_balance,
-                    group_id=group_id
+                    debt_amount=position.debt_amount,
+                    total_balance=position.total_balance,
+                    group_id=group_id,
+                    price=trade_info.trade_price
                 )
 
-        if trade_info.loan_type not in [Order.LIQUIDATION, OPEN] and position.status == position.OPEN:
-            position.rebalance(pipeline)
+        if trade_info.loan_type not in [Order.LIQUIDATION, OPEN] and position.status == position.OPEN and\
+                not is_close_position:
+            position.rebalance(pipeline, price=trade_info.trade_price)
         position.set_liquidation_price(pipeline)
 
         to_update_positions[position.id] = position

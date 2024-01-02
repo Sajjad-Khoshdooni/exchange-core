@@ -137,7 +137,7 @@ class MarginPosition(models.Model):
         else:
             self.liquidation_price = None
 
-    def rebalance(self, pipeline):
+    def rebalance(self, pipeline, price: Decimal = None):
         from ledger.models import Wallet
 
         debt_amount = self.debt_amount - pipeline.get_wallet_balance_diff(self.loan_wallet.id)
@@ -167,10 +167,13 @@ class MarginPosition(models.Model):
                 scope=Trx.MARGIN_TRANSFER
             )
 
-            self.create_transfer_equity_history(amount=amount, total_balance=total_balance, debt_amount=debt_amount, group_id=group_id)
+            self.create_transfer_equity_history(amount=amount, total_balance=total_balance, debt_amount=debt_amount,
+                                                group_id=group_id, price=price)
 
-    def create_transfer_equity_history(self, amount, total_balance, debt_amount, group_id):
-        price = self.symbol.last_trade_price
+    def create_transfer_equity_history(self, amount, total_balance, debt_amount, group_id, price: Decimal = None):
+
+        if not price:
+            price = self.symbol.last_trade_price
 
         if self.side == LONG:
             total_value, debt_value = price * total_balance, debt_amount
@@ -320,7 +323,8 @@ class MarginPosition(models.Model):
                 variant=self.group_id,
                 pass_min_notional=True,
                 order_type=Order.LIQUIDATION if charge_insurance else Order.ORDINARY,
-                parent_lock_group_id=group_id
+                parent_lock_group_id=group_id,
+                margin_position=self
             )
 
         self.base_wallet.refresh_from_db()
