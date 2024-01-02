@@ -32,11 +32,14 @@ UTM_TERM_PREFIX = {
 
 def yektanet_ads_fetcher(start: datetime, end: datetime):
     # for ad_type in ('native', 'banner', 'push', 'mobile', 'video', 'universal'):
+
+    start_date, end_date = str(start.astimezone().date()), str(end.astimezone().date())
+
     for ad_type in ('native', 'banner', 'mobile'):
         resp = yektanet_requester('/campaigns-ad-report/', params={
             'type': ad_type,
-            'start_date': str(start.date()),
-            'end_date': str(end.date()),
+            'start_date': start_date,
+            'end_date': end_date,
         })
 
         for data in resp:
@@ -56,8 +59,8 @@ def yektanet_ads_fetcher(start: datetime, end: datetime):
 
         resp = yektanet_requester('/campaigns-publisher-report/', params={
             'type': ad_type,
-            'start_date': str(start.date()),
-            'end_date': str(end.date()),
+            'start_date': start_date,
+            'end_date': end_date,
         })
 
         for data in resp:
