@@ -14,6 +14,7 @@ class SystemConfig(models.Model):
     withdraw_fee_percent = get_amount_field(default=Decimal('5'))
 
     hedge_irt_by_internal_market = models.BooleanField(default=False)
+    hedge_coin_otc_from_internal_market = models.BooleanField(default=True)
 
     max_margin_leverage = models.SmallIntegerField(default=5)
     default_margin_leverage = models.SmallIntegerField(default=3)
