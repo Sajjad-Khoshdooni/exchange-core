@@ -33,8 +33,8 @@ class WalletsOverviewAPIView(APIView):
             total_usdt_value += wallet.balance * price_usdt
             total_irt_value += wallet.balance * price_irt
         return {
-            'IRT': get_margin_coin_presentation_balance('IRT', floor_precision(total_irt_value)),
-            'USDT': get_margin_coin_presentation_balance('USDT', floor_precision(total_usdt_value))
+            'IRT': get_margin_coin_presentation_balance('IRT', Decimal(total_irt_value)),
+            'USDT': get_margin_coin_presentation_balance('USDT', Decimal(total_usdt_value))
         }
 
     def get(self, request: Request):
