@@ -58,21 +58,21 @@ def create_pnl_histories(self):
                             profit=profit if last_usdt_snapshot else 0,
                         )
                     )
-                    if market == Wallet.SPOT:
-                        irt_snapshot = snapshot_balance * usdt_price
-                        last_irt_snapshot = last_pnl_histories.get((account, market, Asset.IRT), 0) + (
-                                    input_output_amount * usdt_price)
 
-                        to_create_pnl_histories.append(
-                            PNLHistory(
-                                date=today,
-                                account_id=account,
-                                market=market,
-                                base_asset=Asset.IRT,
-                                snapshot_balance=irt_snapshot,
-                                profit=irt_snapshot - last_irt_snapshot if last_irt_snapshot else 0,
-                            )
+                    irt_snapshot = snapshot_balance * usdt_price
+                    last_irt_snapshot = last_pnl_histories.get((account, market, Asset.IRT), 0) + (
+                                input_output_amount * usdt_price)
+
+                    to_create_pnl_histories.append(
+                        PNLHistory(
+                            date=today,
+                            account_id=account,
+                            market=market,
+                            base_asset=Asset.IRT,
+                            snapshot_balance=irt_snapshot,
+                            profit=irt_snapshot - last_irt_snapshot if last_irt_snapshot else 0,
                         )
+                    )
 
             PNLHistory.objects.bulk_create(to_create_pnl_histories)
     except Exception as e:
