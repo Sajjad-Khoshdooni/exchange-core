@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 import django_filters
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -45,22 +45,16 @@ class MarginInfoView(APIView):
 
     def get(self, request: Request):
         account = request.user.get_account()
-        coins = ['IRT', 'USDT']
 
-        loan_wallets = []
-        total_wallets = list(Wallet.objects.filter(market=Wallet.MARGIN, account=account, variant__isnull=True))
+        user_margin_wallets = Wallet.objects.filter(
+            Q(variant__isnull=True) | Q(asset_wallet__status=MarginPosition.OPEN),
+            account=account, market=Wallet.MARGIN)
 
-        for positin in MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN).\
-                prefetch_related('asset_wallet', 'base_wallet'):
-
-            total_wallets.append(positin.margin_wallet)
-            loan_wallets.append(positin.loan_wallet)
-            coins.append(positin.asset_wallet.asset.symbol)
-
+        coins = list(user_margin_wallets.values_list('asset__symbol', flat=True))
         prices = get_last_prices(get_coins_symbols(coins))
 
-        total_asset = self.aggregate_wallets_values(total_wallets, prices)
-        total_debt = self.aggregate_wallets_values(loan_wallets, prices)
+        total_asset = self.aggregate_wallets_values(user_margin_wallets.filter(balance__gt=Decimal('0')), prices)
+        total_debt = self.aggregate_wallets_values(user_margin_wallets.filter(balance__lt=Decimal('0')), prices)
 
         return Response({
             'total_assets': total_asset,
