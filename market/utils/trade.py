@@ -111,11 +111,13 @@ def _update_trading_positions(trading_positions, pipeline):
                                             position.symbol.step_size) >= Decimal('0')
 
         if is_close_position:
+            position.convert_dust(pipeline)
 
             position.status = MarginPosition.CLOSED
-            position.base_wallet.refresh_from_db()
             margin_cross_wallet = position.base_wallet.asset.get_wallet(
                 position.account, market=Wallet.MARGIN, variant=None)
+
+            position.base_wallet.refresh_from_db()
             remaining_balance = position.base_wallet.balance + pipeline.get_wallet_balance_diff(position.base_wallet.id)
 
             insurance_fee_amount = max(Decimal('0'), remaining_balance * SystemConfig.get_system_config().insurance_fee)
@@ -134,7 +136,9 @@ def _update_trading_positions(trading_positions, pipeline):
                     group_id=group_id,
                     type=MarginHistoryModel.INSURANCE_FEE
                 )
-                remaining_balance -= insurance_fee_amount
+
+            position.base_wallet.refresh_from_db()
+            remaining_balance = position.base_wallet.balance + pipeline.get_wallet_balance_diff(position.base_wallet.id)
 
             if remaining_balance > Decimal('0'):
                 group_id = uuid4()
