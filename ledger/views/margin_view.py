@@ -47,7 +47,7 @@ class MarginInfoView(APIView):
         account = request.user.get_account()
 
         user_margin_wallets = Wallet.objects.filter(
-            Q(variant__isnull=True) | Q(asset_wallet__status=MarginPosition.OPEN),
+            Q(variant__isnull=True) | Q(asset_wallet__status=MarginPosition.OPEN) | Q(base_wallet__status=MarginPosition.OPEN),
             account=account, market=Wallet.MARGIN)
 
         coins = list(user_margin_wallets.values_list('asset__symbol', flat=True))
