@@ -45,18 +45,22 @@ class MarginInfoView(APIView):
 
     def get(self, request: Request):
         account = request.user.get_account()
+        coins = ['IRT', 'USDT']
 
-        user_margin_wallets = list(Wallet.objects.filter(market=Wallet.MARGIN, account=account, variant__isnull=True))
+        loan_wallets = []
+        total_wallets = list(Wallet.objects.filter(market=Wallet.MARGIN, account=account, variant__isnull=True))
 
         for positin in MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN).\
                 prefetch_related(['asset_wallet', 'base_wallet']):
-            user_margin_wallets.extend([positin.asset_wallet, positin.base_wallet])
 
-        coins = list(user_margin_wallets.values_list('asset__symbol', flat=True))
+            total_wallets.append(positin.margin_wallet)
+            loan_wallets.append(positin.loan_wallet)
+            coins.append(positin.asset_wallet.asset.symbol)
+
         prices = get_last_prices(get_coins_symbols(coins))
 
-        total_asset = self.aggregate_wallets_values(user_margin_wallets.filter(balance__gt=Decimal('0')), prices)
-        total_debt = self.aggregate_wallets_values(user_margin_wallets.filter(balance__lt=Decimal('0')), prices)
+        total_asset = self.aggregate_wallets_values(total_wallets, prices)
+        total_debt = self.aggregate_wallets_values(loan_wallets, prices)
 
         return Response({
             'total_assets': total_asset,
