@@ -6,6 +6,7 @@ from celery import shared_task
 from decouple import config
 
 from accounting.models import PeriodicFetcher
+from accounting.models.periodic_fetcher import FetchError
 from marketing.models import AdsReport, CampaignPublisherReport
 
 
@@ -16,8 +17,10 @@ def yektanet_requester(path: str, params: dict):
     }
     resp = requests.get(url=url, params=params, headers=header, timeout=60)
 
-    if resp.ok:
-        return resp.json()
+    if not resp.ok:
+        raise FetchError
+
+    return resp.json()
 
 
 UTM_TERM_PREFIX = {
@@ -28,15 +31,16 @@ UTM_TERM_PREFIX = {
 
 
 def yektanet_ads_fetcher(start: datetime, end: datetime):
-    for ad_type in ('native', 'banner', 'push', 'mobile', 'video', 'universal'):
+    # for ad_type in ('native', 'banner', 'push', 'mobile', 'video', 'universal'):
+
+    start_date, end_date = str(start.astimezone().date()), str(end.astimezone().date())
+
+    for ad_type in ('native', 'banner', 'mobile'):
         resp = yektanet_requester('/campaigns-ad-report/', params={
             'type': ad_type,
-            'start_date': str(start.date()),
-            'end_date': str(end.date()),
+            'start_date': start_date,
+            'end_date': end_date,
         })
-
-        if resp is None:
-            return
 
         for data in resp:
             AdsReport.objects.update_or_create(
@@ -55,19 +59,16 @@ def yektanet_ads_fetcher(start: datetime, end: datetime):
 
         resp = yektanet_requester('/campaigns-publisher-report/', params={
             'type': ad_type,
-            'start_date': str(start.date()),
-            'end_date': str(end.date()),
+            'start_date': start_date,
+            'end_date': end_date,
         })
-
-        if resp is None:
-            return
 
         for data in resp:
             CampaignPublisherReport.objects.update_or_create(
                 created=start,
                 type=ad_type,
                 utm_campaign=data['utm_campaign'],
-                utm_content=data['publisher_name'],
+                utm_content=data['publisher_name'] or '',
                 campaign_id=data['campaign_id'],
                 publisher_id=data['publisher_id'],
                 defaults={
@@ -77,7 +78,7 @@ def yektanet_ads_fetcher(start: datetime, end: datetime):
                 }
             )
 
-        time.sleep(1)
+        time.sleep(2)
 
 
 @shared_task()

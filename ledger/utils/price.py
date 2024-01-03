@@ -3,6 +3,7 @@ from typing import List, Dict, Union
 
 from django.db.models import Min, Max, F
 
+from accounts.models import SystemConfig
 from ledger.exceptions import SmallDepthError
 from ledger.utils.cache import cache_for
 from ledger.utils.depth import get_base_price_and_spread, NoDepthError
@@ -62,10 +63,18 @@ def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict
     else:
         annotate_func = Min
 
+    internal_symbols = symbols
+    if not SystemConfig.get_system_config().hedge_coin_otc_from_internal_market:
+
+        if USDT_IRT in internal_symbols:
+            internal_symbols = [USDT_IRT]
+        else:
+            internal_symbols = []
+
     prices = dict(Order.open_objects.filter(
         side=side,
         symbol__enable=True,
-        symbol__name__in=symbols
+        symbol__name__in=internal_symbols
     ).values('symbol__name').annotate(p=annotate_func('price')).values_list('symbol__name', 'p'))
 
     if USDT_IRT not in prices:
@@ -169,7 +178,7 @@ def get_depth_price(symbol: str, side: str, amount: Decimal, depth_check: bool =
 
     pair_symbol = PairSymbol.objects.filter(name=symbol).first()
 
-    if pair_symbol.enable:
+    if SystemConfig.get_system_config().hedge_coin_otc_from_internal_market and pair_symbol.enable:
         cumulative_sum = Decimal(0)
 
         open_orders = list(Order.open_objects.filter(symbol=pair_symbol, side=side).annotate(

@@ -15,3 +15,7 @@ class CoinPriceContent(models.Model):
 
     def get_html(self):
         return self.content.replace('\r\n', '')
+
+    class Meta:
+        verbose_name = 'توضیحات کوین'
+        verbose_name_plural = 'توضیحات کوین‌ها'

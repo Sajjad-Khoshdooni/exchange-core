@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
 from django_quill.fields import QuillField
+from simple_history.models import HistoricalRecords
 
 from multimedia.utils.custom_tags import post_render_html, get_text_of_html
 
@@ -21,6 +22,8 @@ class BaseItem(models.Model):
 
 
 class Section(BaseItem):
+    history = HistoricalRecords()
+
     ICONS = 'getting-started', 'signup', 'accounts', 'transfer', 'trade', 'earn'
 
     parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
@@ -45,6 +48,8 @@ class Section(BaseItem):
 
 
 class Article(BaseItem):
+    history = HistoricalRecords()
+
     parent = models.ForeignKey(Section, on_delete=models.CASCADE)
     is_pinned = models.BooleanField(default=False)
     order = models.PositiveSmallIntegerField(default=0)

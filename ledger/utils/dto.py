@@ -11,6 +11,7 @@ class MarketInfo:
     coin: str
     base_coin: str
     exchange: str
+    side: str
 
     type: str  # spot | futures
 

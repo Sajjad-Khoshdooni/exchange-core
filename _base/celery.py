@@ -190,9 +190,10 @@ app.conf.beat_schedule = {
 
     'fill_ads_reports': {
         'task': 'marketing.tasks.fill_ads_reports',
-        'schedule': crontab(hour=20, minute=30),
+        'schedule': crontab(hour=20, minute=31),
         'options': {
             'queue': 'marketing',
+            'expires': 3600 * TASK_MULTIPLIER
         }
     },
 
@@ -282,10 +283,10 @@ app.conf.beat_schedule = {
     },
     'check_alerts': {
         'task': 'health.tasks.check_alerts',
-        'schedule': crontab(minute='*/5'),
+        'schedule': crontab(minute='*'),
         'options': {
             'queue': 'alert',
-            'expires': 200
+            'expires': 60
         }
     },
 
