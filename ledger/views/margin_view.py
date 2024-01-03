@@ -51,7 +51,7 @@ class MarginInfoView(APIView):
         total_wallets = list(Wallet.objects.filter(market=Wallet.MARGIN, account=account, variant__isnull=True))
 
         for positin in MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN).\
-                prefetch_related(['asset_wallet', 'base_wallet']):
+                prefetch_related('asset_wallet', 'base_wallet'):
 
             total_wallets.append(positin.margin_wallet)
             loan_wallets.append(positin.loan_wallet)
