@@ -46,7 +46,11 @@ class MarginInfoView(APIView):
     def get(self, request: Request):
         account = request.user.get_account()
 
-        user_margin_wallets = Wallet.objects.filter(market=Wallet.MARGIN, account=account)
+        user_margin_wallets = list(Wallet.objects.filter(market=Wallet.MARGIN, account=account, variant__isnull=True))
+
+        for positin in MarginPosition.objects.filter(account=account, status=MarginPosition.OPEN).\
+                prefetch_related(['asset_wallet', 'base_wallet']):
+            user_margin_wallets.extend([positin.asset_wallet, positin.base_wallet])
 
         coins = list(user_margin_wallets.values_list('asset__symbol', flat=True))
         prices = get_last_prices(get_coins_symbols(coins))
