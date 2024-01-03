@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 import django_filters
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -46,7 +46,9 @@ class MarginInfoView(APIView):
     def get(self, request: Request):
         account = request.user.get_account()
 
-        user_margin_wallets = Wallet.objects.filter(market=Wallet.MARGIN, account=account)
+        user_margin_wallets = Wallet.objects.filter(
+            Q(variant__isnull=True) | Q(asset_wallet__status=MarginPosition.OPEN) | Q(base_wallet__status=MarginPosition.OPEN),
+            account=account, market=Wallet.MARGIN)
 
         coins = list(user_margin_wallets.values_list('asset__symbol', flat=True))
         prices = get_last_prices(get_coins_symbols(coins))
