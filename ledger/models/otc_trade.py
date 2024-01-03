@@ -124,7 +124,7 @@ class OTCTrade(models.Model):
         assert self.execution_type == self.MARKET
 
         symbol = self.otc_request.symbol
-        if symbol.enable:
+        if symbol.enable and SystemConfig.get_system_config().hedge_coin_otc_from_internal_market:
             from market.models import Order
 
             fok_order = new_order(
