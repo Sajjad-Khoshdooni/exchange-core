@@ -13,7 +13,8 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Wallet, MarginPosition
 from ledger.models.asset import Asset, AssetSerializerMini
 from ledger.utils.external_price import SELL, LONG
-from ledger.utils.precision import get_presentation_amount, get_margin_coin_presentation_balance
+from ledger.utils.precision import get_presentation_amount, get_margin_coin_presentation_balance, \
+    get_coin_presentation_balance
 from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import get_last_price
 from market.models import PairSymbol
@@ -233,7 +234,7 @@ class MarginTransferBalanceAPIView(APIView):
 
             return Response({
                 'asset': base_asset.symbol,
-                'balance': get_margin_coin_presentation_balance(base_asset.symbol, margin_cross_wallet.get_free())
+                'balance': get_coin_presentation_balance(base_asset.symbol, margin_cross_wallet.get_free())
             })
 
         elif transfer_type in [MarginTransfer.POSITION_TO_MARGIN, MarginTransfer.MARGIN_TO_POSITION]:

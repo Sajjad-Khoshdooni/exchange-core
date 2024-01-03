@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from ledger.models import Wallet
+from ledger.models import Wallet, MarginPosition
 from ledger.models.asset import Asset
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.precision import get_presentation_amount, floor_precision
@@ -59,7 +59,10 @@ class WalletsOverviewAPIView(APIView):
 
         stake_wallets = Wallet.objects.filter(account=account, market=Wallet.STAKE).exclude(balance=0)
 
-        margin_wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN).exclude(balance=0)
+        margin_wallets = Wallet.objects.filter(
+            Q(variant__isnull=True) | Q(asset_wallet__status=MarginPosition.OPEN) |
+            Q(base_wallet__status=MarginPosition.OPEN),
+            account=account, market=Wallet.MARGIN).exclude(balance=0)
 
         return Response({
             Wallet.SPOT: self.aggregate_wallets_values(spot_wallets, prices),
