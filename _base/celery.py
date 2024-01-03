@@ -283,10 +283,10 @@ app.conf.beat_schedule = {
     },
     'check_alerts': {
         'task': 'health.tasks.check_alerts',
-        'schedule': crontab(minute='*/5'),
+        'schedule': crontab(minute='*'),
         'options': {
             'queue': 'alert',
-            'expires': 200
+            'expires': 60
         }
     },
 
