@@ -12,7 +12,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from ledger.models import Wallet, MarginPosition
 from ledger.models.asset import Asset
 from ledger.models.wallet import ReserveWallet
-from ledger.utils.precision import get_presentation_amount, floor_precision
+from ledger.utils.precision import get_presentation_amount, floor_precision, get_margin_coin_presentation_balance
 from ledger.utils.price import get_coins_symbols, get_last_prices
 
 logger = logging.getLogger(__name__)
@@ -33,8 +33,8 @@ class WalletsOverviewAPIView(APIView):
             total_usdt_value += wallet.balance * price_usdt
             total_irt_value += wallet.balance * price_irt
         return {
-            'IRT': get_presentation_amount(floor_precision(total_irt_value)),
-            'USDT': get_presentation_amount(floor_precision(total_usdt_value))
+            'IRT': get_margin_coin_presentation_balance('IRT', floor_precision(total_irt_value)),
+            'USDT': get_margin_coin_presentation_balance('USDT', floor_precision(total_usdt_value))
         }
 
     def get(self, request: Request):
