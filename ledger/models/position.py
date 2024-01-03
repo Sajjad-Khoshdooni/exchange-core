@@ -9,12 +9,13 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import UniqueConstraint, Q, Sum
 
+from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account, SystemConfig
 from ledger.models import Trx
 from ledger.utils.external_price import SHORT, LONG, BUY, SELL, get_other_side
 from ledger.utils.fields import get_amount_field
 from ledger.utils.precision import floor_precision, ceil_precision
-from ledger.utils.price import get_depth_price, get_base_depth_price
+from ledger.utils.price import get_depth_price, get_base_depth_price, get_price
 from market.models import PairSymbol
 
 logger = logging.getLogger(__name__)
@@ -434,6 +435,37 @@ class MarginPosition(models.Model):
             asset=self.symbol.base_asset
         ).aggregate(s=Sum('amount'))['s'] or 0)
         return asset_fee + base_asset_fee
+
+    def convert_dust(self, pipeline):
+        group_id = uuid.uuid4()
+        self.asset_wallet.refresh_from_db()
+
+        price = get_price(
+            self.asset_wallet.asset.symbol + self.base_wallet.asset.symbol,
+            side=BUY,
+        )
+
+        if price is None:
+            return
+
+        free = self.asset_wallet.get_free() + pipeline.get_wallet_balance_diff(self.asset_wallet.id)
+
+        if free > 0:
+            pipeline.new_trx(
+                sender=self.asset_wallet,
+                receiver=self.asset_wallet.asset.get_wallet(SYSTEM_ACCOUNT_ID),
+                amount=free,
+                group_id=group_id,
+                scope=Trx.DUST
+            )
+
+            pipeline.new_trx(
+                sender=self.base_wallet.asset.get_wallet(SYSTEM_ACCOUNT_ID),
+                receiver=self.base_wallet,
+                amount=price * free,
+                group_id=group_id,
+                scope=Trx.DUST,
+            )
 
 
 class MarginLeverage(models.Model):

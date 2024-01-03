@@ -139,7 +139,7 @@ class LeveragedIsolatedMarginTestCase(TestCase):
         mp = MarginPosition.objects.filter(account=account, symbol=symbol).first()
 
         negetive_wallets = Wallet.objects.filter(
-            Q(balance__lt=Decimal(0)) | Q(balance__gt=Decimal('0.000001')),
+            ~Q(balance=Decimal(0)),
             account=account,
             market=Wallet.MARGIN,
             variant__isnull=False,
