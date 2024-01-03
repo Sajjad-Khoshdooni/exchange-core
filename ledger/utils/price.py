@@ -207,10 +207,7 @@ def get_depth_price(symbol: str, side: str, amount: Decimal, depth_check: bool =
             symbol = f'{coin}USDT'
             base_price = get_price(USDT_IRT, side)
 
-        if symbol == 'USDTUSDT':
-            external_depth = 1
-        else:
-            external_depth = fetch_external_depth(symbol, side)
+        external_depth = fetch_external_depth(symbol, side)
 
         if external_depth:
             try:
