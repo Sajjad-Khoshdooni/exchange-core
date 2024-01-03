@@ -178,7 +178,7 @@ def get_depth_price(symbol: str, side: str, amount: Decimal, depth_check: bool =
 
     pair_symbol = PairSymbol.objects.filter(name=symbol).first()
 
-    if pair_symbol.enable:
+    if SystemConfig.get_system_config().hedge_coin_otc_from_internal_market and pair_symbol.enable:
         cumulative_sum = Decimal(0)
 
         open_orders = list(Order.open_objects.filter(symbol=pair_symbol, side=side).annotate(
