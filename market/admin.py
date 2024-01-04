@@ -87,12 +87,17 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
     readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss', 'login_activity')
+    actions = ('cancel_order', )
 
     def created_at_millis(self, instance):
         created = instance.created.astimezone()
         return created.strftime('%S.%f')[:-3]
 
     created_at_millis.short_description = 'Created Second'
+
+    @admin.action(description='Cancel', permissions=['change'])
+    def cancel_order(self, request, queryset):
+        Order.cancel_orders(queryset.filter(status=Order.NEW))
 
 
 @admin.register(CancelRequest)
