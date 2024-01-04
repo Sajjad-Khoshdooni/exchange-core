@@ -55,7 +55,9 @@ class StakeRequest(models.Model):
         locked_revenue = \
             self.stakerevenue_set.filter(wallet_source=Wallet.STAKE).aggregate(amount=Sum('revenue'))['amount'] or 0
 
-        return self.amount + locked_revenue
+        stake_wallet = self.stake_option.asset.get_wallet(account=self.account, market=Wallet.STAKE)
+
+        return min(self.amount + locked_revenue, stake_wallet.balance)
 
     def send_email_for_staking(self, user: User, template: str):
         EmailNotification.send_by_template(
