@@ -217,12 +217,16 @@ class MarginPositionInfoView(APIView):
 class MarginHistorySerializer(serializers.ModelSerializer):
     asset = serializers.SerializerMethodField()
     symbol = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
 
     def get_asset(self, instance):
         return instance.asset.symbol
 
     def get_symbol(self, instance):
         return instance.position and instance.position.symbol.name
+
+    def get_amount(self, instance):
+        return get_presentation_amount(instance.amount)
 
     class Meta:
         model = MarginHistoryModel
