@@ -156,7 +156,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
         for fiat_withdraw in valid_qs:
             fiat_withdraw.refund()
 
-    @admin.action(description='ارسال دوباره', permissions=['chabge'])
+    @admin.action(description='ارسال دوباره', permissions=['change'])
     def resend_withdraw_request(self, request, queryset):
         queryset.filter(status=FiatWithdrawRequest.PENDING).update(status=FiatWithdrawRequest.PROCESSING)
 
