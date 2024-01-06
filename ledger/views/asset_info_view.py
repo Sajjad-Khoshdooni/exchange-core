@@ -82,7 +82,6 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return min_withdraw['min']
 
     def get_trend_url(self, asset: Asset):
-        return ''
         return self.get_cap(asset).weekly_trend_url
 
     def get_change_24h(self, asset: Asset):
