@@ -108,9 +108,9 @@ class OHLCVAPIView(APIView):
         symbol = request.query_params.get('symbol')
         if not symbol:
             raise ValidationError(f'symbol is required')
-        symbol = get_object_or_404(PairSymbol, name=symbol.upper())
-        if not symbol.enable:
-            raise ValidationError(f'{symbol} is not enable')
+
+        symbol = get_object_or_404(PairSymbol, name=symbol.upper(), enable=True)
+
         start = request.query_params.get('from', (timezone.now() - timedelta(hours=24)).timestamp())
         end = request.query_params.get('to', timezone.now().timestamp())
         interval = request.query_params.get('resolution')

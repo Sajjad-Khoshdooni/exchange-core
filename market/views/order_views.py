@@ -116,7 +116,7 @@ class OpenOrderListAPIView(APIView):
         bot_filter = self.request.query_params.get('bot')
         oco_filter = self.request.query_params.get('oco')
         if symbol_filter:
-            symbol = get_object_or_404(PairSymbol, name=symbol_filter.upper())
+            symbol = get_object_or_404(PairSymbol, name=symbol_filter.upper(), enable=True)
             filters['symbol'] = symbol
         if side_filter:
             filters['side'] = side_filter

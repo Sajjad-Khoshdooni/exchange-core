@@ -77,7 +77,7 @@ class TradeHistoryView(ListAPIView):
 
         symbol = self.request.query_params.get('symbol')
         my = self.request.query_params.get('my')
-        pair_symbol = get_object_or_404(PairSymbol, name=symbol)
+        pair_symbol = get_object_or_404(PairSymbol, name=symbol, enable=True)
 
         user = self.request.user
 

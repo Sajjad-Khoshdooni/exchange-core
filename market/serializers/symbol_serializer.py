@@ -162,7 +162,7 @@ class BookMarkPairSymbolSerializer(serializers.ModelSerializer):
     action = serializers.CharField()
 
     def update(self, instance, validated_data):
-        pair_symbol = get_object_or_404(PairSymbol, name=validated_data.get('pair_symbol'))
+        pair_symbol = get_object_or_404(PairSymbol, name=validated_data.get('pair_symbol'), enable=True)
         action = validated_data['action']
         if action == 'add':
             instance.account.bookmark_market.add(pair_symbol)

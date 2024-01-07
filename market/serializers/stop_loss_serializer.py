@@ -39,7 +39,7 @@ class StopLossSerializer(OrderSerializer):
         return data
 
     def create(self, validated_data):
-        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper(), enable=True)
         if validated_data.get('price'):
             conservative_factor = Decimal(1)
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])

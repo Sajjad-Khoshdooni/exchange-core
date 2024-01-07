@@ -195,7 +195,7 @@ class MarginPositionInfoView(APIView):
             return Response({'Error': 'need position side'}, 400)
 
         from market.models import PairSymbol
-        symbol_model = get_object_or_404(PairSymbol, name=symbol)
+        symbol_model = get_object_or_404(PairSymbol, name=symbol, enable=True)
 
         free = symbol_model.base_asset.get_wallet(
             account, Wallet.MARGIN, None

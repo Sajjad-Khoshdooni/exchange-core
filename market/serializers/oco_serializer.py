@@ -44,7 +44,7 @@ class OCOSerializer(OrderSerializer):
         return data
 
     def create(self, validated_data):
-        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper(), enable=True)
         validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
         validated_data['stop_loss_price'] = self.post_validate_price(symbol, validated_data['stop_loss_price'])
         validated_data['stop_loss_trigger_price'] = self.post_validate_price(

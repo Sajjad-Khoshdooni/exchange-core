@@ -68,7 +68,7 @@ class OrderSerializer(serializers.ModelSerializer):
         if not settings.MARKET_TRADE_ENABLE and not request.user.account.is_system():
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
-        symbol = get_object_or_404(PairSymbol, name=symbol_name)
+        symbol = get_object_or_404(PairSymbol, name=symbol_name, enable=True)
 
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
