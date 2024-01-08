@@ -12,47 +12,65 @@ from ledger.utils.price import get_last_price
 
 
 def blocklink_income_fetcher(start: datetime, end: datetime):
+    result_list = list(Transfer.objects.filter(
+        finished_datetime__range=(start, end),
+        deposit=False,
+    ).values('wallet__asset__symbol', 'network__symbol').annotate(
+        total=Sum(F('usdt_value') / (F('amount') + F('fee_amount')) * F('fee_amount'))
+    ))
+
+    data_dict = {}
+
+    for item in result_list:
+        network_symbol = item['network__symbol']
+        coin = item['wallet__asset__symbol']
+        total = item['total']
+        data_dict[(network_symbol, coin)] = {'total': total}
+
     resp = blocklink_income_request(start=start, end=end)
 
-    for network, data_list in resp.items():
+    for key, value in resp.items():
+        total = 0
+
+        if key in data_dict.keys():
+            total = data_dict[key].get('total', 0)
+
+        data_dict[key] = {
+            'total': total,
+            **value
+        }
+
+    for pair, data in data_dict.items():
+        network, coin = pair
+
         network_coin = 'BNB' if network == 'BSC' else network
         price = get_last_price(network_coin + Asset.USDT)
 
-        for data in data_list:
-            coin = data['coin']
+        fee_income = data.get('total', 0)
 
-            fee_income = Transfer.objects.filter(
-                finished_datetime__range=(start, end),
-                deposit=False,
-                network__symbol=network,
-                wallet__asset__symbol=coin
-            ).aggregate(
-                total=Sum(F('usdt_value') / (F('amount') + F('fee_amount')) * F('fee_amount'))
-            )['total'] or 0
+        fee_amount = Decimal(data.get('fee_amount', 0))
+        dust_cost = Decimal(data.get('dust_cost', 0))
 
-            fee_amount = Decimal(data['fee_amount'])
-            dust_cost = Decimal(data['dust_cost'])
-
-            if not is_zero_by_precision(fee_amount + fee_income):
-                BlocklinkIncome.objects.get_or_create(
-                    start=start,
-                    network=network,
-                    defaults={
-                        'coin': coin,
-                        'real_fee_amount': fee_amount,
-                        'fee_cost': price * fee_amount,
-                        'fee_income': fee_income
-                    }
-                )
-
-            BlocklinkDustCost.objects.update_or_create(
+        if not is_zero_by_precision(fee_amount + fee_income):
+            BlocklinkIncome.objects.get_or_create(
+                start=start,
                 network=network,
+                coin=coin,
                 defaults={
-                    'coin': coin,
-                    'amount': dust_cost,
-                    'usdt_value': dust_cost * price
+                    'real_fee_amount': fee_amount,
+                    'fee_cost': price * fee_amount,
+                    'fee_income': fee_income
                 }
             )
+
+        BlocklinkDustCost.objects.update_or_create(
+            network=network,
+            defaults={
+                'coin': coin,
+                'amount': dust_cost,
+                'usdt_value': dust_cost * price
+            }
+        )
 
 
 @shared_task()
