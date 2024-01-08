@@ -1,11 +1,12 @@
-from datetime import timedelta
 from decimal import Decimal
 
+from django import forms
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import Q, F
-from django.utils import timezone
+from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
+from django_otp.plugins.otp_totp.models import TOTPDevice
 from import_export import resources
 from import_export.admin import ExportMixin
 from simple_history.admin import SimpleHistoryAdmin
@@ -14,15 +15,14 @@ from accounting.models import VaultItem, Vault
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
-from accounts.admin_guard.utils.html import get_table_html
 from accounts.models import User
 from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.validation import gregorian_to_jalali_date_str, gregorian_to_jalali_datetime
+from accounts.utils.validation import gregorian_to_jalali_datetime
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, \
     GeneralBankAccount, BankPaymentRequest, BankPaymentRequestReceipt
-from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
+from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.encryption import encrypt
 from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
@@ -368,12 +368,28 @@ class MarketingCostAdmin(admin.ModelAdmin):
     search_fields = ('source__utm_source', )
 
 
+class ManualTransferForm(forms.ModelForm):
+    otp = forms.IntegerField(required=False)
+
+    class Meta:
+        model = ManualTransfer
+        fields = '__all__'
+
+
 @admin.register(ManualTransfer)
 class ManualTransferAdmin(admin.ModelAdmin):
+    form = ManualTransferForm
+
     list_display = ('created', 'amount', 'bank_account', 'status')
     readonly_fields = ('status', 'group_id', 'ref_id')
 
     def save_model(self, request, obj: ManualTransfer, form, change):
+        totp = form.cleaned_data.pop('otp', None)
+        device = TOTPDevice.objects.filter(user=request.user, confirmed=True).first()
+
+        if not (device and device.verify_token(totp)) and not settings.DEBUG_OR_TESTING_OR_STAGING:
+            raise ValidationError('InvalidTotp')
+
         obj.save()
 
         if obj.status == ManualTransfer.PROCESS:

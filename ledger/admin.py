@@ -3,14 +3,17 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django import forms
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.core.exceptions import ValidationError
 from django.db.models import F, Sum, Q, OuterRef, Subquery, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
+from django_otp.plugins.otp_totp.models import TOTPDevice
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import AssetPrice
@@ -768,6 +771,7 @@ class ManualTransactionForm(forms.ModelForm):
     asset = forms.ModelChoiceField(required=False, queryset=Asset.objects.filter(enable=True))
     market = forms.ChoiceField(choices=Wallet.MARKET_CHOICES, initial=Wallet.SPOT)
     wallet = forms.IntegerField(required=False, disabled=True)
+    otp = forms.IntegerField(required=False)
 
     def clean(self):
         wallet_id = self.cleaned_data['wallet']
@@ -811,6 +815,15 @@ class ManualTransactionAdmin(admin.ModelAdmin):
     @admin.display(description='amount', ordering='amount')
     def get_amount_preview(self, mt: ManualTransaction):
         return humanize_number(mt.amount)
+
+    def save_model(self, request, obj, form, change):
+        totp = form.cleaned_data.pop('otp', None)
+        device = TOTPDevice.objects.filter(user=request.user, confirmed=True).first()
+
+        if not (device and device.verify_token(totp)) and not settings.DEBUG_OR_TESTING_OR_STAGING:
+            raise ValidationError('InvalidTotp')
+
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(AssetAlert)
