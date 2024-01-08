@@ -25,7 +25,7 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
         network_symbol = item['network__symbol']
         coin = item['wallet__asset__symbol']
         total = item['total']
-        data_dict[(network_symbol, coin)] = {'total': total}
+        data_dict[network_symbol + '/' + coin] = {'total': total}
 
     resp = blocklink_income_request(start=start, end=end)
 
