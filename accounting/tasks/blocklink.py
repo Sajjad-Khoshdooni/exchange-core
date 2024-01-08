@@ -14,6 +14,21 @@ from ledger.utils.price import get_last_price
 def blocklink_income_fetcher(start: datetime, end: datetime):
     resp = blocklink_income_request(start=start, end=end)
 
+    result_list = list(Transfer.objects.filter(
+        finished_datetime__range=(start, end),
+        deposit=False,
+    ).values('wallet__asset__symbol', 'network__symbol').annotate(
+        total=Sum(F('usdt_value') / (F('amount') + F('fee_amount')) * F('fee_amount'))
+    ))
+
+    result_dict = {}
+
+    for item in result_list:
+        network_symbol = item['network__symbol']
+        coin = item['wallet__asset__symbol']
+        total = item['total']
+        result_dict[network_symbol][coin] = total
+
     for network, data_list in resp.items():
         network_coin = 'BNB' if network == 'BSC' else network
         price = get_last_price(network_coin + Asset.USDT)
@@ -21,14 +36,7 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
         for data in data_list:
             coin = data['coin']
 
-            fee_income = Transfer.objects.filter(
-                finished_datetime__range=(start, end),
-                deposit=False,
-                network__symbol=network,
-                wallet__asset__symbol=coin
-            ).aggregate(
-                total=Sum(F('usdt_value') / (F('amount') + F('fee_amount')) * F('fee_amount'))
-            )['total'] or 0
+            fee_income = result_dict.get(network, {}).get(coin, 0)
 
             fee_amount = Decimal(data['fee_amount'])
             dust_cost = Decimal(data['dust_cost'])
@@ -37,8 +45,8 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
                 BlocklinkIncome.objects.get_or_create(
                     start=start,
                     network=network,
+                    coin=coin,
                     defaults={
-                        'coin': coin,
                         'real_fee_amount': fee_amount,
                         'fee_cost': price * fee_amount,
                         'fee_income': fee_income
