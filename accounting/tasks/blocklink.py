@@ -41,7 +41,7 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
         }
 
     for pair, data in data_dict.items():
-        network, coin = pair
+        network, coin = pair.split('/')
 
         network_coin = 'BNB' if network == 'BSC' else network
         price = get_last_price(network_coin + Asset.USDT)
