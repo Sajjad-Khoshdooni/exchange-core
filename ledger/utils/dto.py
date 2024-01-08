@@ -11,10 +11,10 @@ class MarketInfo:
     coin: str
     base_coin: str
     exchange: str
-    side: str
 
     type: str  # spot | futures
 
+    tick_size: Decimal
     step_size: Decimal
     min_quantity: Decimal
     max_quantity: Decimal

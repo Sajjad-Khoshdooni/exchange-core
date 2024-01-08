@@ -78,8 +78,20 @@ class ProviderRequester:
         return Response(data=resp_json, success=resp.ok, status_code=resp.status_code)
 
     def get_market_info(self, asset: Asset, side: str) -> MarketInfo:
-        resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol, 'side': side}, cache_timeout=300)
-        return MarketInfo(coin=asset.symbol, **resp.data)
+        data = self.collect_api('/api/v1/market/', data={'coin': asset.symbol, 'side': side}, cache_timeout=300).data
+        return MarketInfo(
+            id=data['id'],
+            coin=asset.symbol,
+            base_coin=data['base_coin'],
+            type=data['type'],
+            exchange=data['exchange'],
+
+            tick_size=data['tick_size'],
+            step_size=data['step_size'],
+            min_notional=data['min_notional'],
+            min_quantity=data['min_quantity'],
+            max_quantity=data['max_quantity'],
+        )
 
     def get_spot_balance_map(self, exchange: str, market: str = 'trade') -> dict:
         resp = self.collect_api('/api/v1/spot/balance/', data={'exchange': exchange, 'market': market})
@@ -105,7 +117,8 @@ class ProviderRequester:
 
         return info
 
-    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0):
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0,
+                            hedge_price: Decimal = None):
         if settings.DEBUG_OR_TESTING_OR_STAGING:
             logger.info('ignored due to debug')
             return
@@ -127,78 +140,90 @@ class ProviderRequester:
         else:
             threshold = step_size * 2
 
-        if abs(buy_amount) > threshold:
-            side = BUY
+        if abs(buy_amount) < threshold:
+            return
 
-            if buy_amount < 0:
-                buy_amount = -buy_amount
-                side = SELL
+        side = BUY
 
-            round_digits = -int(log10(step_size))
+        if buy_amount < 0:
+            buy_amount = -buy_amount
+            side = SELL
 
-            order_amount = round(buy_amount, round_digits)
+        round_digits = -int(log10(step_size))
 
-            price = get_price(
-                asset.symbol + Asset.USDT,
-                side=BUY
-            )
-            min_notional = market_info.min_notional * Decimal('1.1')
+        order_amount = round(buy_amount, round_digits)
 
-            if order_amount * price < min_notional:
-                logger.info('ignored due to small order')
-                return
+        price = get_price(
+            asset.symbol + Asset.USDT,
+            side=BUY
+        )
+        min_notional = market_info.min_notional * Decimal('1.1')
 
-            if market_info.type == 'spot' and side == SELL:
-                balance_map = self.get_balances(market_info.id, market_info.type)['balances']
-                balance = Decimal(balance_map.get(asset.symbol, 0))
+        if order_amount * price < min_notional:
+            logger.info('ignored due to small order')
+            return
 
-                if balance < order_amount:
-                    diff = order_amount - balance
+        if market_info.type == 'spot' and side == SELL:
+            balance_map = self.get_balances(market_info.id, market_info.type)['balances']
+            balance = Decimal(balance_map.get(asset.symbol, 0))
 
-                    if diff * price < min_notional:
-                        order_amount = floor_precision(balance, round_digits)
+            if balance < order_amount:
+                diff = order_amount - balance
 
-                        if order_amount * price < min_notional:
-                            logger.info('ignored due to small order')
-                            return
+                if diff * price < min_notional:
+                    order_amount = floor_precision(balance, round_digits)
 
-            if side == BUY and market_info.base_coin == 'BUSD':
-                busd_balance = Decimal(self.get_spot_balance_map(market_info.exchange)['BUSD'])
-                needed_busd = order_amount * price
+                    if order_amount * price < min_notional:
+                        logger.info('ignored due to small order')
+                        return
 
-                if needed_busd > busd_balance:
-                    logger.info('providing busd for order')
-                    to_buy_busd = max(math.ceil((needed_busd - busd_balance) * Decimal('1.01')), min_notional)
+        if side == BUY and market_info.base_coin == 'BUSD':
+            busd_balance = Decimal(self.get_spot_balance_map(market_info.exchange)['BUSD'])
+            needed_busd = order_amount * price
 
-                    self.new_order(
-                        request_id=request_id,
-                        asset=Asset.get('BUSD'),
-                        side=BUY,
-                        amount=Decimal(to_buy_busd),
-                        scope='prv-base',
-                    )
+            if needed_busd > busd_balance:
+                logger.info('providing busd for order')
+                to_buy_busd = max(math.ceil((needed_busd - busd_balance) * Decimal('1.01')), min_notional)
 
-            order = self.new_order(
-                request_id=request_id,
-                asset=asset,
-                side=side,
-                amount=order_amount,
-                scope=scope
-            )
+                self.new_order(
+                    request_id=request_id,
+                    asset=Asset.get('BUSD'),
+                    side=BUY,
+                    amount=Decimal(to_buy_busd),
+                    scope='prv-base',
+                )
 
-            if not order:
-                raise HedgeError
+        if hedge_price:
+            hedge_price = floor_precision(hedge_price, -int(log10(market_info.tick_size)))
 
-            return True
+        order = self.new_order(
+            request_id=request_id,
+            asset=asset,
+            side=side,
+            amount=order_amount,
+            price=hedge_price,
+            scope=scope
+        )
 
-    def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
-        resp = self.collect_api('/api/v1/orders/', method='POST', data={
+        if not order:
+            raise HedgeError
+
+        return True
+
+    def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str, price: Decimal = None):
+        data = {
             'request_id': request_id,
             'coin': asset.symbol,
             'scope': scope,
             'amount': str(amount),
             'side': side
-        }, timeout=15)
+        }
+
+        if price:
+            data['price'] = str(price)
+
+        resp = self.collect_api('/api/v1/orders/', method='POST', data=data, timeout=15)
+
         return resp.success
 
     def new_withdraw(self, transfer: Transfer) -> Response:
@@ -301,7 +326,7 @@ class ProviderRequester:
 
 class MockProviderRequester(ProviderRequester):
     def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 10):
-        if config('IRAN_ACCESS_TIMEOUT_MODE', default=None):
+        if config('PROVIDER_TIMEOUT_MODE', default=None):
             time.sleep(60)
             raise requests.exceptions.Timeout
 
@@ -315,6 +340,7 @@ class MockProviderRequester(ProviderRequester):
             exchange='binance',
             type='spot',
             step_size=Decimal(1),
+            tick_size=Decimal(1),
             min_quantity=Decimal(1),
             max_quantity=Decimal(1000),
             min_notional=Decimal(10)
@@ -347,10 +373,10 @@ class MockProviderRequester(ProviderRequester):
             )
         ]
 
-    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0):
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0, hedge_price: Decimal = None):
         self._collect_api('/')
 
-    def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
+    def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str, price: Decimal = None):
         self._collect_api('/')
         return True
 

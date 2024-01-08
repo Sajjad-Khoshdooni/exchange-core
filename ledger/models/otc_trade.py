@@ -239,12 +239,19 @@ class OTCTrade(models.Model):
                 req = self.otc_request
                 _key = 'otc:%s' % self.id
 
+                hedge_price = None
+                buy_amount = self.get_pending_to_buy_amount()
+
+                if buy_amount != 0 and self.to_buy_amount / buy_amount > Decimal('0.9'):
+                    hedge_price = req.price * req.base_usdt_price
+
                 from ledger.utils.provider import TRADE, get_provider_requester
                 hedged = get_provider_requester().try_hedge_new_order(
                     request_id=_key,
                     asset=req.symbol.asset,
-                    buy_amount=self.get_pending_to_buy_amount(),
-                    scope=TRADE
+                    buy_amount=buy_amount,
+                    scope=TRADE,
+                    hedge_price=hedge_price
                 )
 
                 if SystemConfig.get_system_config().hedge_irt_by_internal_market and req.symbol.name != 'USDTIRT' and req.symbol.base_asset.symbol == Asset.IRT:
