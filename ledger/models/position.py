@@ -467,6 +467,14 @@ class MarginPosition(models.Model):
                 scope=Trx.DUST,
             )
 
+            MarginHistoryModel.objects.create(
+                asset=self.base_wallet.asset,
+                amount=free,
+                group_id=group_id,
+                type=MarginHistoryModel.DUST,
+                account=self.account
+            )
+
 
 class MarginLeverage(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -489,7 +497,7 @@ class MarginPositionTradeInfo:
 
 
 class MarginHistoryModel(models.Model):
-    PNL, TRANSFER, POSITION_TRANSFER, TRADE_FEE, INTEREST_FEE, INSURANCE_FEE = 'pnl', 'transfer', 'p_transfer', 'trade_fee', 'int_fee', 'ins_fee'
+    PNL, TRANSFER, POSITION_TRANSFER, TRADE_FEE, INTEREST_FEE, INSURANCE_FEE, DUST = 'pnl', 'transfer', 'p_transfer', 'trade_fee', 'int_fee', 'ins_fee', 'dust'
     type_list = [PNL, TRANSFER, TRADE_FEE, INTEREST_FEE, INSURANCE_FEE]
 
     created = models.DateTimeField(auto_now_add=True)
@@ -499,7 +507,7 @@ class MarginHistoryModel(models.Model):
     amount = get_amount_field()
     type = models.CharField(
         choices=[(PNL, PNL), (TRANSFER, TRANSFER), (TRADE_FEE, TRADE_FEE), (INTEREST_FEE, INTEREST_FEE),
-                 (INSURANCE_FEE, INSURANCE_FEE), (POSITION_TRANSFER, POSITION_TRANSFER)],
+                 (INSURANCE_FEE, INSURANCE_FEE), (POSITION_TRANSFER, POSITION_TRANSFER), (DUST, DUST)],
         max_length=12
     )
     group_id = models.UUIDField()

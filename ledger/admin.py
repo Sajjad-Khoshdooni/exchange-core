@@ -975,7 +975,7 @@ class TokenRebrandAdmin(admin.ModelAdmin):
 
 @admin.register(MarginPosition)
 class MarginPositionAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'symbol', 'amount')
+    list_display = ('created', 'account', 'symbol', 'amount', 'side', 'status', 'liquidation_price')
     readonly_fields = ('account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price', 'side',
                        'liquidation_price', 'status', 'leverage', 'equity', 'group_id')
     list_filter = ('status', 'side', 'symbol')
