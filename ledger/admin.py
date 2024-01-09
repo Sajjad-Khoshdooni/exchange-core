@@ -9,7 +9,9 @@ from django.contrib.admin import SimpleListFilter
 from django.core.exceptions import ValidationError
 from django.db.models import F, Sum, Q, OuterRef, Subquery, Value
 from django.db.models.functions import Coalesce
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
@@ -993,11 +995,19 @@ class TokenRebrandAdmin(admin.ModelAdmin):
 
 @admin.register(MarginPosition)
 class MarginPositionAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'symbol', 'amount', 'side', 'status', 'liquidation_price')
-    readonly_fields = ('account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price', 'side',
-                       'liquidation_price', 'status', 'leverage', 'equity', 'group_id')
+    list_display = ('created', 'account', 'symbol', 'amount', 'side', 'status', 'liquidation_price', 'orders', 'trades')
+    # readonly_fields = ('account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price', 'side',
+    #                    'liquidation_price', 'status', 'leverage', 'equity', 'group_id')
     list_filter = ('status', 'side', 'symbol')
     search_fields = ('symbol__name', 'status',)
+
+    def orders(self, obj):
+        url = reverse('admin:market_order_changelist') + f'?position={obj.id}'
+        return format_html('<a href="{}">Orders</a>', url)
+
+    def trades(self, obj):
+        url = reverse('admin:market_trade_changelist') + f'?position={obj.id}'
+        return format_html('<a href="{}">Trades</a>', url)
 
 
 @admin.register(MarginHistoryModel)
