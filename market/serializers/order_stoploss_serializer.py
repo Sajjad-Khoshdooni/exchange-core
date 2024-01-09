@@ -28,10 +28,19 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: Union[Order, StopLoss]):
         data = super(OrderStopLossSerializer, self).to_representation(instance)
-        data['amount'] = decimal_to_str(floor_precision(Decimal(data['amount']), instance.symbol.step_size))
+        data['amount'] = decimal_to_str(
+            floor_precision(Decimal(data['amount']), instance.symbol.step_size),
+            truncate=False
+        )
+
         if data['price']:
-            data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), instance.symbol.tick_size))
+            data['price'] = decimal_to_str(
+                floor_precision(Decimal(data['price']), instance.symbol.tick_size),
+                truncate=False
+            )
+
         data['symbol'] = instance.symbol.name
+
         return data
 
     def get_id(self, instance: Union[Order, StopLoss]):

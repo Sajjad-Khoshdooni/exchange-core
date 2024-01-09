@@ -44,9 +44,9 @@ def get_precision(amount: Decimal) -> int:
         return len(amount.split('.')[1])
 
 
-def decimal_to_str(amount: Decimal) -> str:
+def decimal_to_str(amount: Decimal, truncate: bool = True) -> str:
     amount = '{:f}'.format(amount)
-    if '.' in amount:
+    if truncate and '.' in amount:
         amount = amount.rstrip('0').rstrip('.')
     return amount
 
