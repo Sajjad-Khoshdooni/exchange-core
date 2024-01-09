@@ -1,10 +1,11 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
 
+from ledger.models import Asset, MarginPosition
 from ledger.utils.precision import get_presentation_amount
 from market.models import Order, Trade, PairSymbol, CancelRequest, ReferralTrx, StopLoss, OCO
-from ledger.models import Asset
 
 
 class BaseAssetFilter(SimpleListFilter):                                           
@@ -82,11 +83,29 @@ class UserFilter(SimpleListFilter):
             return queryset
 
 
+class OrderPositionFilter(admin.SimpleListFilter):
+    title = _('Position')
+    parameter_name = 'position'
+
+    def lookups(self, request, model_admin):
+        positions = MarginPosition.objects.all()
+        return ((position.id, _(str(position))) for position in positions)
+
+    def queryset(self, request, queryset):
+        if not self.parameter_name in request.GET.keys():
+            return None
+
+        if self.value() is None:
+            return Order.objects.all()
+
+        return Order.objects.filter(position__id=self.value())
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount')
-    list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
-    readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss', 'login_activity')
+    list_filter = (TypeFilter, UserFilter, OrderPositionFilter, 'side', 'fill_type', 'status', 'symbol')
+    readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss', 'login_activity', 'position')
     actions = ('cancel_order', )
 
     def created_at_millis(self, instance):
@@ -112,12 +131,30 @@ class CancelRequestAdmin(admin.ModelAdmin):
     created_at_millis.short_description = 'Created Second'
 
 
+class TradePositionFilter(admin.SimpleListFilter):
+    title = _('Position')
+    parameter_name = 'position'
+
+    def lookups(self, request, model_admin):
+        positions = MarginPosition.objects.all()
+        return ((position.id, _(str(position))) for position in positions)
+
+    def queryset(self, request, queryset):
+        if not self.parameter_name in request.GET.keys():
+            return None
+
+        if self.value() is None:
+            return Trade.objects.all()
+
+        return Trade.objects.filter(position__id=self.value())
+
+
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'is_maker', 'amount', 'fee_amount',
                     'fee_revenue', 'get_value_irt', 'get_value_usdt')
-    list_filter = ('trade_source', UserTradeFilter, 'symbol')
-    readonly_fields = ('symbol', 'order_id', 'account', 'login_activity', 'group_id')
+    list_filter = ('trade_source', UserTradeFilter, TradePositionFilter, 'symbol')
+    readonly_fields = ('symbol', 'order_id', 'account', 'login_activity', 'group_id', 'position')
     search_fields = ('symbol__name', )
     actions = ('revert', )
 
