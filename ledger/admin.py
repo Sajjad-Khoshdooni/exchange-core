@@ -323,7 +323,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
     list_filter = (OTCUserFilter, 'status', 'execution_type', 'hedged')
     search_fields = ('group_id', 'order_id', 'otc_request__symbol__asset__symbol', 'otc_request__account__user__phone')
     readonly_fields = ('otc_request', 'get_username')
-    actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
+    actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade', 'revert')
 
     def get_queryset(self, request):
         return super(OTCTradeAdmin, self).get_queryset(request).prefetch_related('otc_request__account__user')
@@ -345,18 +345,23 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
     @admin.action(description='Accept Trade')
     def accept_trade(self, request, queryset):
-        for otc in queryset.filter(status='pending'):
+        for otc in queryset.filter(status=PENDING):
             otc.hedge_with_provider()
 
     @admin.action(description='Accept without Hedge')
     def accept_trade_without_hedge(self, request, queryset):
-        for otc in queryset.filter(status='pending'):
+        for otc in queryset.filter(status=PENDING):
             otc.hedge_with_provider(hedge=False)
 
     @admin.action(description='Cancel Trade')
     def cancel_trade(self, request, queryset):
-        for otc in queryset.filter(status='pending'):
+        for otc in queryset.filter(status=PENDING):
             otc.cancel()
+
+    @admin.action(description='Revert')
+    def revert(self, request, queryset):
+        for otc in queryset.filter(status=DONE):
+            otc.revert()
 
 
 @admin.register(models.Trx)

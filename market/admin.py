@@ -3,23 +3,23 @@ from django.contrib.admin import SimpleListFilter
 from django.utils.safestring import mark_safe
 
 from ledger.utils.precision import get_presentation_amount
-from market.models import *
+from market.models import Order, Trade, PairSymbol, CancelRequest, ReferralTrx, StopLoss, OCO
 from ledger.models import Asset
 
 
 class BaseAssetFilter(SimpleListFilter):                                           
-      title = 'Base Asset'                                                           
-      parameter_name = 'base_asset'
+    title = 'Base Asset'
+    parameter_name = 'base_asset'
 
-      def lookups(self, request, model_admin):                                        
-          assets = set([t for t in Asset.objects.filter(symbol__in=(Asset.USDT, Asset.IRT))])       
-          return zip(assets, assets)                                                    
+    def lookups(self, request, model_admin):
+        assets = set([t for t in Asset.objects.filter(symbol__in=(Asset.USDT, Asset.IRT))])
+        return zip(assets, assets)
 
-      def queryset(self, request, queryset):                                          
-          if self.value():                                                            
-              return queryset.filter(base_asset__symbol=self.value())
-          else:                                                                       
-              return queryset
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(base_asset__symbol=self.value())
+        else:
+            return queryset
 
 
 class UserTradeFilter(SimpleListFilter):
@@ -119,6 +119,7 @@ class TradeAdmin(admin.ModelAdmin):
     list_filter = ('trade_source', UserTradeFilter, 'symbol')
     readonly_fields = ('symbol', 'order_id', 'account', 'login_activity', 'group_id')
     search_fields = ('symbol__name', )
+    actions = ('revert', )
 
     def created_at_millis(self, instance):
         created = instance.created.astimezone()
@@ -134,6 +135,11 @@ class TradeAdmin(admin.ModelAdmin):
     def get_value_usdt(self, trade: Trade):
         return get_presentation_amount(trade.usdt_value)
 
+    @admin.action(description='Revert', permissions=['change'])
+    def revert(self, request, queryset):
+        for trade in queryset:
+            trade.revert()
+
 
 @admin.register(ReferralTrx)
 class ReferralTrxAdmin(admin.ModelAdmin):
@@ -147,9 +153,9 @@ class StopLossAdmin(admin.ModelAdmin):
     readonly_fields = ('wallet', 'symbol', 'group_id', 'login_activity')
 
     @admin.display(description='wallet')
-    def get_masked_wallet(self, stopLoss: StopLoss):
+    def get_masked_wallet(self, stop_loss: StopLoss):
         return mark_safe(
-            f'<span dir="ltr">{stopLoss.wallet}</span>'
+            f'<span dir="ltr">{stop_loss.wallet}</span>'
         )
 
 
