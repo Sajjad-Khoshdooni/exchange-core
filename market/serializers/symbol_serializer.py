@@ -66,7 +66,9 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         for field in ('min_trade_quantity', 'max_trade_quantity'):
-            representation[field] = get_presentation_amount(representation[field])
+            serializer_field = representation.get(field)
+            if serializer_field:
+                representation[field] = get_presentation_amount(serializer_field)
         return representation
 
     def get_price(self, symbol: PairSymbol):

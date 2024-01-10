@@ -117,7 +117,7 @@ class MarginPositionViewSet(ModelViewSet):
             account=self.request.user.get_account(),
             liquidation_price__isnull=False,
             status=MarginPosition.OPEN
-        ).order_by('-created').prefetch_related('base_wallet', 'asset_wallet', 'symbol')
+        ).order_by('-created').prefetch_related('base_wallet', 'asset_wallet', 'symbol', 'symbol__base_asset')
 
 
 class MarginClosePositionSerializer(serializers.Serializer):
