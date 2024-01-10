@@ -187,19 +187,18 @@ class MarginPositionInfoView(APIView):
     def get(self, request: Request):
         account = request.user.get_account()
         symbol = request.GET.get('symbol')
-        side = request.GET.get('side')
 
         if not symbol:
             return Response({'Error': 'need symbol'}, 400)
-        if not side:
-            return Response({'Error': 'need position side'}, 400)
 
         from market.models import PairSymbol
+
         symbol_model = get_object_or_404(PairSymbol, name=symbol, enable=True)
 
         free = symbol_model.base_asset.get_wallet(
             account, Wallet.MARGIN, None
         ).get_free()
+
         margin_leverage, _ = MarginLeverage.objects.get_or_create(account=account)
 
         data = {
