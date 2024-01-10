@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import django_filters
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework.authentication import SessionAuthentication
@@ -180,10 +181,18 @@ class BulkCancelOrderAPIView(APIView):
         serializer = BulkCancelRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         order_ids = serializer.data.get('id_list')
+        client_order_id_list = serializer.data.get('client_order_id_list')
+
+        q = Q()
+        if order_ids:
+            q = q & Q(id__in=order_ids)
+
+        if client_order_id_list:
+            q = q & Q(client_order_id__in=client_order_id_list)
 
         canceled_orders = []
         if order_ids:
-            to_cancel_orders = Order.objects.filter(account=request.user.get_account(), id__in=order_ids)
+            to_cancel_orders = Order.objects.filter(q, account=request.user.get_account(), status=Order.NEW)
             canceled_orders = Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
 
         return Response({
