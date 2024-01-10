@@ -181,9 +181,14 @@ class BulkCancelOrderAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         order_ids = serializer.data.get('id_list')
 
+        canceled_orders = []
         if order_ids:
             to_cancel_orders = Order.objects.filter(account=request.user.get_account(), id__in=order_ids)
-            Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
+            canceled_orders = Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
+
+        return Response({
+            "cancelled_orders":  canceled_orders.values_list('id', flat=True) if canceled_orders else []
+        }, 200)
 
 
 class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):

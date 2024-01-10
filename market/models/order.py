@@ -186,6 +186,7 @@ class Order(models.Model):
     def bulk_cancel_simple_orders(cls, to_cancel_orders: QuerySet):
         orders = to_cancel_orders.filter(oco__isnull=True, status=cls.NEW)
 
+        canceled_orders = []
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             PairSymbol.objects.select_for_update().filter(id=orders.values_list('symbol_id', flat=True))
             order_queryset = Order.objects.filter(id__in=orders.values_list('id', flat=True))
@@ -197,7 +198,9 @@ class Order(models.Model):
                 pipeline.add_market_cache_data(order.symbol, [order], side=order.side, canceled=True)
 
             Order.objects.bulk_update(order_queryset, ['status'])
-            return order_queryset
+            canceled_orders = order_queryset
+
+        return canceled_orders
 
     @property
     def base_wallet(self):
