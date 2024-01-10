@@ -53,12 +53,21 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
     change_percent = serializers.SerializerMethodField()
     bookmark = serializers.SerializerMethodField()
 
+    maker_fee = serializers.SerializerMethodField()
+    taker_fee = serializers.SerializerMethodField()
+
     def __init__(self, *args, **kwargs):
         super(SymbolBriefStatsSerializer, self).__init__(*args, **kwargs)
 
         self.prices_data_dic = self.context.get('prices')
         if not self.prices_data_dic:
             self.prices_data_dic = get_symbol_prices()
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        for field in ('min_trade_quantity', 'max_trade_quantity'):
+            representation[field] = get_presentation_amount(representation[field])
+        return representation
 
     def get_price(self, symbol: PairSymbol):
         last_prices = self.prices_data_dic['last']
@@ -87,11 +96,18 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
             return
         change_percent = 100 * (last_price - previous_price) / previous_price
         return decimal_to_str(floor_precision(change_percent, 2))
+
+    def get_maker_fee(self, pair_symbol: PairSymbol):
+        return '0'
+
+    def get_taker_fee(self, pair_symbol: PairSymbol):
+        return '0.002'
     
     class Meta:
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'enable', 'price', 'change_percent', 'bookmark', 'margin_enable',
-                  'strategy_enable')
+                  'strategy_enable',  'taker_fee', 'maker_fee', 'tick_size', 'step_size', 'min_trade_quantity',
+                  'max_trade_quantity')
 
 
 class SymbolStatsSerializer(SymbolBriefStatsSerializer):
