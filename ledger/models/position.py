@@ -26,6 +26,7 @@ MARGIN_POOL_ACCOUNT = config('MARGIN_POOL_ACCOUNT', cast=int)
 
 class MarginPosition(models.Model):
     OPEN, CLOSED, TERMINATING = 'open', 'closed', 'terminating'
+    STATUS_LIST = [OPEN, CLOSED, TERMINATING]
     STATUS_CHOICES = [(OPEN, OPEN), (CLOSED, CLOSED), (TERMINATING, TERMINATING)]
     SIDE_CHOICES = [(LONG, LONG), (SHORT, SHORT)]
 

@@ -53,8 +53,26 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
     change_percent = serializers.SerializerMethodField()
     bookmark = serializers.SerializerMethodField()
 
+    maker_fee = serializers.SerializerMethodField()
+    taker_fee = serializers.SerializerMethodField()
+
+    def __init__(self, *args, **kwargs):
+        super(SymbolBriefStatsSerializer, self).__init__(*args, **kwargs)
+
+        self.prices_data_dic = self.context.get('prices')
+        if not self.prices_data_dic:
+            self.prices_data_dic = get_symbol_prices()
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        for field in ('min_trade_quantity', 'max_trade_quantity'):
+            serializer_field = representation.get(field)
+            if serializer_field:
+                representation[field] = get_presentation_amount(serializer_field)
+        return representation
+
     def get_price(self, symbol: PairSymbol):
-        last_prices = get_symbol_prices()['last']
+        last_prices = self.prices_data_dic['last']
         price = last_prices.get(symbol.id)
         if price:
             return decimal_to_str(floor_precision(price, symbol.tick_size))
@@ -63,10 +81,8 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
         return pair_symbol.id in self.context.get('bookmarks', [])
 
     def get_change_value_pairs(self, symbol: PairSymbol):
-        last_prices = get_symbol_prices()
-
-        yesterday_prices = last_prices['yesterday']
-        today_prices = last_prices['last']
+        yesterday_prices = self.prices_data_dic['yesterday']
+        today_prices = self.prices_data_dic['last']
 
         previous_trade_price = yesterday_prices.get(symbol.id)
         last_trade_price = today_prices.get(symbol.id)
@@ -82,11 +98,18 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
             return
         change_percent = 100 * (last_price - previous_price) / previous_price
         return decimal_to_str(floor_precision(change_percent, 2))
+
+    def get_maker_fee(self, pair_symbol: PairSymbol):
+        return '0'
+
+    def get_taker_fee(self, pair_symbol: PairSymbol):
+        return '0.002'
     
     class Meta:
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'enable', 'price', 'change_percent', 'bookmark', 'margin_enable',
-                  'strategy_enable')
+                  'strategy_enable',  'taker_fee', 'maker_fee', 'tick_size', 'step_size', 'min_trade_quantity',
+                  'max_trade_quantity')
 
 
 class SymbolStatsSerializer(SymbolBriefStatsSerializer):
