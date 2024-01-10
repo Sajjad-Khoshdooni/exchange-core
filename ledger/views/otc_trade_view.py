@@ -27,6 +27,9 @@ class OTCInfoView(APIView):
         from_symbol = request.query_params.get('from')
         to_symbol = request.query_params.get('to')
 
+        if from_symbol != to_symbol:
+            raise ValidationError('دو ارز دیجیتال باید متفاوت باشند.')
+
         try:
             from_amount = request.query_params.get('from_amount')
             if from_amount:
