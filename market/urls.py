@@ -13,6 +13,7 @@ urlpatterns = [
     path('irt/info/', cache_page(60)(MarketInfoView.as_view())),
     path('depth/<str:symbol>/', OrderBookAPIView.as_view()),
     path('orders/cancel/', CancelOrderAPIView.as_view()),
+    path('orders/bulk-cancel/', BulkCancelOrderAPIView.as_view()),
     path('symbols/spreads/', SymbolSpreadListView.as_view()),
     path('symbols/<str:name>/', cache_page(300)(SymbolDetailedStatsAPIView.as_view())),
     path('symbols/', SymbolListAPIView.as_view()),

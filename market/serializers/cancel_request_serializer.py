@@ -93,3 +93,9 @@ class CancelRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = CancelRequest
         fields = ('id', 'canceled_at', 'client_order_id')
+
+
+class BulkCancelRequestSerializer(serializers.Serializer):
+    id_list = serializers.ListField(
+        child=serializers.IntegerField(min_value=0)
+    )

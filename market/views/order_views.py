@@ -18,7 +18,7 @@ from accounts.views.jwt_views import DelegatedAccountMixin, user_has_delegate_pe
 from ledger.models.wallet import ReserveWallet
 from market.models import Order, CancelRequest, PairSymbol, OCO
 from market.models import StopLoss, Trade
-from market.serializers.cancel_request_serializer import CancelRequestSerializer
+from market.serializers.cancel_request_serializer import CancelRequestSerializer, BulkCancelRequestSerializer
 from market.serializers.oco_serializer import OCOSerializer
 from market.serializers.order_serializer import OrderIDSerializer, OrderSerializer
 from market.serializers.order_stoploss_serializer import OrderStopLossSerializer
@@ -170,6 +170,20 @@ class CancelOrderAPIView(CreateAPIView, DelegatedAccountMixin):
             'account': self.get_account_variant(self.request)[0],
             'allow_cancel_strategy_orders': user_has_delegate_permission(self.request.user)
         }
+
+
+class BulkCancelOrderAPIView(APIView):
+    authentication_classes = (SessionAuthentication, TradeTokenAuthentication, JWTAuthentication)
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
+
+    def post(self, request):
+        serializer = BulkCancelRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order_ids = serializer.data.get('id_list')
+
+        if order_ids:
+            to_cancel_orders = Order.objects.filter(account=request.user.get_account(), id__in=order_ids)
+            Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
 
 
 class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):
