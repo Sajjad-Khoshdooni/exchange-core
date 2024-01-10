@@ -53,8 +53,15 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
     change_percent = serializers.SerializerMethodField()
     bookmark = serializers.SerializerMethodField()
 
+    def __init__(self, *args, **kwargs):
+        super(SymbolBriefStatsSerializer, self).__init__(*args, **kwargs)
+
+        self.prices_data_dic = self.context.get('prices')
+        if not self.prices_data_dic:
+            self.prices_data_dic = get_symbol_prices()
+
     def get_price(self, symbol: PairSymbol):
-        last_prices = get_symbol_prices()['last']
+        last_prices = self.prices_data_dic['last']
         price = last_prices.get(symbol.id)
         if price:
             return decimal_to_str(floor_precision(price, symbol.tick_size))
@@ -63,10 +70,8 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
         return pair_symbol.id in self.context.get('bookmarks', [])
 
     def get_change_value_pairs(self, symbol: PairSymbol):
-        last_prices = get_symbol_prices()
-
-        yesterday_prices = last_prices['yesterday']
-        today_prices = last_prices['last']
+        yesterday_prices = self.prices_data_dic['yesterday']
+        today_prices = self.prices_data_dic['last']
 
         previous_trade_price = yesterday_prices.get(symbol.id)
         last_trade_price = today_prices.get(symbol.id)

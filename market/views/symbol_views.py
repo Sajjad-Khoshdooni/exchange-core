@@ -12,6 +12,7 @@ from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from market.models import PairSymbol
 from market.serializers import BookMarkPairSymbolSerializer
 from market.serializers.symbol_serializer import SymbolSerializer, SymbolBriefStatsSerializer, SymbolStatsSerializer
+from market.utils.price import get_symbol_prices
 
 
 class SymbolFilter(django_filters.FilterSet):
@@ -32,12 +33,14 @@ class SymbolListAPIView(ListAPIView):
 
     def get_queryset(self):
         if self.request.query_params.get('include_hidden') == '1':
-            return PairSymbol.objects.filter(asset__enable=True).order_by(
+            queryset = PairSymbol.objects.filter(asset__enable=True).order_by(
                 '-asset__trend', 'asset__order', 'base_asset__trend', '-base_asset__order'
             )
-        return PairSymbol.objects.filter(enable=True).order_by(
-            '-asset__trend', 'asset__order', 'base_asset__trend', '-base_asset__order'
-        )
+        else:
+            queryset = PairSymbol.objects.filter(enable=True).order_by(
+                '-asset__trend', 'asset__order', 'base_asset__trend', '-base_asset__order'
+            )
+        return queryset.prefetch_related('asset', 'base_asset')
 
     def get_serializer_class(self):
         if self.request.query_params.get('stats') == '1':
@@ -52,6 +55,8 @@ class SymbolListAPIView(ListAPIView):
             ctx['bookmarks'] = set(user.get_account().bookmark_market.values_list('id', flat=True))
         else:
             ctx['bookmarks'] = []
+
+        ctx['prices'] = get_symbol_prices()
 
         return ctx
 
