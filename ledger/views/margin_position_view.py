@@ -13,7 +13,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.exceptions import SmallDepthError, InsufficientBalance
 from ledger.models import MarginPosition, MarginHistoryModel
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.external_price import SHORT
+from ledger.utils.external_price import SHORT, LONG
 from ledger.utils.precision import floor_precision, get_margin_coin_presentation_balance
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
@@ -38,27 +38,55 @@ class MarginPositionSerializer(AssetSerializerMini):
     volume = serializers.SerializerMethodField()
 
     def get_margin_ratio(self, instance: MarginPosition):
-        if instance.base_debt_amount:
-            ratio = instance.base_total_balance / -instance.base_debt_amount
+        debt = Decimal(self.get_base_debt(instance))
+        total = Decimal(self.get_base_total(instance))
+
+        if debt:
+            ratio = total / -debt
             if ratio > 0:
                 return floor_precision(ratio, 2)
             return 1000
+
         return None
 
     def get_balance(self, instance):
         return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, instance.equity)
 
+    def get_loan_wallet(self, instance):
+        if instance.side == SHORT:
+            wallet = instance.asset_wallet
+        else:
+            wallet = instance.base_wallet
+        return wallet
+
+    def get_margin_wallet(self, instance):
+        if instance.side == LONG:
+            wallet = instance.asset_wallet
+        else:
+            wallet = instance.base_wallet
+        return wallet
+
     def get_base_debt(self, instance):
-        return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, instance.base_debt_amount)
+        balance = self.get_loan_wallet(instance).balance
+
+        if instance.side == SHORT:
+            balance *= instance.symbol.last_trade_price
+
+        return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, balance)
 
     def get_asset_debt(self, instance):
-        return get_margin_coin_presentation_balance(instance.symbol.asset.symbol, instance.loan_wallet.balance)
+        return get_margin_coin_presentation_balance(instance.symbol.asset.symbol, self.get_loan_wallet(instance).balance)
 
     def get_base_total(self, instance):
-        return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, instance.base_total_balance)
+        balance = self.get_margin_wallet(instance).balance
+
+        if instance.side == LONG:
+            balance *= instance.symbol.last_trade_price
+
+        return get_margin_coin_presentation_balance(instance.symbol.base_asset.symbol, balance)
 
     def get_asset_total(self, instance):
-        return get_margin_coin_presentation_balance(instance.symbol.asset.symbol, instance.total_balance)
+        return get_margin_coin_presentation_balance(instance.symbol.asset.symbol, self.get_margin_wallet(instance).balance)
 
     def get_amount(self, instance):
         amount = floor_precision(abs(instance.asset_wallet.balance), instance.symbol.step_size)
@@ -117,7 +145,8 @@ class MarginPositionViewSet(ModelViewSet):
             account=self.request.user.get_account(),
             liquidation_price__isnull=False,
             status=MarginPosition.OPEN
-        ).order_by('-created').prefetch_related('base_wallet', 'asset_wallet', 'symbol', 'symbol__base_asset')
+        ).order_by('-created').prefetch_related('base_wallet', 'asset_wallet', 'symbol', 'symbol__base_asset',
+                                                'symbol__asset')
 
 
 class MarginClosePositionSerializer(serializers.Serializer):
