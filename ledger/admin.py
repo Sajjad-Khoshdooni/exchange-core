@@ -1014,17 +1014,20 @@ class PositionStatusFilter(SimpleListFilter):
 
 @admin.register(MarginPosition)
 class MarginPositionAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'symbol', 'amount', 'side', 'status', 'liquidation_price', 'orders', 'trades')
+    list_display = ('created', 'account', 'symbol', 'side', 'status', 'leverage', 'equity', 'amount',
+                    'liquidation_price', 'get_orders', 'get_trades')
     readonly_fields = ('account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price', 'side',
                        'liquidation_price', 'status', 'leverage', 'equity', 'group_id')
     list_filter = (PositionStatusFilter, 'side', 'symbol')
     search_fields = ('symbol__name', 'status',)
 
-    def orders(self, obj):
+    @admin.display(description='Orders')
+    def get_orders(self, obj):
         url = reverse('admin:market_order_changelist') + f'?position={obj.id}'
         return format_html('<a href="{}">Orders</a>', url)
 
-    def trades(self, obj):
+    @admin.display(description='Trades')
+    def get_trades(self, obj):
         url = reverse('admin:market_trade_changelist') + f'?position={obj.id}'
         return format_html('<a href="{}">Trades</a>', url)
 
