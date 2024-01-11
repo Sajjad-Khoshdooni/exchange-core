@@ -255,7 +255,7 @@ def check_withdraw_conditions(account: Account) -> bool:
     if not settings.WITHDRAW_ENABLE or not account.user.can_withdraw:
         return False
 
-    if Wallet.objects.filter(account=account, market=Wallet.DEBT, balance__lt=0):
+    if Wallet.objects.filter(account=account, market__in=[Wallet.DEBT, Wallet.SPOT], balance__lt=0):
         return False
 
     return True
