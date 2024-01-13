@@ -185,10 +185,10 @@ class BulkCancelOrderAPIView(APIView):
 
         q = Q()
         if order_ids:
-            q = q & Q(id__in=order_ids)
+            q = q | Q(id__in=order_ids)
 
         if client_order_id_list:
-            q = q & Q(client_order_id__in=client_order_id_list)
+            q = q | Q(client_order_id__in=client_order_id_list)
 
         canceled_orders = []
         if order_ids:
