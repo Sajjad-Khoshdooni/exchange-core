@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import django_filters
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework.authentication import SessionAuthentication
@@ -18,7 +19,7 @@ from accounts.views.jwt_views import DelegatedAccountMixin, user_has_delegate_pe
 from ledger.models.wallet import ReserveWallet
 from market.models import Order, CancelRequest, PairSymbol, OCO
 from market.models import StopLoss, Trade
-from market.serializers.cancel_request_serializer import CancelRequestSerializer
+from market.serializers.cancel_request_serializer import CancelRequestSerializer, BulkCancelRequestSerializer
 from market.serializers.oco_serializer import OCOSerializer
 from market.serializers.order_serializer import OrderIDSerializer, OrderSerializer
 from market.serializers.order_stoploss_serializer import OrderStopLossSerializer
@@ -170,6 +171,35 @@ class CancelOrderAPIView(CreateAPIView, DelegatedAccountMixin):
             'account': self.get_account_variant(self.request)[0],
             'allow_cancel_strategy_orders': user_has_delegate_permission(self.request.user)
         }
+
+
+class BulkCancelOrderAPIView(APIView):
+    authentication_classes = (SessionAuthentication, TradeTokenAuthentication, JWTAuthentication)
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
+
+    def post(self, request):
+        serializer = BulkCancelRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order_ids = serializer.data.get('id_list')
+        client_order_id_list = serializer.data.get('client_order_id_list')
+
+        q = Q()
+        if order_ids:
+            q = q | Q(id__in=order_ids)
+
+        if client_order_id_list:
+            q = q | Q(client_order_id__in=client_order_id_list)
+
+        canceled_orders = []
+
+        if q:
+            to_cancel_orders = Order.objects.filter(q, account=request.user.get_account(), status=Order.NEW)
+            canceled_orders = Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
+
+        return Response({
+            "ids":  canceled_orders.values_list('id', flat=True) if canceled_orders else [],
+            "client_order_ids":  canceled_orders.values_list('client_order_id', flat=True) if canceled_orders else []
+        }, 200)
 
 
 class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):
