@@ -98,25 +98,18 @@ class MarginTransferSerializer(serializers.ModelSerializer):
     asset = AssetSerializerMini(read_only=True)
     id = serializers.IntegerField(write_only=True, required=False)
 
-    def create(self, validated_data):
+    def validate(self, attrs):
         user = self.context['request'].user
-
-        symbol = validated_data.get('position_symbol')
+        symbol = attrs.get('position_symbol')
         check_margin_view_permission(user.get_account(), symbol)
 
-        return super(MarginTransferSerializer, self).create(validated_data)
-
-    def validate(self, attrs):
         if attrs['asset'] not in Asset.objects.filter(symbol__in=[Asset.IRT, Asset.USDT]):
             raise ValidationError({'asset': 'فقط میتوانید ریال و تتر انتقال دهید.'})
 
-        if attrs['type'] not in [MarginTransfer.SPOT_TO_MARGIN, MarginTransfer.MARGIN_TO_SPOT] and not attrs.get('position_symbol'):
-            raise ValidationError({'position_symbol': 'بازار را وارد کنید'})
+        if attrs['type'] not in [MarginTransfer.SPOT_TO_MARGIN, MarginTransfer.MARGIN_TO_SPOT] and not symbol:
+            raise ValidationError({'symbol': 'بازار را وارد کنید'})
 
         if attrs['type'] == MarginTransfer.SPOT_TO_MARGIN:
-            if not self.context['request'].user.show_margin:
-                raise ValidationError('Dont Have allow to Transfer Margin')
-
             user_total_equity = MarginPosition.objects.filter(
                 account=self.context['request'].user.get_account(),
                 status__in=[MarginPosition.TERMINATING, MarginPosition.OPEN],
@@ -132,16 +125,16 @@ class MarginTransferSerializer(serializers.ModelSerializer):
                 raise ValidationError('Cant place margin order Due to reach total Equity limit')
 
         if attrs['type'] in [MarginTransfer.POSITION_TO_MARGIN, MarginTransfer.MARGIN_TO_POSITION]:
-            if attrs['position_symbol'].base_asset != attrs['asset']:
-                asset = attrs['position_symbol'].base_asset.name_fa
+            if symbol.base_asset != attrs['asset']:
+                asset = symbol.base_asset.name_fa
                 raise ValidationError({'asset': f'فقط میتوانید {asset} انتقال دهید.'})
 
             if not attrs.get('id'):
                 raise ValidationError({'id': 'id موقعیت را وارد کنید'})
 
             position = MarginPosition.objects.filter(
-                account=self.context['request'].user.get_account(),
-                symbol=attrs['position_symbol'],
+                account=user.get_account(),
+                symbol=symbol,
                 status__in=[MarginPosition.OPEN],
                 id=attrs.pop('id')
             ).first()

@@ -12,16 +12,17 @@ from market.models import PairSymbol
 logger = logging.getLogger(__name__)
 
 
-def check_margin_view_permission(account: Account, symbol: PairSymbol = None):
+def check_margin_view_permission(account: Account, symbol: PairSymbol):
     user = account.user
 
-    assert user
-
-    if symbol and (not user.show_margin or not symbol.margin_enable):
-        raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
+    if not user.show_margin:
+        raise ValidationError('معاملات تعهدی هنوز برای شما فعال نشده است!')
 
     if not user.margin_quiz_pass_date:
         raise ValidationError('لطفا ابتدا به سوالات آزمون معاملات تعهدی پاسخ دهید.')
+
+    if symbol and not symbol.margin_enable:
+        raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 
 
 def alert_liquidate(position):
