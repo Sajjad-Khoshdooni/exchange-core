@@ -196,7 +196,8 @@ class BulkCancelOrderAPIView(APIView):
             canceled_orders = Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
 
         return Response({
-            "cancelled_orders":  canceled_orders.values_list('id', flat=True) if canceled_orders else []
+            "ids":  canceled_orders.values_list('id', flat=True) if canceled_orders else [],
+            "client_order_ids":  canceled_orders.values_list('client_order_id', flat=True) if canceled_orders else []
         }, 200)
 
 
