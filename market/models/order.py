@@ -188,7 +188,7 @@ class Order(models.Model):
 
         canceled_orders = []
         with WalletPipeline() as pipeline:  # type: WalletPipeline
-            PairSymbol.objects.select_for_update().filter(id=orders.values_list('symbol_id', flat=True))
+            PairSymbol.objects.select_for_update().filter(id__in=orders.values_list('symbol_id', flat=True))
             order_queryset = Order.objects.filter(id__in=orders.values_list('id', flat=True))
 
             for order in order_queryset:
