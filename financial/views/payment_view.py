@@ -34,6 +34,9 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         from financial.models import Gateway
         gateway = Gateway.get_active_deposit(user, amount=amount)
 
+        if not user.is_staff and gateway.suspended:
+            raise ValidationError('در حال حاضر امکان واریز ریال، فقط به صورت شناسه واریز وجود دارد. برای استفاده از این امکان از نسخه وب صرافی استفاده کنید.')
+
         if amount < gateway.min_deposit_amount:
             raise ValidationError('حداقل میزان واریز {} تومان است.'.format(humanize_number(gateway.min_deposit_amount)))
 
