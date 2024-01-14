@@ -31,6 +31,8 @@ CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
 
 KAFKA_HOST_URL = config('KAFKA_HOST_URL', default='')
 
+OPEN_PAY_ID_TO_ALL = config('OPEN_PAY_ID_TO_ALL', cast=bool, default=False)
+
 # Application definition
 
 INSTALLED_APPS = [
