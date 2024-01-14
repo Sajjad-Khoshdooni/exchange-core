@@ -383,6 +383,7 @@ class WalletBalanceView(APIView, DelegatedAccountMixin):
             free = int(free)
 
         return Response({
+            'symbol': asset.symbol,  # todo: for backward compatability for application
             'asset': asset.symbol,
             'balance': get_presentation_amount(free),
         })
