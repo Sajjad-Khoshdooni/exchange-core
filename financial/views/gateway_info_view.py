@@ -58,6 +58,7 @@ class GatewaySerializer(serializers.ModelSerializer):
         fields = (
             'id', 'min_deposit_amount', 'max_deposit_amount', 'next_ach_time', 'pay_id_enable', 'ipg_fee_min',
             'ipg_fee_max', 'ipg_fee_percent', 'withdraw_fee_min', 'withdraw_fee_max', 'withdraw_fee_percent',
+            'suspended'
         )
 
 

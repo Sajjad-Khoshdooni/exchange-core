@@ -65,6 +65,8 @@ class Gateway(models.Model):
 
     batch_id = models.CharField(max_length=20, null=True, blank=True)
 
+    suspended = models.BooleanField(default=False)
+
     def clean(self):
         if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
             raise ValidationError('At least one gateway should be active')
