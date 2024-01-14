@@ -1,5 +1,6 @@
 from django.core.validators import validate_integer
 from django.db import models
+from django.db.models import UniqueConstraint, Q
 
 from financial.models import Payment
 from financial.validators import iban_validator
@@ -28,7 +29,18 @@ class PaymentId(models.Model):
         return self.pay_id
 
     class Meta:
-        unique_together = [('user', 'gateway'), ('pay_id', 'gateway')]
+        constraints = [
+            UniqueConstraint(
+                fields=('user', 'gateway'),
+                condition=Q(deleted=False),
+                name='unique_financial_paymentid_user_gateway',
+            ),
+            UniqueConstraint(
+                fields=('pay_id', 'gateway'),
+                condition=Q(deleted=False),
+                name='unique_financial_paymentid_pay_id_gateway',
+            ),
+        ]
 
 
 class PaymentIdRequest(models.Model):
