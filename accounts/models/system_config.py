@@ -26,6 +26,8 @@ class SystemConfig(models.Model):
     liquidation_level = get_amount_field(default=Decimal('1.1'))
     insurance_fee = get_amount_field(default=Decimal('0.02'))
 
+    open_pay_id_to_all = models.BooleanField(default=False)
+
     @classmethod
     def get_system_config(cls) -> 'SystemConfig':
         return SystemConfig.objects.filter(
