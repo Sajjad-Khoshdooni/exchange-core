@@ -115,7 +115,8 @@ class JibitClient(BaseClient):
         bank_accounts = BankAccount.objects.filter(user=user, verified=True)
         ibans = list(bank_accounts.values_list('iban', flat=True))
 
-        owner = bank_accounts[0].owners[0]
+        owners = bank_accounts.order_by('owners')[0].owners
+        owner = owners[0]
         owner_full_name = owner['firstName'] + ' ' + owner['lastName']
 
         group_id = uuid.uuid4()
