@@ -32,7 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_features(self, user: User):
         features = UserFeatureSerializer(instance=user.userfeatureperm_set.all(), many=True).data
-        if settings.OPEN_PAY_ID_TO_ALL and not user.has_feature_perm(UserFeaturePerm.PAY_ID):
+        if SystemConfig.get_system_config().open_pay_id_to_all and not user.has_feature_perm(UserFeaturePerm.PAY_ID):
             features.append({
                 'feature': UserFeaturePerm.PAY_ID,
                 'limit': None,
