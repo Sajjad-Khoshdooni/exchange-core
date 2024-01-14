@@ -106,7 +106,7 @@ class JibitClient(BaseClient):
         return Response(data=resp_json, success=resp.ok, status_code=resp.status_code)
     
     def create_payment_id(self, user: User) -> PaymentId:
-        existing = PaymentId.objects.filter(user=user, gateway=self.gateway).first()
+        existing = PaymentId.objects.filter(user=user, gateway=self.gateway, deleted=False).first()
         if existing:
             return existing
 

@@ -428,13 +428,14 @@ class PaymentIdRequestAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentId)
 class PaymentIdAdmin(admin.ModelAdmin):
-    list_display = ('created', 'updated', 'user', 'pay_id', 'verified')
+    list_display = ('created', 'updated', 'user', 'pay_id', 'verified', 'deleted')
     search_fields = ('user__phone', 'pay_id')
     list_filter = ('verified',)
     readonly_fields = ('user', )
     actions = ('check_status', )
+    list_editable = ('deleted', )
 
-    @admin.action(description='check status', permissions=['view'])
+    @admin.action(description='Check Status', permissions=['view'])
     def check_status(self, request, queryset):
         for payment_id in queryset.filter(verified=False):
             client = get_payment_id_client(payment_id.gateway)

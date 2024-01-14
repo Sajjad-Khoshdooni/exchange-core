@@ -40,6 +40,6 @@ def handle_missing_payment_ids():
     client = get_payment_id_client(gateway)
     client.create_missing_payment_requests()
 
-    for payment_id in PaymentId.objects.filter(verified=False):
+    for payment_id in PaymentId.objects.filter(verified=False, deleted=False):
         client = get_payment_id_client(payment_id.gateway)
         client.check_payment_id_status(payment_id)

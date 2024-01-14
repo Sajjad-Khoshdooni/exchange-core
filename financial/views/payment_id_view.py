@@ -59,4 +59,4 @@ class PaymentIdViewsSet(ModelViewSet):
 
     def get_object(self):
         gateway = Gateway.get_active_pay_id_deposit()
-        return get_object_or_404(PaymentId, user=self.request.user, gateway=gateway)
+        return get_object_or_404(PaymentId, user=self.request.user, gateway=gateway, deleted=False)

@@ -10,6 +10,7 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 class PaymentId(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    deleted = models.BooleanField(default=False)
 
     gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
