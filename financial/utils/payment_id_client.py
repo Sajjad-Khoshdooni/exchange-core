@@ -229,6 +229,7 @@ class JibitClient(BaseClient):
         if resp.success:
             payment_request.status = PENDING
             payment_request.save(update_fields=['status'])
+            payment_request.accept()
 
     def create_missing_payment_requests(self):
         resp = self._collect_api(f'/v1/payments/waitingForVerify?pageNumber=0&pageSize=100')
