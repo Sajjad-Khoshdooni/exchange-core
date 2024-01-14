@@ -3,7 +3,7 @@ from django.db import models
 
 from financial.models import Payment
 from financial.validators import iban_validator
-from ledger.utils.fields import get_status_field, DONE, PENDING, get_group_id_field
+from ledger.utils.fields import get_status_field, DONE, PENDING, get_group_id_field, CANCELED
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -73,3 +73,6 @@ class PaymentIdRequest(models.Model):
 
             req.status = DONE
             req.save(update_fields=['status', 'payment'])
+
+    def reject(self):
+        PaymentIdRequest.objects.filter(id=self.id, status=PENDING).update(status=CANCELED)

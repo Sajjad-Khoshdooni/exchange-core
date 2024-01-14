@@ -406,13 +406,18 @@ class PaymentIdRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'owner', 'status', 'amount', 'get_user', 'external_ref', 'source_iban', 'deposit_time')
     search_fields = ('owner__pay_id', 'owner__user__phone', 'external_ref', 'source_iban', 'bank_ref')
     list_filter = ('status',)
-    actions = ('accept', )
+    actions = ('accept', 'reject')
     readonly_fields = ('owner', 'get_user', 'payment')
 
-    @admin.action(description='accept deposit', permissions=['change'])
+    @admin.action(description='Accept', permissions=['change'])
     def accept(self, request, queryset):
         for payment_request in queryset.filter(status=PENDING):
             payment_request.accept()
+
+    @admin.action(description='Reject', permissions=['change'])
+    def reject(self, request, queryset):
+        for payment_request in queryset.filter(status=PENDING):
+            payment_request.reject()
 
     @admin.display(description='user')
     def get_user(self, payment_id_request: PaymentIdRequest):
