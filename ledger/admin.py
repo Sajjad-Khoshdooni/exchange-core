@@ -37,7 +37,7 @@ from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTran
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
-from ledger.utils.fields import DONE, PROCESS, PENDING
+from ledger.utils.fields import DONE, PROCESS, PENDING, CANCELED
 from ledger.utils.precision import get_presentation_amount, humanize_number
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
@@ -808,8 +808,18 @@ class ManualTransactionAdmin(admin.ModelAdmin):
     list_display = ('created', 'wallet', 'type', 'status', 'get_amount_preview')
     list_filter = ('type', 'status')
     ordering = ('-created',)
-    readonly_fields = ('group_id',)
-    actions = ('clone_transaction',)
+    readonly_fields = ('group_id', 'status')
+    actions = ('accept_transaction', 'reject_transaction', 'clone_transaction',)
+
+    @admin.action(description='Accept')
+    def accept_transaction(self, request, queryset):
+        for trx in queryset:
+            trx.change_status(DONE)
+
+    @admin.action(description='Reject')
+    def reject_transaction(self, request, queryset):
+        for trx in queryset:
+            trx.change_status(CANCELED)
 
     @admin.action(description='Clone')
     def clone_transaction(self, request, queryset):
