@@ -151,9 +151,9 @@ class TradePositionFilter(admin.SimpleListFilter):
 
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'is_maker', 'amount', 'fee_amount',
-                    'fee_revenue', 'get_value_irt', 'get_value_usdt')
-    list_filter = ('trade_source', UserTradeFilter, TradePositionFilter, 'symbol')
+    list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'is_maker', 'market',
+                    'amount', 'fee_amount', 'fee_revenue', 'get_value_irt', 'get_value_usdt')
+    list_filter = ('trade_source', UserTradeFilter, 'symbol', 'market')
     readonly_fields = ('symbol', 'order_id', 'account', 'login_activity', 'group_id', 'position')
     search_fields = ('symbol__name', )
     actions = ('revert', )
