@@ -40,7 +40,7 @@ class GatewaySerializer(serializers.ModelSerializer):
         user = self.context['request'].user
 
         gateway = Gateway.get_active_pay_id_deposit()
-        return bool(gateway) and user.has_feature_perm(UserFeaturePerm.PAY_ID)
+        return bool(gateway) and (SystemConfig.get_system_config().open_pay_id_to_all or user.has_feature_perm(UserFeaturePerm.PAY_ID))
 
     def get_ipg_fee_percent(self, gateway: Gateway):
         return get_presentation_amount(gateway.ipg_fee_percent)
