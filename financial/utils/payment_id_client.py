@@ -152,7 +152,14 @@ class JibitClient(BaseClient):
         )
 
         if not payment_id.verified:
-            self.check_payment_id_status(payment_id)
+            verified = self.check_payment_id_status(payment_id)
+
+            for i in range(4):
+                if verified:
+                    break
+
+                time.sleep(5)
+                verified = self.check_payment_id_status(payment_id)
 
         return payment_id
 
@@ -169,6 +176,8 @@ class JibitClient(BaseClient):
         payment_id.provider_reason = resp.data.get('failReason') or ''
 
         payment_id.save(update_fields=['verified', 'provider_status', 'provider_reason'])
+
+        return payment_id.verified
 
     def _create_and_verify_payment_data(self, data: dict):
         merchant_ref = data['merchantReferenceNumber']
