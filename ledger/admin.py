@@ -38,7 +38,8 @@ from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
 from ledger.utils.fields import DONE, PROCESS, PENDING, CANCELED
-from ledger.utils.precision import get_presentation_amount, humanize_number
+from ledger.utils.precision import get_presentation_amount, humanize_number, get_margin_coin_presentation_balance, \
+    floor_precision
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
 from market.utils.fix import create_symbols_for_asset
@@ -1024,8 +1025,8 @@ class PositionStatusFilter(SimpleListFilter):
 
 @admin.register(MarginPosition)
 class MarginPositionAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'symbol', 'side', 'status', 'leverage', 'equity', 'amount',
-                    'liquidation_price', 'get_orders', 'get_trades')
+    list_display = ('created', 'account', 'symbol', 'side', 'status', 'leverage', 'get_equity', 'amount',
+                    'get_liquidation_price', 'get_average_price', 'get_orders', 'get_trades')
     readonly_fields = ('account', 'asset_wallet', 'base_wallet', 'symbol', 'amount', 'average_price', 'side',
                        'liquidation_price', 'status', 'leverage', 'equity', 'group_id')
     list_filter = (PositionStatusFilter, 'side', 'symbol')
@@ -1040,6 +1041,24 @@ class MarginPositionAdmin(admin.ModelAdmin):
     def get_trades(self, obj):
         url = reverse('admin:market_trade_changelist') + f'?position={obj.id}'
         return format_html('<a href="{}">Trades</a>', url)
+
+    @admin.display(description='Equity')
+    def get_equity(self, obj):
+        return get_margin_coin_presentation_balance(obj.symbol.base_asset.symbol, obj.equity)
+
+    @admin.display(description='Liquidation Price')
+    def get_liquidation_price(self, obj):
+        price = obj.liquidation_price
+        if price:
+            price = floor_precision(obj.liquidation_price, obj.symbol.tick_size)
+        return price
+
+    @admin.display(description='Average Price')
+    def get_average_price(self, obj):
+        price = obj.average_price
+        if price:
+            price = floor_precision(obj.average_price, obj.symbol.tick_size)
+        return price
 
 
 @admin.register(MarginHistoryModel)
