@@ -1049,14 +1049,14 @@ class MarginPositionAdmin(admin.ModelAdmin):
     @admin.display(description='Liquidation Price')
     def get_liquidation_price(self, obj):
         price = obj.liquidation_price
-        if price:
+        if price is not None:
             price = floor_precision(obj.liquidation_price, obj.symbol.tick_size)
         return price
 
     @admin.display(description='Average Price')
     def get_average_price(self, obj):
         price = obj.average_price
-        if price:
+        if price is not None:
             price = floor_precision(obj.average_price, obj.symbol.tick_size)
         return price
 
