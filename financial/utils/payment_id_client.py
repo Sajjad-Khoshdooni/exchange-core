@@ -1,4 +1,5 @@
 import logging
+import math
 import time
 import uuid
 from datetime import timedelta
@@ -190,7 +191,7 @@ class JibitClient(BaseClient):
             status = PROCESS
 
         amount = data['amount'] // 10
-        fee = amount * Decimal('0.0001')
+        fee = math.ceil(data['amount'] / 10_000_000) * 250
 
         payment_request, created = PaymentIdRequest.objects.get_or_create(
             external_ref=data['externalReferenceNumber'],
