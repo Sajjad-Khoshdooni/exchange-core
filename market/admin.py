@@ -104,7 +104,7 @@ class OrderPositionFilter(admin.SimpleListFilter):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount')
-    list_filter = (TypeFilter, UserFilter, OrderPositionFilter, 'side', 'fill_type', 'status', 'symbol')
+    list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
     readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss', 'login_activity', 'position')
     actions = ('cancel_order', )
 
@@ -151,9 +151,9 @@ class TradePositionFilter(admin.SimpleListFilter):
 
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'is_maker', 'amount', 'fee_amount',
-                    'fee_revenue', 'get_value_irt', 'get_value_usdt')
-    list_filter = ('trade_source', UserTradeFilter, TradePositionFilter, 'symbol')
+    list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'is_maker', 'market',
+                    'amount', 'fee_amount', 'fee_revenue', 'get_value_irt', 'get_value_usdt')
+    list_filter = ('trade_source', UserTradeFilter, 'symbol', 'market')
     readonly_fields = ('symbol', 'order_id', 'account', 'login_activity', 'group_id', 'position')
     search_fields = ('symbol__name', )
     actions = ('revert', )
