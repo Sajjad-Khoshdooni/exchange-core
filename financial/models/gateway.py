@@ -143,7 +143,7 @@ class Gateway(models.Model):
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
-        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway, Jib
+        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway
         mapping = {
             cls.ZARINPAL: ZarinpalGateway,
             cls.PAYIR: PaydotirGateway,
