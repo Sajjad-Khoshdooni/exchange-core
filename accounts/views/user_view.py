@@ -28,18 +28,7 @@ class UserSerializer(serializers.ModelSerializer):
     is_2fa_active = serializers.SerializerMethodField()
     is_consultation_available = serializers.SerializerMethodField()
     is_company = serializers.SerializerMethodField()
-    features = serializers.SerializerMethodField()
-
-    def get_features(self, user: User):
-        features = UserFeatureSerializer(instance=user.userfeatureperm_set.all(), many=True).data
-        if settings.OPEN_PAY_ID_TO_ALL and not user.has_feature_perm(UserFeaturePerm.PAY_ID):
-            features.append({
-                'feature': UserFeaturePerm.PAY_ID,
-                'limit': None,
-                'custom': ''
-            })
-
-        return features
+    features = UserFeatureSerializer(source='userfeatureperm_set', many=True)
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']

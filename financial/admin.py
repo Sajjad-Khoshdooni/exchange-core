@@ -434,7 +434,7 @@ class PaymentIdAdmin(admin.ModelAdmin):
     readonly_fields = ('user', )
     actions = ('check_status', )
 
-    @admin.action(description='check status', permissions=['change'])
+    @admin.action(description='check status', permissions=['view'])
     def check_status(self, request, queryset):
         for payment_id in queryset.filter(verified=False):
             client = get_payment_id_client(payment_id.gateway)
