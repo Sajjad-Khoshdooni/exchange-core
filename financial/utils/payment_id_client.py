@@ -19,7 +19,7 @@ from accounts.verifiers.jibit import Response
 from financial.models import BankAccount, PaymentIdRequest, PaymentId, Gateway
 from financial.models.bank import GeneralBankAccount
 from financial.utils.bank import get_bank
-from ledger.utils.fields import PROCESS, PENDING
+from ledger.utils.fields import PROCESS, PENDING, CANCELED
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +231,17 @@ class JibitClient(BaseClient):
             payment_request.status = PENDING
             payment_request.save(update_fields=['status'])
             payment_request.accept()
+
+    def reject_payment_request(self, payment_request: PaymentIdRequest):
+        if payment_request.status != PROCESS:
+            return
+
+        resp = self._collect_api(f'/v1/payments/{payment_request.external_ref}/fail')
+
+        if resp.success:
+            payment_request.status = CANCELED
+            payment_request.save(update_fields=['status'])
+            payment_request.reject()
 
     def create_missing_payment_requests(self):
         resp = self._collect_api(f'/v1/payments/waitingForVerify?pageNumber=0&pageSize=100')
