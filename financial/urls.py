@@ -12,6 +12,8 @@ urlpatterns = [
     path('payment/callback/paydotir/', PaydotirCallbackView.as_view(), name='paydotir-callback'),
     path('payment/callback/zibal/', ZibalCallbackView.as_view(), name='zibal-callback'),
     path('payment/callback/jibit/', JibitCallbackView.as_view(), name='jibit-callback'),
+    path('payment/callback/jibimo/', JibitCallbackView.as_view(), name='paystar-callback'),
+    path('payment/callback/paystar/', JibitCallbackView.as_view(), name='paystar-callback'),
     path('cards/', BankCardView.as_view({
         'get': 'list',
         'post': 'create'

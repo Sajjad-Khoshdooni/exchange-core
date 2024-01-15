@@ -9,6 +9,8 @@ from django.utils import timezone
 
 from accounts.models import User, SystemConfig
 from financial.models import BankCard, Payment, PaymentRequest
+from financial.models.jibimo_gateway import JibimoGateway
+from financial.models.paystar_gateway import PaystarGateway
 from financial.utils.encryption import decrypt
 from ledger.models import FastBuyToken
 from ledger.utils.fields import DONE, get_amount_field
@@ -23,7 +25,8 @@ class GatewayFailed(Exception):
 class Gateway(models.Model):
     BASE_URL = None
 
-    TYPES = MANUAL, ZARINPAL, PAYIR, ZIBAL, JIBIT, JIBIMO = 'manual', 'zarinpal', 'payir', 'zibal', 'jibit', 'jibimo'
+    TYPES = MANUAL, ZARINPAL, PAYIR, ZIBAL, JIBIT, JIBIMO, PAYSTAR = \
+        'manual', 'zarinpal', 'payir', 'zibal', 'jibit', 'jibimo', 'paystar'
 
     name = models.CharField(max_length=128)
     type = models.CharField(
@@ -147,7 +150,9 @@ class Gateway(models.Model):
             cls.ZARINPAL: ZarinpalGateway,
             cls.PAYIR: PaydotirGateway,
             cls.ZIBAL: ZibalGateway,
-            cls.JIBIT: JibitGateway
+            cls.JIBIT: JibitGateway,
+            cls.JIBIMO: JibimoGateway,
+            cls.PAYSTAR: PaystarGateway,
         }
 
         return mapping.get(type)
