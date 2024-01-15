@@ -9,8 +9,6 @@ from django.utils import timezone
 
 from accounts.models import User, SystemConfig
 from financial.models import BankCard, Payment, PaymentRequest
-from financial.models.jibimo_gateway import JibimoGateway
-from financial.models.paystar_gateway import PaystarGateway
 from financial.utils.encryption import decrypt
 from ledger.models import FastBuyToken
 from ledger.utils.fields import DONE, get_amount_field
@@ -145,14 +143,14 @@ class Gateway(models.Model):
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
-        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway
+        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway, Jib
         mapping = {
             cls.ZARINPAL: ZarinpalGateway,
             cls.PAYIR: PaydotirGateway,
             cls.ZIBAL: ZibalGateway,
             cls.JIBIT: JibitGateway,
-            cls.JIBIMO: JibimoGateway,
-            cls.PAYSTAR: PaystarGateway,
+            # cls.JIBIMO: JibimoGateway,
+            # cls.PAYSTAR: PaystarGateway,
         }
 
         return mapping.get(type)
