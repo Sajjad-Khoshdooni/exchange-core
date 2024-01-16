@@ -194,7 +194,7 @@ class BulkCancelOrderAPIView(APIView):
             to_cancel_orders = Order.objects.filter(q, status=Order.NEW, account=request.user.get_account())
             Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
 
-        canceled_orders = set(Order.objects.filter(q, account=request.user.get_account(), status=Order.CANCELED).
+        canceled_orders = (Order.objects.filter(q, account=request.user.get_account(), status=Order.CANCELED).
                               values('id', 'client_order_id'))
 
         return Response({
