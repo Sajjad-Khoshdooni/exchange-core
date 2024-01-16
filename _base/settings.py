@@ -381,7 +381,7 @@ BRAND_EN = config('BRAND_EN', default='')
 BRAND = config('BRAND', default='')
 
 OTP_TOTP_ISSUER = BRAND_EN
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 2000
 
 TRADE_ENABLE = config('TRADE_ENABLE', cast=bool, default=True)
 MARKET_TRADE_ENABLE = config('MARKET_TRADE_ENABLE', cast=bool, default=True)
