@@ -191,15 +191,15 @@ class BulkCancelOrderAPIView(APIView):
             q = q | Q(client_order_id__in=client_order_id_list)
 
         if q:
-            to_cancel_orders = Order.objects.filter(q, account=request.user.get_account(), status=Order.NEW)
-            canceled_queryset = Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
-            q = q | Q(id__in=canceled_queryset.values_list('id', flat=True))
+            to_cancel_orders = Order.objects.filter(q, status=Order.NEW, account=request.user.get_account())
+            Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
 
-        canceled_orders = Order.objects.filter(q, account=request.user.get_account(), status=Order.CANCELED)
+        canceled_orders = set(Order.objects.filter(q, account=request.user.get_account(), status=Order.CANCELED).
+                              values('id', 'client_order_id'))
 
         return Response({
-            "ids":  canceled_orders.values_list('id', flat=True) if canceled_orders else [],
-            "client_order_ids":  canceled_orders.values_list('client_order_id', flat=True) if canceled_orders else []
+            "ids":  [order['id'] for order in canceled_orders],
+            "client_order_ids":  [order['client_order_id'] for order in canceled_orders]
         }, 200)
 
 
