@@ -226,7 +226,8 @@ class NetworkAssetAdmin(admin.ModelAdmin):
     search_fields = ('asset__symbol',)
     list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
                      'update_fee_with_provider', 'expected_hw_balance')
-    list_filter = ('network', 'allow_provider_withdraw', 'hedger_withdraw_enable', 'update_fee_with_provider')
+    list_filter = ('can_deposit', 'can_withdraw', 'network', 'allow_provider_withdraw', 'hedger_withdraw_enable',
+                   'update_fee_with_provider', )
     actions = ('update_fees', )
 
     @admin.display(description='withdraw_fee', ordering='withdraw_fee')
