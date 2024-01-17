@@ -44,6 +44,7 @@ from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
 from market.utils.fix import create_symbols_for_asset
 from .models import Asset, BalanceLock
+from .tasks import update_network_fees
 from .utils.price import get_last_price
 from .utils.wallet_pipeline import WalletPipeline
 
@@ -226,6 +227,7 @@ class NetworkAssetAdmin(admin.ModelAdmin):
     list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
                      'update_fee_with_provider', 'expected_hw_balance')
     list_filter = ('network', 'allow_provider_withdraw', 'hedger_withdraw_enable', 'update_fee_with_provider')
+    actions = ('update_fees', )
 
     @admin.display(description='withdraw_fee', ordering='withdraw_fee')
     def get_withdraw_fee(self, network_asset: NetworkAsset):
@@ -242,6 +244,10 @@ class NetworkAssetAdmin(admin.ModelAdmin):
     @admin.display(description='deposit_min', ordering='deposit_min')
     def get_deposit_min(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.deposit_min)
+
+    @admin.action(description='Update Fees', permissions=['change'])
+    def update_fees(self, request, queryset):
+        update_network_fees(queryset)
 
 
 class DepositAddressUserFilter(admin.SimpleListFilter):
