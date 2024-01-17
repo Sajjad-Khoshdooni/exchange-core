@@ -76,7 +76,7 @@ class Order(models.Model):
     LIMIT, MARKET = 'limit', 'market'
     FILL_TYPE_CHOICES = [(LIMIT, LIMIT), (MARKET, MARKET)]
 
-    TIME_IN_FORCE_OPTIONS = GTC, FOK, IOC = None, 'FOK', 'IOC'
+    TIME_IN_FORCE_OPTIONS = GTC, FOK, IOC, ME_IOC = None, 'FOK', 'IOC', 'ME_IOC'
 
     NEW, CANCELED, FILLED = 'new', 'canceled', 'filled'
     STATUS_CHOICES = [(NEW, NEW), (CANCELED, CANCELED), (FILLED, FILLED)]
@@ -118,10 +118,10 @@ class Order(models.Model):
     position = models.ForeignKey(to='ledger.MarginPosition', on_delete=models.CASCADE, null=True)
 
     time_in_force = models.CharField(
-        max_length=4,
+        max_length=6,
         blank=True,
         null=True,
-        choices=[(GTC, 'GTC'), (FOK, 'FOK'), (IOC, 'IOC')]
+        choices=[(GTC, 'GTC'), (FOK, 'FOK'), (IOC, 'IOC'), (ME_IOC, 'ME_IOC')]
     )
     login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -389,7 +389,7 @@ class Order(models.Model):
         logger.info(log_prefix + f'make match finished fetching matching orders {len(matching_orders)} {timezone.now()}')
 
         if not matching_orders:
-            if (self.fill_type == Order.MARKET or self.time_in_force == self.IOC) and self.status == Order.NEW:
+            if (self.fill_type == Order.MARKET or self.time_in_force in [self.IOC, self.ME_IOC]) and self.status == Order.NEW:
                 self.status = Order.CANCELED
                 pipeline.release_lock(self.group_id)
                 self.save(update_fields=['status'])
@@ -405,6 +405,9 @@ class Order(models.Model):
         total_matched = 0
 
         for maker_order in matching_orders:
+            if self.time_in_force == self.ME_IOC and maker_order.account != self.account:
+                break
+
             trade_price = maker_order.price
 
             match_amount = min(maker_order.unfilled_amount, unfilled_amount)
@@ -482,7 +485,7 @@ class Order(models.Model):
                 )
             )
 
-        if (self.fill_type == Order.MARKET or self.time_in_force == self.IOC) and self.status == Order.NEW:
+        if (self.fill_type == Order.MARKET or self.time_in_force in [self.IOC, self.ME_IOC]) and self.status == Order.NEW:
             self.status = Order.CANCELED
             pipeline.release_lock(self.group_id)
             self.save(update_fields=['status'])
