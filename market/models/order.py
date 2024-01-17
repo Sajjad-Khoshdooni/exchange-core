@@ -184,23 +184,32 @@ class Order(models.Model):
 
     @classmethod
     def bulk_cancel_simple_orders(cls, to_cancel_orders: QuerySet):
-        orders = to_cancel_orders.filter(oco__isnull=True, status=cls.NEW)
+        orders = to_cancel_orders.filter(oco__isnull=True, status=cls.NEW).only('id', 'symbol_id')
 
-        canceled_orders = []
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             PairSymbol.objects.select_for_update().filter(id__in=orders.values_list('symbol_id', flat=True))
-            order_queryset = Order.objects.filter(id__in=orders.values_list('id', flat=True))
+            order_queryset = Order.objects.filter(id__in=orders.values_list('id', flat=True)).only('group_id', 'id')
 
+            ids = []
             for order in order_queryset:
+                ids.append(order.id)
                 order.status = cls.CANCELED
                 pipeline.release_lock(key=order.group_id)
 
                 pipeline.add_market_cache_data(order.symbol, [order], side=order.side, canceled=True)
 
             Order.objects.bulk_update(order_queryset, ['status'])
-            canceled_orders = order_queryset
 
-        return canceled_orders
+            from market.models import CancelRequest
+
+            cancel_requests = []
+            ids = set(ids).difference(set(CancelRequest.objects.filter(order_id__in=ids).values_list('order_id', flat=True)))
+
+            for id in ids:
+                cancel_requests.append(
+                    CancelRequest(order_id=id)
+                )
+            CancelRequest.objects.bulk_create(cancel_requests)
 
     @property
     def base_wallet(self):
