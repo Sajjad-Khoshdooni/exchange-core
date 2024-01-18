@@ -16,19 +16,22 @@ class PaystarGateway(Gateway):
     REDIRECT_BASE_URL = 'https://raastin.business'
 
     def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
-        amount = amount * 10
+        fee = self.get_ipg_fee(amount)
 
         payment_request = PaymentRequest.objects.create(
             bank_card=bank_card,
-            amount=amount,
+            amount=amount - fee,
+            fee=fee,
             gateway=self,
             source=source,
         )
 
+        rial_amount = payment_request.rial_amount
+
         order_id = str(payment_request.id)
         callback_url = self.REDIRECT_BASE_URL + reverse('finance:paystar-callback') + f'?id={payment_request.id}'
 
-        sign_message = f'{amount}#{order_id}#{callback_url}'
+        sign_message = f'{rial_amount}#{order_id}#{callback_url}'
         sign = hmac.new(self.deposit_api_secret.encode(), sign_message.encode(), hashlib.sha512).hexdigest()
 
         resp = requests.post(
@@ -37,7 +40,7 @@ class PaystarGateway(Gateway):
                 'Authorization': 'Bearer ' + self.merchant_id
             },
             data={
-                'amount': amount,
+                'amount': rial_amount,
                 'callback': callback_url,
                 'order_id': order_id,
                 'card_number': bank_card.card_pan,
