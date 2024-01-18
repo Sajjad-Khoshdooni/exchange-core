@@ -26,7 +26,7 @@ class PaystarGateway(Gateway):
             source=source,
         )
 
-        rial_amount = payment_request.rial_amount
+        rial_amount = amount * 10
 
         order_id = str(payment_request.id)
         callback_url = self.REDIRECT_BASE_URL + reverse('finance:paystar-callback') + f'?id={payment_request.id}'
