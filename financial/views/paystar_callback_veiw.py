@@ -32,7 +32,7 @@ class PaystarCallbackView(TemplateView):
                 payment.save(update_fields=['ref_id'])
 
         if payment.status == PENDING:
-            if status != 1:
+            if status != '1':
                 payment.status = CANCELED
                 payment.save()
             else:
