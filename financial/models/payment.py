@@ -48,7 +48,7 @@ class PaymentRequest(models.Model):
 
     @property
     def rial_amount(self):
-        return self.amount * 10
+        return (self.fee + self.amount) * 10
 
     def get_or_create_payment(self):
         with transaction.atomic():
