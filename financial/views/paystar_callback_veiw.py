@@ -28,8 +28,8 @@ class PaystarCallbackView(TemplateView):
         if not payment:
             with transaction.atomic():
                 payment = payment_request.get_or_create_payment()
-                payment.tracking_code = tracking_code
-                payment.save(update_fields=['tracking_code'])
+                payment.ref_id = tracking_code
+                payment.save(update_fields=['ref_id'])
 
         if payment.status == PENDING:
             if status != 1:
