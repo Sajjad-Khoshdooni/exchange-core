@@ -25,7 +25,7 @@ class JibitCallbackView(TemplateView):
         if status not in ('SUCCESSFUL', 'FAILED'):
             return HttpResponseBadRequest('Invalid data')
 
-        payment_request = get_object_or_404(PaymentRequest, authority=authority)
+        payment_request = get_object_or_404(PaymentRequest, authority=authority, gateway__type=Gateway.JIBIT)
         payment = getattr(payment_request, 'payment', None)
 
         if not payment:

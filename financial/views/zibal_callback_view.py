@@ -5,7 +5,7 @@ from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView
 
-from financial.models import PaymentRequest
+from financial.models import PaymentRequest, Gateway
 from financial.models.payment import Payment
 from ledger.utils.fields import DONE, CANCELED, PENDING
 
@@ -23,7 +23,7 @@ class ZibalCallbackView(TemplateView):
         if status not in ['1', '0']:
             return HttpResponseBadRequest('Invalid data')
 
-        payment_request = get_object_or_404(PaymentRequest, authority=authority)
+        payment_request = get_object_or_404(PaymentRequest, authority=authority, gateway__type=Gateway.ZIBAL)
         payment = payment_request.payment
 
         if not payment:
