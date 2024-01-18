@@ -25,6 +25,10 @@ class ProviderError(Exception):
     pass
 
 
+class NoChannelError(Exception):
+    pass
+
+
 @dataclass
 class Wallet:
     id: int
@@ -57,7 +61,12 @@ class FiatWithdraw:
             Gateway.JIBIT: JibitChannel,
             Gateway.JIBIMO: JibimoChannel,
         }
-        return mapping[gateway.type](gateway, verbose)
+
+        channel_class = mapping.get(gateway.type)
+        if not channel_class:
+            raise NoChannelError
+
+        return channel_class(gateway, verbose)
 
     def create_withdraw(self, transfer: BaseTransfer) -> Withdraw:
         raise NotImplementedError

@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from financial.models import Gateway, Payment, PaymentId
 from financial.utils.payment_id_client import get_payment_id_client
-from financial.utils.withdraw import FiatWithdraw
+from financial.utils.withdraw import FiatWithdraw, NoChannelError
 from ledger.utils.fields import PENDING
 
 
@@ -25,9 +25,12 @@ def handle_missing_payments():
 
     # update missing payments
     gateway = Gateway.get_active_deposit()
-    channel = FiatWithdraw.get_withdraw_channel(gateway)
 
-    channel.update_missing_payments(gateway)
+    try:
+        channel = FiatWithdraw.get_withdraw_channel(gateway)
+        channel.update_missing_payments(gateway)
+    except NoChannelError:
+        pass
 
 
 @shared_task(queue='finance')
