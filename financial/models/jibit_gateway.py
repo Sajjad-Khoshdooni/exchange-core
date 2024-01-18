@@ -85,7 +85,7 @@ class JibitGateway(Gateway):
     def get_payment_url(cls, payment_request: PaymentRequest):
         return 'https://napi.jibit.cloud/ppg/v3/purchases/{}/payments'.format(payment_request.authority)
 
-    def _verify(self, payment: Payment):
+    def _verify(self, payment: Payment, **kwargs):
         payment_request = payment.paymentrequest
         token = self._get_token()
         resp = requests.post(

@@ -1,14 +1,13 @@
+import hashlib
+import hmac
+
 import requests
-from django.conf import settings
 from django.urls import reverse
-from decouple import config
 
 from financial.models import Gateway, BankCard, PaymentRequest, Payment
 from financial.models.gateway import GatewayFailed
-from ledger.utils.fields import DONE, CANCELED
+from ledger.utils.fields import CANCELED
 from ledger.utils.wallet_pipeline import WalletPipeline
-import hashlib
-import hmac
 
 
 class PaystarGateway(Gateway):
@@ -70,13 +69,14 @@ class PaystarGateway(Gateway):
     def get_payment_url(cls, payment_request: PaymentRequest):
         return f'https://core.paystar.ir/api/pardakht/payment?token={payment_request.token}'
 
-    def _verify(self, payment: Payment):
+    def _verify(self, payment: Payment, **kwargs):
         payment_request = payment.paymentrequest
+        card_number = kwargs['card_number']
 
         amount = payment_request.rial_amount
         ref_num = payment_request.authority
 
-        sign_message = f'{amount}#{ref_num}#{payment_request.bank_card.card_pan}#{payment.ref_id}'
+        sign_message = f'{amount}#{ref_num}#{card_number}#{payment.ref_id}'
         sign = hmac.new(self.deposit_api_secret.encode(), sign_message.encode(), hashlib.sha512).hexdigest()
 
         resp = requests.post(

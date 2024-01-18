@@ -18,6 +18,7 @@ class PaystarCallbackView(TemplateView):
         status = request.GET.get('status')
         authority = request.GET.get('ref_num')
         tracking_code = request.GET.get('tracking_code')
+        card_number = request.GET.get('card_number')
 
         if not authority:
             raise ValidationError('no authority')
@@ -36,6 +37,6 @@ class PaystarCallbackView(TemplateView):
                 payment.status = CANCELED
                 payment.save()
             else:
-                payment_request.get_gateway().verify(payment)
+                payment_request.get_gateway().verify(payment, card_number=card_number)
 
         return payment.redirect_to_app()
