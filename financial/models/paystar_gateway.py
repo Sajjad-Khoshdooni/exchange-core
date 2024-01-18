@@ -60,8 +60,8 @@ class PaystarGateway(Gateway):
 
         data = resp_data['data']
 
-        payment_request.authority = data['token']
-        payment_request.token = data['ref_num']
+        payment_request.authority = data['ref_num']
+        payment_request.token = data['token']
         payment_request.save(update_fields=['authority', 'token'])
 
         return payment_request
