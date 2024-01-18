@@ -19,7 +19,7 @@ class PaystarCallbackView(TemplateView):
         authority = request.GET.get('ref_num')
         tracking_code = request.GET.get('tracking_code')
 
-        if authority:
+        if not authority:
             raise ValidationError('no authority')
 
         payment_request = get_object_or_404(PaymentRequest, authority=authority, gateway__type=Gateway.PAYSTAR)
