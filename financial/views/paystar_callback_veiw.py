@@ -3,8 +3,9 @@ import logging
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
+from rest_framework.exceptions import ValidationError
 
-from financial.models import PaymentRequest
+from financial.models import PaymentRequest, Gateway
 from ledger.utils.fields import CANCELED, PENDING
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,10 @@ class PaystarCallbackView(TemplateView):
         authority = request.GET.get('ref_num')
         tracking_code = request.GET.get('tracking_code')
 
-        payment_request = get_object_or_404(PaymentRequest, authority=authority)
+        if authority:
+            raise ValidationError('no authority')
+
+        payment_request = get_object_or_404(PaymentRequest, authority=authority, gateway__type=Gateway.PAYSTAR)
         payment = getattr(payment_request, 'payment', None)
 
         if not payment:
