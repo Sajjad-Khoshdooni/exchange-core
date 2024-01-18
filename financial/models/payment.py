@@ -36,6 +36,8 @@ class PaymentRequest(models.Model):
     source = models.CharField(max_length=16, choices=((APP, APP), (DESKTOP, DESKTOP)), default=DESKTOP)
 
     authority = models.CharField(max_length=64, blank=True, db_index=True, null=True)
+    token = models.CharField(max_length=256, blank=True)
+
     login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
     group_id = get_group_id_field()
@@ -43,6 +45,10 @@ class PaymentRequest(models.Model):
 
     def get_gateway(self):
         return self.gateway.get_concrete_gateway()
+
+    @property
+    def rial_amount(self):
+        return self.amount * 10
 
     def get_or_create_payment(self):
         with transaction.atomic():

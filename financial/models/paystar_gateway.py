@@ -7,24 +7,42 @@ from financial.models import Gateway, BankCard, PaymentRequest, Payment
 from financial.models.gateway import GatewayFailed
 from ledger.utils.fields import DONE, CANCELED
 from ledger.utils.wallet_pipeline import WalletPipeline
+import hashlib
+import hmac
 
 
 class PaystarGateway(Gateway):
     BASE_URL = 'https://core.paystar.ir/api/pardakht'
+    REDIRECT_BASE_URL = 'https://raastin.business'
 
     def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
-        base_url = config('PAYMENT_PROXY_HOST_URL', default='') or settings.HOST_URL
+        amount = amount * 10
+
+        payment_request = PaymentRequest.objects.create(
+            bank_card=bank_card,
+            amount=amount,
+            gateway=self,
+            source=source,
+        )
+
+        order_id = str(payment_request.id)
+        callback_url = self.REDIRECT_BASE_URL + reverse('finance:paystar-callback') + f'?id={payment_request.id}'
+
+        sign_message = f'{amount}#{order_id}#{callback_url}'
+        sign = hmac.new(self.deposit_api_secret.encode(), sign_message.encode(), hashlib.sha512).hexdigest()
 
         resp = requests.post(
             self.BASE_URL + '/create',
             headers={
                 'Authorization': 'Bearer ' + self.merchant_id
             },
-            json={
-                'amount': amount * 10,
-                'callback': base_url + reverse('finance:paystar-callback'),
+            data={
+                'amount': amount,
+                'callback': callback_url,
+                'order_id': order_id,
                 'card_number': bank_card.card_pan,
-                'sign': 0
+                'sign': sign,
+                'callback_method': 1
             },
             timeout=30,
         )
@@ -37,54 +55,50 @@ class PaystarGateway(Gateway):
 
             raise GatewayFailed
 
-        authority = resp.json()['token']
+        data = resp_data['data']
 
-        return PaymentRequest.objects.create(
-            bank_card=bank_card,
-            amount=amount,
-            gateway=self,
-            authority=authority,
-            source=source,
+        payment_request.authority = data['token']
+        payment_request.token = data['ref_num']
+        payment_request.save(update_fields=['authority', 'token'])
+
+        return payment_request
+
+    @classmethod
+    def get_payment_url(cls, payment_request: PaymentRequest):
+        return f'https://core.paystar.ir/api/pardakht/payment?token={payment_request.token}'
+
+    def _verify(self, payment: Payment):
+        payment_request = payment.paymentrequest
+
+        amount = payment_request.rial_amount
+        ref_num = payment_request.authority
+
+        sign_message = f'{amount}#{ref_num}#{payment_request.bank_card.card_pan}#{payment.ref_id}'
+        sign = hmac.new(self.deposit_api_secret.encode(), sign_message.encode(), hashlib.sha512).hexdigest()
+
+        resp = requests.post(
+            self.BASE_URL + '/verify',
+            headers={
+                'Authorization': 'Bearer ' + self.merchant_id
+            },
+            data={
+                'ref_num': ref_num,
+                'amount': amount,
+                'sign': sign
+            },
+            timeout=30,
         )
-    #
-    # def get_initial_redirect_url(self, payment_request: PaymentRequest) -> str:
-    #     payment_proxy = config('PAYMENT_PROXY_HOST_URL', default='')
-    #
-    #     if not payment_proxy:
-    #         return super(PaydotirGateway, self).get_initial_redirect_url(payment_request)
-    #     else:
-    #         return payment_proxy + '/api/v1/finance/payment/go/?gateway={gateway}&authority={authority}'.format(
-    #             gateway=self.PAYIR,
-    #             authority=payment_request.authority
-    #         )
-    #
-    # @classmethod
-    # def get_payment_url(cls, authority: str):
-    #     return 'https://pay.ir/pg/{}'.format(authority)
-    #
-    # def _verify(self, payment: Payment):
-    #     payment_request = payment.paymentrequest
-    #
-    #     resp = requests.post(
-    #         self.BASE_URL + '/pg/verify',
-    #         data={
-    #             'api': payment_request.gateway.merchant_id,
-    #             'token': payment_request.authority
-    #         },
-    #         timeout=30,
-    #     )
-    #
-    #     data = resp.json()
-    #
-    #     if data['status'] == 1:
-    #         with WalletPipeline() as pipeline:
-    #             ref_id = data.get('transId')
-    #             payment.accept(pipeline, ref_id)
-    #
-    #     else:
-    #         payment.status = CANCELED
-    #         payment.ref_status = data['status']
-    #         payment.save()
+
+        data = resp.json()
+
+        if data['status'] == 1:
+            with WalletPipeline() as pipeline:
+                payment.accept(pipeline, payment.ref_id)
+
+        else:
+            payment.status = CANCELED
+            payment.ref_status = data['status']
+            payment.save()
 
     class Meta:
         proxy = True

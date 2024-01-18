@@ -1,13 +1,11 @@
 import logging
 
 from django.db import transaction
-from django.http import HttpResponseBadRequest
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 
 from financial.models import PaymentRequest
-from financial.models.payment import Payment
-from ledger.utils.fields import DONE, CANCELED, PENDING
+from ledger.utils.fields import CANCELED, PENDING
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +15,8 @@ class PaystarCallbackView(TemplateView):
 
     def get(self, request, *args, **kwargs):
         status = request.GET.get('status')
-        authority = request.GET.get('token')
-
-        if status not in ['1', '0']:
-            return HttpResponseBadRequest('Invalid data')
+        authority = request.GET.get('ref_num')
+        tracking_code = request.GET.get('tracking_code')
 
         payment_request = get_object_or_404(PaymentRequest, authority=authority)
         payment = getattr(payment_request, 'payment', None)
@@ -28,9 +24,11 @@ class PaystarCallbackView(TemplateView):
         if not payment:
             with transaction.atomic():
                 payment = payment_request.get_or_create_payment()
+                payment.tracking_code = tracking_code
+                payment.save(update_fields=['tracking_code'])
 
         if payment.status == PENDING:
-            if status == '0':
+            if status != 1:
                 payment.status = CANCELED
                 payment.save()
             else:

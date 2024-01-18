@@ -143,14 +143,14 @@ class Gateway(models.Model):
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
-        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway
+        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway, PaystarGateway
         mapping = {
             cls.ZARINPAL: ZarinpalGateway,
             cls.PAYIR: PaydotirGateway,
             cls.ZIBAL: ZibalGateway,
             cls.JIBIT: JibitGateway,
             # cls.JIBIMO: JibimoGateway,
-            # cls.PAYSTAR: PaystarGateway,
+            cls.PAYSTAR: PaystarGateway,
         }
 
         return mapping.get(type)
@@ -160,10 +160,10 @@ class Gateway(models.Model):
         return self
 
     def get_initial_redirect_url(self, payment_request: PaymentRequest):
-        return self.get_payment_url(payment_request.authority)
+        return self.get_payment_url(payment_request)
 
     @classmethod
-    def get_payment_url(cls, authority: str):
+    def get_payment_url(cls, payment_request: PaymentRequest):
         raise NotImplementedError
 
     def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:

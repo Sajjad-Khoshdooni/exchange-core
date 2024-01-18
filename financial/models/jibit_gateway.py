@@ -82,8 +82,8 @@ class JibitGateway(Gateway):
             )
 
     @classmethod
-    def get_payment_url(cls, authority: str):
-        return 'https://napi.jibit.cloud/ppg/v3/purchases/{}/payments'.format(authority)
+    def get_payment_url(cls, payment_request: PaymentRequest):
+        return 'https://napi.jibit.cloud/ppg/v3/purchases/{}/payments'.format(payment_request.authority)
 
     def _verify(self, payment: Payment):
         payment_request = payment.paymentrequest

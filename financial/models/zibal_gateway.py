@@ -45,8 +45,8 @@ class ZibalGateway(Gateway):
         )
 
     @classmethod
-    def get_payment_url(cls, authority: str):
-        return 'https://gateway.zibal.ir/start/{}'.format(authority)
+    def get_payment_url(cls, payment_request: PaymentRequest):
+        return 'https://gateway.zibal.ir/start/{}'.format(payment_request.authority)
 
     def _verify(self, payment: Payment):
         payment_request = payment.paymentrequest
