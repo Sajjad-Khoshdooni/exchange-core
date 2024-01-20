@@ -196,7 +196,10 @@ class MarketStreamCache:
             amount = get_presentation_amount(maker_trade.amount, maker_trade.symbol.step_size)
             self.market_pipeline.publish(
                 f'market:trades:{maker_trade.symbol.name}',
-                f'{taker_trade.id}#{price}#{amount}#{maker_trade.client_order_id or maker_trade.order_id}#{taker_trade.client_order_id or taker_trade.order_id}#{is_buyer_maker}#{maker_trade.order_id}#{taker_trade.order_id}#{maker_trade.created}'
+                f'{taker_trade.id}#{price}#{amount}#{maker_trade.client_order_id or maker_trade.order_id}#'
+                f'{taker_trade.client_order_id or taker_trade.order_id}#{is_buyer_maker}#{maker_trade.order_id}#'
+                f'{taker_trade.order_id}#{maker_trade.created}#'
+                f'{maker_trade.account.id}#{taker_trade.account.id}'
             )
             logger.info(f'publishing taker_trade:{taker_trade.id}, maker_trade:{maker_trade.id} to socket server redis')
 
