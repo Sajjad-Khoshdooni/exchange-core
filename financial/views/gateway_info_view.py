@@ -57,7 +57,7 @@ class GatewaySerializer(serializers.ModelSerializer):
         return max(0, min(deposit_quota, gateway.max_deposit_amount))
 
     def get_suspended(self, gateway):
-        if not gateway.suspended and config('LIMIT_IPG_GATEWAYS', cast=bool, default=False):
+        if not gateway.suspended and SystemConfig.get_system_config().limit_ipg_to_users_without_payment:
             return self.context['request'].user.first_fiat_deposit_date is None
 
         return gateway.suspended

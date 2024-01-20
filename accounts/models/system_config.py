@@ -28,6 +28,8 @@ class SystemConfig(models.Model):
 
     open_pay_id_to_all = models.BooleanField(default=False)
 
+    limit_ipg_to_users_without_payment = models.BooleanField(default=False)
+
     @classmethod
     def get_system_config(cls) -> 'SystemConfig':
         return SystemConfig.objects.filter(
