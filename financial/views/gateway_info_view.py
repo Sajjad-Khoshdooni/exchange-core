@@ -1,3 +1,4 @@
+from decouple import config
 from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.generics import RetrieveAPIView
@@ -20,6 +21,8 @@ class GatewaySerializer(serializers.ModelSerializer):
     withdraw_fee_min = serializers.SerializerMethodField()
     withdraw_fee_max = serializers.SerializerMethodField()
     withdraw_fee_percent = serializers.SerializerMethodField()
+
+    suspended = serializers.SerializerMethodField()
 
     def get_withdraw_fee_min(self, gateway):
         system_config = SystemConfig.get_system_config()
@@ -52,6 +55,12 @@ class GatewaySerializer(serializers.ModelSerializer):
         deposit_quota = user.get_feature_limit(UserFeaturePerm.FIAT_DEPOSIT_DAILY_LIMIT) - today_deposits
 
         return max(0, min(deposit_quota, gateway.max_deposit_amount))
+
+    def get_suspended(self, gateway):
+        if not gateway.suspended and config('LIMIT_IPG_GATEWAYS', cast=bool, default=False):
+            return self.context['request'].user.first_fiat_deposit_date is None
+
+        return gateway.suspended
 
     class Meta:
         model = Gateway
