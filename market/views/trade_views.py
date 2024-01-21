@@ -129,8 +129,8 @@ class TradePairsHistoryView(ListAPIView):
             ).exclude(
                 maker_account_id=F('taker_account_id')
             ).filter(
-                Q(maker_account_id=self.request.user.account_id) |
-                Q(taker_account_id=self.request.user.account_id)
+                Q(maker_account_id=self.request.user.account.id) |
+                Q(taker_account_id=self.request.user.account.id)
             )
 
         else:
