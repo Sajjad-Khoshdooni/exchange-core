@@ -116,27 +116,25 @@ class TradePairsHistoryView(ListAPIView):
             return Trade.objects.none()
 
         min_id = self.request.query_params.get('from_id')
-        id_filter = {'id__gt': min_id} if min_id else {}
+        id_filter = {'id__gt': 2306740} if min_id else {}
         filter_self = self.request.query_params.get('self', False)
 
         qs = Trade.objects.filter(
             **id_filter
         )
         if filter_self:
-            qs = qs.values('group_id').annotate(
+            group_ids = set(qs.values('group_id').annotate(
                 maker_account_id=Min('account_id'),
-                taker_account_id=Max('account_id')
+                taker_account_id=Max('account_id'),
             ).exclude(
                 maker_account_id=F('taker_account_id')
             ).filter(
-                Q(maker_account_id=self.request.user.account.id) |
-                Q(taker_account_id=self.request.user.account.id)
-            )
+                Q(maker_account_id=41) |
+                Q(taker_account_id=41)
+            ).values_list('group_id', flat=True))
+            qs.filter(group_id__in=group_ids)
 
-        else:
-            qs = qs.filter(account=self.request.user.account)
-
-        return qs.prefetch_related('symbol').order_by('id')
+        return qs.filter(account=self.request.user.account).prefetch_related('symbol').order_by('id')
 
     def list(self, request, *args, **kwargs):
         min_id = self.request.query_params.get('from_id')
