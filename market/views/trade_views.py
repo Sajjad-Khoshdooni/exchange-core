@@ -116,7 +116,7 @@ class TradePairsHistoryView(ListAPIView):
             return Trade.objects.none()
 
         min_id = self.request.query_params.get('from_id')
-        id_filter = {'id__gt': 2306740} if min_id else {}
+        id_filter = {'id__gt': min_id} if min_id else {}
         filter_self = self.request.query_params.get('self', False)
 
         qs = Trade.objects.filter(
