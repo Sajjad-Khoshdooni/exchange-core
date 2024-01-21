@@ -132,7 +132,7 @@ class TradePairsHistoryView(ListAPIView):
                 Q(maker_account_id=41) |
                 Q(taker_account_id=41)
             ).values_list('group_id', flat=True))
-            qs.filter(group_id__in=group_ids)
+            qs = qs.filter(group_id__in=group_ids)
 
         return qs.filter(account=self.request.user.account).prefetch_related('symbol').order_by('id')
 
