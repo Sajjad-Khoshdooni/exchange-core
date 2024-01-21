@@ -123,14 +123,16 @@ class TradePairsHistoryView(ListAPIView):
             **id_filter
         )
         if filter_self:
+            account_id = self.request.user.account.id
+
             group_ids = set(qs.values('group_id').annotate(
                 maker_account_id=Min('account_id'),
                 taker_account_id=Max('account_id'),
             ).exclude(
                 maker_account_id=F('taker_account_id')
             ).filter(
-                Q(maker_account_id=41) |
-                Q(taker_account_id=41)
+                Q(maker_account_id=account_id) |
+                Q(taker_account_id=account_id)
             ).values_list('group_id', flat=True))
             qs = qs.filter(group_id__in=group_ids)
 
