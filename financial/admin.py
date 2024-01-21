@@ -213,7 +213,7 @@ class PaymentAdmin(admin.ModelAdmin):
                     'get_card_pan', 'get_user',)
     list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount',
-                     'paymentrequest__authority', 'paymentrequest__bank_card__user__phone')
+                     'paymentrequest__authority', 'user__phone')
     readonly_fields = ('user', 'group_id')
 
     @admin.display(description='مقدار')
