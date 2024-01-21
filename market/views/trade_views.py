@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 import django_filters
-from django.db.models import Min, Max, F
+from django.db.models import Min, Max, F, Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, get_object_or_404
@@ -120,14 +120,21 @@ class TradePairsHistoryView(ListAPIView):
         filter_self = self.request.query_params.get('self', False)
 
         qs = Trade.objects.filter(
-            account=self.request.user.account,
             **id_filter
         )
         if filter_self:
-            qs = qs.filter(group_id__in=qs.values_list('group_id', flat=True), **id_filter).values(
-                'group_id').annotate(
-                maker_account_id=Min('account_id'), taker_account_id=Max('account_id')
-            ).exclude(maker_account_id=F('taker_account_id'))
+            qs = qs.values('group_id').annotate(
+                maker_account_id=Min('account_id'),
+                taker_account_id=Max('account_id')
+            ).exclude(
+                maker_account_id=F('taker_account_id')
+            ).filter(
+                Q(maker_account_id=self.request.user.account_id) |
+                Q(taker_account_id=self.request.user.account_id)
+            )
+
+        else:
+            qs = qs.filter(account=self.request.user.account)
 
         return qs.prefetch_related('symbol').order_by('id')
 
