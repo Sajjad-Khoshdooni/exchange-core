@@ -149,7 +149,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
         for fiat_withdraw in valid_qs:
             fiat_withdraw.change_status(FiatWithdrawRequest.CANCELED)
 
-    @admin.action(description='refund', permissions=['change'])
+    @admin.action(description='Refund', permissions=['change'])
     def refund(self, request, queryset):
         valid_qs = queryset.filter(status=FiatWithdrawRequest.DONE)
 
@@ -212,9 +212,10 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status',
                     'get_card_pan', 'get_user',)
     list_filter = (PaymentUserFilter, 'status', )
-    search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount',
-                     'paymentrequest__authority', 'user__phone')
+    search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount', 'paymentrequest__authority',
+                     'user__phone')
     readonly_fields = ('user', 'group_id')
+    actions = ('refund', )
 
     @admin.display(description='مقدار')
     def get_amount(self, payment: Payment):
@@ -234,6 +235,13 @@ class PaymentAdmin(admin.ModelAdmin):
         if payment.paymentrequest:
             link = url_to_edit_object(payment.paymentrequest.bank_card)
             return mark_safe("<a href='%s'>%s</a>" % (link, payment.paymentrequest.bank_card.card_pan))
+
+    @admin.action(description='Refund', permissions=['change'])
+    def refund(self, request, queryset):
+        valid_qs = queryset.filter(status=FiatWithdrawRequest.DONE)
+
+        for payment in valid_qs:
+            payment.refund()
 
 
 class BankCardUserFilter(SimpleListFilter):

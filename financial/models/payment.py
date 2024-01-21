@@ -15,7 +15,7 @@ from accounts.models import Notification
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
-from ledger.utils.fields import DONE
+from ledger.utils.fields import DONE, REFUND
 from ledger.utils.fields import get_group_id_field, get_status_field
 from ledger.utils.precision import humanize_number, get_presentation_amount
 from ledger.utils.price import get_last_price, USDT_IRT
@@ -149,6 +149,18 @@ class Payment(models.Model):
         check_prize_achievements(account, Task.DEPOSIT)
 
         self.alert_payment()
+
+    def refund(self):
+        with WalletPipeline() as pipeline:
+            payment = Payment.objects.select_for_update().get(id=self.id)
+            if payment.status != DONE:
+                return
+
+            for trx in Trx.objects.filter(group_id=payment.group_id):
+                trx.revert(pipeline)
+
+            payment.status = REFUND
+            payment.save(update_fields=['status'])
 
     def get_redirect_url(self) -> str:
         from ledger.models import FastBuyToken
