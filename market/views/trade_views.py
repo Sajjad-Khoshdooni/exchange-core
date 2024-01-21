@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 import django_filters
-from django.db.models import Min, Max
+from django.db.models import Min, Max, F
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, get_object_or_404
@@ -124,15 +124,22 @@ class TradePairsHistoryView(ListAPIView):
 
     def list(self, request, *args, **kwargs):
         min_id = self.request.query_params.get('from_id')
+        filter_self = self.request.query_params.get('self', False)
+
         id_filter = {'id__gt': min_id} if min_id else {}
         qs = self.get_queryset()
-        maker_taker_mapping = {
-            t['group_id']: (t['maker_order_id'], t['taker_order_id']) for t in
-            Trade.objects.filter(group_id__in=qs.values_list('group_id', flat=True), **id_filter).values(
-                'group_id').annotate(
-                maker_order_id=Min('order_id'), taker_order_id=Max('order_id')
-            )
-        }
+
+        mapping_qs = Trade.objects.filter(group_id__in=qs.values_list('group_id', flat=True), **id_filter).values(
+            'group_id').annotate(
+            maker_order_id=Min('order_id'), taker_order_id=Max('order_id'),
+            maker_account_id=Min('account_id'), taker_account_id=Max('account_id')
+        )
+
+        if filter_self:
+            mapping_qs = mapping_qs.exclude(maker_account_id=F('taker_account_id'))
+
+        maker_taker_mapping = {t['group_id']: (t['maker_order_id'], t['taker_order_id']) for t in mapping_qs}
+
         all_order_ids = set(sum(maker_taker_mapping.values(), ()))
         client_order_id_mapping = {o.id: o.client_order_id for o in Order.objects.filter(id__in=all_order_ids)}
         serializer = TradePairSerializer(qs, context={
