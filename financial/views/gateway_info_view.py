@@ -7,7 +7,7 @@ from accounts.models import SystemConfig
 from accounts.models.user_feature_perm import UserFeaturePerm
 from financial.models import Gateway, Payment
 from financial.utils.ach import next_ach_clear_time
-from financial.utils.user import get_today_fiat_deposits
+from financial.utils.user import get_today_fiat_ipg_deposits
 from ledger.utils.fields import DONE
 from ledger.utils.precision import get_presentation_amount
 
@@ -51,7 +51,7 @@ class GatewaySerializer(serializers.ModelSerializer):
     def get_max_deposit_amount(self, gateway):
         user = self.context['request'].user
 
-        today_deposits = get_today_fiat_deposits(user)
+        today_deposits = get_today_fiat_ipg_deposits(user)
         deposit_quota = user.get_feature_limit(UserFeaturePerm.FIAT_DEPOSIT_DAILY_LIMIT) - today_deposits
 
         return max(0, min(deposit_quota, gateway.max_deposit_amount))
