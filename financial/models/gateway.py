@@ -33,10 +33,11 @@ class Gateway(models.Model):
     )
     merchant_id = models.CharField(max_length=128, blank=True)
 
-    withdraw_enable = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
     active_for_staff = models.BooleanField(default=False)
-    primary = models.BooleanField(default=False)
+    ipg_deposit_enable = models.BooleanField(default=True)
+    pay_id_deposit_enable = models.BooleanField(default=False)
+    withdraw_enable = models.BooleanField(default=False)
 
     min_deposit_amount = models.PositiveIntegerField(default=10000)
     max_deposit_amount = models.PositiveIntegerField(default=50000000)
@@ -68,10 +69,6 @@ class Gateway(models.Model):
 
     suspended = models.BooleanField(default=False)
 
-    def clean(self):
-        if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
-            raise ValidationError('At least one gateway should be active')
-
     @property
     def withdraw_api_secret(self):
         return decrypt(self.withdraw_api_secret_encrypted)
@@ -97,12 +94,12 @@ class Gateway(models.Model):
     @classmethod
     def _find_best_deposit_gateway(cls, user: User = None, amount: Decimal = 0) -> 'Gateway':
         if user and user.is_staff:
-            gateway = Gateway.objects.filter(active_for_staff=True).order_by('id').first()
+            gateway = Gateway.objects.filter(active_for_staff=True, ipg_deposit_enable=True).order_by('id').first()
 
             if gateway:
                 return gateway
 
-        gateways = Gateway.objects.filter(active=True).order_by('-deposit_priority')
+        gateways = Gateway.objects.filter(active=True, ipg_deposit_enable=True).order_by('-deposit_priority')
 
         gateway = gateways.first()
 
@@ -135,11 +132,11 @@ class Gateway(models.Model):
 
     @classmethod
     def get_active_withdraw(cls) -> 'Gateway':
-        return Gateway.objects.filter(withdraw_enable=True).order_by('id').first()
+        return Gateway.objects.filter(active=True, withdraw_enable=True).order_by('id').first()
 
     @classmethod
     def get_active_pay_id_deposit(cls) -> 'Gateway':
-        return Gateway.objects.filter(active=True).exclude(payment_id_api_key='').order_by('id').first()
+        return Gateway.objects.filter(active=True, pay_id_deposit_enable=True).exclude(payment_id_api_key='').order_by('id').first()
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:

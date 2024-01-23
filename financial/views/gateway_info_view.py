@@ -85,4 +85,4 @@ class GatewayInfoView(RetrieveAPIView):
         if total < 10_000_000:
             return Gateway.get_active_deposit(user)
         else:
-            return Gateway.objects.filter(active=True).order_by('-max_deposit_amount').first()
+            return Gateway.objects.filter(active=True, ipg_deposit_enable=True).order_by('-max_deposit_amount').first()
