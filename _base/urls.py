@@ -30,6 +30,8 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('admin/dashboard/', dashboard),
+
     path('api/v1/health/ready/', HealthView.as_view()),
     path('api/v1/health/price/', PriceHealthView.as_view()),
     path('api/v1/accounts/', include('accounts.urls')),
@@ -43,7 +45,6 @@ urlpatterns = [
     path('api/', include('ledger.urls')),
     path('hijack/', include('hijack.urls')),
     path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
-    path('dashboard/', dashboard),
 
     path('tinymce/', include('tinymce.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
