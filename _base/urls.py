@@ -29,8 +29,8 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('admin/dashboard/', dashboard),
+    path('admin/', admin.site.urls),
 
     path('api/v1/health/ready/', HealthView.as_view()),
     path('api/v1/health/price/', PriceHealthView.as_view()),
