@@ -46,7 +46,7 @@ class Gateway(models.Model):
     max_auto_withdraw_amount = models.PositiveIntegerField(null=True, blank=True)
     expected_withdraw_datetime = models.DateTimeField(null=True, blank=True)
 
-    withdraw_api_key = models.CharField(max_length=1024, blank=True)
+    withdraw_api_key_encrypted = models.CharField(max_length=1024, blank=True)
     withdraw_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
     withdraw_api_password_encrypted = models.CharField(max_length=4096, blank=True)
     withdraw_bank = models.CharField(max_length=128, blank=True)
@@ -57,7 +57,7 @@ class Gateway(models.Model):
     payment_id_api_key = models.CharField(max_length=1024, blank=True)
     payment_id_secret_encrypted = models.CharField(max_length=4096, blank=True)
 
-    wallet_id = models.PositiveIntegerField(null=True, blank=True)
+    wallet_id = models.CharField(blank=True, max_length=256)
 
     deposit_priority = models.SmallIntegerField(default=1)
 
@@ -72,6 +72,10 @@ class Gateway(models.Model):
     @property
     def withdraw_api_secret(self):
         return decrypt(self.withdraw_api_secret_encrypted)
+
+    @property
+    def withdraw_api_key(self):
+        return decrypt(self.withdraw_api_key_encrypted)
 
     @property
     def withdraw_api_password(self):

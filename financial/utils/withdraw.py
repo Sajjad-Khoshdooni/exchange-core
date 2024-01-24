@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -31,8 +33,6 @@ class NoChannelError(Exception):
 
 @dataclass
 class Wallet:
-    id: int
-    name: str
     balance: int
     free: int
 
@@ -60,6 +60,7 @@ class FiatWithdraw:
             Gateway.ZARINPAL: ZarinpalChannel,
             Gateway.JIBIT: JibitChannel,
             Gateway.JIBIMO: JibimoChannel,
+            Gateway.PAYSTAR: PaystarChannel,
         }
 
         channel_class = mapping.get(gateway.type)
@@ -74,8 +75,12 @@ class FiatWithdraw:
     def get_withdraw_status(self, transfer: BaseTransfer) -> Withdraw:
         raise NotImplementedError
 
-    def get_total_wallet_irt_value(self):
+    def get_wallet_data(self) -> Wallet:
         raise NotImplementedError
+
+    def get_total_wallet_irt_value(self):
+        wallet = self.get_wallet_data()
+        return wallet.balance
 
     def update_missing_payments(self, gateway: Gateway):
         pass
@@ -121,19 +126,17 @@ class PayirChannel(FiatWithdraw):
 
         return resp_data['data']
 
-    def get_wallet_data(self, wallet_id: int) -> Wallet:
-        data = self.collect_api(f'/api/v2/wallets/{wallet_id}')['wallet']
+    def get_wallet_data(self) -> Wallet:
+        data = self.collect_api(f'/api/v2/wallets/{self.gateway.wallet_id}')['wallet']
 
         return Wallet(
-            id=data['id'],
-            name=data['name'],
             balance=data['balance'] // 10,
             free=data['cashoutableAmount'] // 10
         )
 
     def create_withdraw(self, transfer: BaseTransfer) -> Withdraw:
         data = self.collect_api('/api/v2/cashouts', method='POST', data={
-            'walletId': self.gateway.wallet_id,
+            'walletId': int(self.gateway.wallet_id),
             'amount': transfer.amount * 10,
             'name': transfer.bank_account.user.get_full_name(),
             'iban': transfer.bank_account.iban[2:],
@@ -250,14 +253,12 @@ class ZibalChannel(FiatWithdraw):
 
         return resp_data['data']
 
-    def get_wallet_data(self, wallet_id: int) -> Wallet:
+    def get_wallet_data(self) -> Wallet:
         data = self.collect_api(f'/v1/wallet/balance', method='POST', data={
-            "id": wallet_id
+            "id": int(self.gateway.wallet_id)
         })
 
         return Wallet(
-            id=wallet_id,
-            name=data['name'],
             balance=data['balance'] // 10,
             free=data['withdrawableBalance'] // 10
         )
@@ -274,7 +275,7 @@ class ZibalChannel(FiatWithdraw):
 
         try:
             data = self.collect_api('/v1/wallet/checkout/plus', method='POST', data={
-                'id': self.gateway.wallet_id,
+                'id': int(self.gateway.wallet_id),
                 'amount': transfer.amount * 10,
                 'bankAccount': transfer.bank_account.iban,
                 'uniqueCode': transfer.id,
@@ -321,7 +322,7 @@ class ZibalChannel(FiatWithdraw):
 
     def get_withdraw_status(self, transfer: BaseTransfer) -> Withdraw:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
-            "walletId": self.gateway.wallet_id,
+            "walletId": int(self.gateway.wallet_id),
             'uniqueCode': str(transfer.id)
         })
 
@@ -391,7 +392,7 @@ class ZarinpalChannel(FiatWithdraw):
 
 
 class JibitChannel(FiatWithdraw):
-    BASE_URL = ' https://napi.jibit.ir/trf'
+    BASE_URL = 'https://napi.jibit.ir/trf'
     INSTANT_BANKS = ['MELLI', 'RESALAT', 'KESHAVARZI', 'SADERAT', 'EGHTESAD_NOVIN', 'SHAHR', 'SEPAH',
                      'AYANDEH', 'SAMAN', 'TEJARAT', 'PARSIAN']
 
@@ -439,7 +440,7 @@ class JibitChannel(FiatWithdraw):
 
         return Response(data=resp_data, success=resp.ok, status_code=resp.status_code)
 
-    def get_wallet_data(self, wallet_id: int = None) -> Wallet:
+    def get_wallet_data(self) -> Wallet:
         resp = self.collect_api('/v2/balances')
         balance = 0
         free = 0
@@ -453,8 +454,6 @@ class JibitChannel(FiatWithdraw):
             balance += d['amount']
 
         return Wallet(
-            id=0,
-            name='main',
             balance=balance // 10,
             free=free // 10
         )
@@ -524,10 +523,6 @@ class JibitChannel(FiatWithdraw):
             tracking_id=tracking_id,
             status=status,
         )
-
-    def get_total_wallet_irt_value(self) -> int:
-        wallet = self.get_wallet_data()
-        return wallet.balance
 
 
 class JibimoChannel(FiatWithdraw):
@@ -644,3 +639,98 @@ class JibimoChannel(FiatWithdraw):
         resp = self.collect_api('/v2/business/refresh')
         user = resp.data['user']
         return int(float(user['balance']) - float(user['reserved']))
+
+
+class PaystarChannel(FiatWithdraw):
+    BASE_URL = 'https://core.paystar.ir/api/wallet'
+
+    def _get_token(self):
+        return self.gateway.withdraw_api_key
+
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> Response:
+        url = self.BASE_URL + path
+
+        request_kwargs = {
+            'url': url,
+            'timeout': timeout,
+            'headers': {'Authorization': 'Bearer ' + self._get_token()},
+        }
+
+        try:
+            if method == 'GET':
+                resp = requests.get(params=data, **request_kwargs)
+            else:
+                method_prop = getattr(requests, method.lower())
+                resp = method_prop(json=data, **request_kwargs)
+        except requests.exceptions.ConnectionError:
+            logger.error('jibit connection error', extra={
+                'url': url,
+                'method': method,
+                'data': data,
+            })
+            raise TimeoutError
+
+        resp_data = resp.json()
+
+        if self.verbose or not resp.ok:
+            print('status', resp.status_code)
+            print('data', resp_data)
+
+        return Response(data=resp_data['data'], success=resp.ok, status_code=resp.status_code)
+
+    def get_wallet_data(self) -> Wallet:
+        resp = self.collect_api('/wallets-balance', data={'wallet_hashid': self.gateway.wallet_id}).data
+
+        return Wallet(
+            balance=int(resp['total_amount'].replace(',', '')) // 10,
+            free=int(resp['available_amount'].replace(',', '')) // 10,
+        )
+
+    def create_withdraw(self, transfer: BaseTransfer) -> Withdraw:
+        transfers = [{
+            'amount': transfer.amount * 10,
+            'destination_number': transfer.bank_account.iban,
+            'destination_firstname': transfer.bank_account.user.first_name,
+            'destination_lastname': transfer.bank_account.user.last_name,
+            'track_id': transfer.id,
+        }]
+
+        sign_message = f'{self.gateway.wallet_id}#{self.gateway.withdraw_api_password}'
+        sign = hmac.new(self.gateway.withdraw_api_secret.encode(), sign_message.encode(), hashlib.sha512).hexdigest()
+
+        resp = self.collect_api('/create-settlement', method='POST', data={
+            'wallet_hashid': self.gateway.wallet_id,
+            'withdraw_type': 8,
+            'transfers': transfers,
+            'password': self.gateway.withdraw_api_password,
+            'sign': sign
+        })
+
+        if not resp.success:
+            raise ServerError
+
+        return Withdraw(
+            tracking_id='',
+            status=FiatWithdrawRequest.PENDING,
+            receive_datetime=next_ach_clear_time()
+        )
+
+    def get_withdraw_status(self, transfer: BaseTransfer) -> Withdraw:
+        resp = self.collect_api('/settlement-requests', method='GET', data={
+            'wallet_hashid': self.gateway.wallet_id,
+            'track_id': f'{self.gateway.wallet_id}*{transfer.id}*1'
+        })
+
+        data = resp.get_success_data()[0]
+
+        mapping_status = {
+            'pending': self.PENDING,
+            'success': self.DONE,
+        }
+
+        status = mapping_status.get(data['status'], self.PENDING)
+
+        return Withdraw(
+            tracking_id=data['ref_code'],
+            status=status,
+        )

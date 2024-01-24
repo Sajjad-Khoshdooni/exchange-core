@@ -8,42 +8,42 @@ from financial.models.gateway import GatewayFailed
 
 
 class JibimoGateway(Gateway):
-    BASE_URL = 'https://core.paystar.ir/api/pardakht'
+    # BASE_URL = 'https://core.paystar.ir/api/pardakht'
 
-    def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
-        base_url = config('PAYMENT_PROXY_HOST_URL', default='') or settings.HOST_URL
-
-        resp = requests.post(
-            self.BASE_URL + '/create',
-            headers={
-                'Authorization': 'Bearer ' + self.merchant_id
-            },
-            json={
-                'amount': amount * 10,
-                'callback': base_url + reverse('finance:paystar-callback'),
-                'card_number': bank_card.card_pan,
-                'sign': 0
-            },
-            timeout=30,
-        )
-
-        resp_data = resp.json()
-
-        if not resp.ok or resp_data['status'] != 1:
-            print('status code', resp.status_code)
-            print('body', resp_data)
-
-            raise GatewayFailed
-
-        authority = resp.json()['token']
-
-        return PaymentRequest.objects.create(
-            bank_card=bank_card,
-            amount=amount,
-            gateway=self,
-            authority=authority,
-            source=source,
-        )
+    # def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
+        # base_url = config('PAYMENT_PROXY_HOST_URL', default='') or settings.HOST_URL
+        #
+        # resp = requests.post(
+        #     self.BASE_URL + '/create',
+        #     headers={
+        #         'Authorization': 'Bearer ' + self.merchant_id
+        #     },
+        #     json={
+        #         'amount': amount * 10,
+        #         'callback': base_url + reverse('finance:jibimo-callback'),
+        #         'card_number': bank_card.card_pan,
+        #         'sign': 0
+        #     },
+        #     timeout=30,
+        # )
+        #
+        # resp_data = resp.json()
+        #
+        # if not resp.ok or resp_data['status'] != 1:
+        #     print('status code', resp.status_code)
+        #     print('body', resp_data)
+        #
+        #     raise GatewayFailed
+        #
+        # authority = resp.json()['token']
+        #
+        # return PaymentRequest.objects.create(
+        #     bank_card=bank_card,
+        #     amount=amount,
+        #     gateway=self,
+        #     authority=authority,
+        #     source=source,
+        # )
     #
     # def get_initial_redirect_url(self, payment_request: PaymentRequest) -> str:
     #     payment_proxy = config('PAYMENT_PROXY_HOST_URL', default='')

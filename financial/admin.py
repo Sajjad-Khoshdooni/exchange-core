@@ -34,12 +34,13 @@ from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active', 'deposit_priority', 'active_for_staff',
+    list_display = ('name', 'type', 'active', 'deposit_priority', 'active_for_staff',
                     'ipg_deposit_enable', 'pay_id_deposit_enable', 'withdraw_enable',
                     'suspended', 'get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
     list_editable = ('active', 'active_for_staff', 'ipg_deposit_enable', 'pay_id_deposit_enable', 'withdraw_enable',
                      'deposit_priority', 'suspended')
     readonly_fields = ('get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
+    list_filter = ('active', 'type')
 
     @admin.display(description='balance')
     def get_balance(self, gateway: Gateway):
@@ -55,8 +56,10 @@ class GatewayAdmin(admin.ModelAdmin):
         return humanize_number(Decimal(gateway.max_deposit_amount))
 
     def save_model(self, request, gateway: Gateway, form, change):
-        encryption_fields = ['withdraw_api_secret_encrypted', 'withdraw_api_password_encrypted',
-                             'deposit_api_secret_encrypted', 'payment_id_secret_encrypted']
+        encryption_fields = [
+            'withdraw_api_key_encrypted', 'withdraw_api_secret_encrypted', 'withdraw_api_password_encrypted',
+            'deposit_api_secret_encrypted', 'payment_id_secret_encrypted'
+        ]
 
         old_gateway = gateway.id and Gateway.objects.get(id=gateway.id)
 
