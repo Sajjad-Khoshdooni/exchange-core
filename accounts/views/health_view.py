@@ -18,7 +18,7 @@ class PriceHealthView(APIView):
 
     def get(self, request):
 
-        symbols = ['BTCUSDT', 'ETHUSDT', 'DOGEUSDT', 'XCOINUSDT']
+        symbols = ['BTCUSDT', 'ETHUSDT', 'DOGEUSDT', 'GORILLAUSDT']
 
         missing_prices = []
 
