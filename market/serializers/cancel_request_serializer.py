@@ -80,7 +80,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             else:
                 order_filter = {'client_order_id': client_order_id}
             order = Order.open_objects.filter(
-                wallet__account=self.context['account'],
+                account=self.context['account'],
                 **order_filter
             ).first()
             if not order or order.stop_loss:

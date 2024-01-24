@@ -131,7 +131,7 @@ class OpenOrderListAPIView(APIView):
                 exclude_filters['wallet__variant__in'] = reserved_variants
 
         open_orders = Order.open_objects.filter(
-            wallet__account=account, stop_loss__isnull=True, **filters
+            account=account, stop_loss__isnull=True, **filters
         ).exclude(**exclude_filters).select_related('symbol', 'wallet', )
 
         open_stop_losses = StopLoss.open_objects.filter(
