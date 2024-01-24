@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 import django_filters
@@ -25,6 +26,7 @@ from market.serializers.order_serializer import OrderIDSerializer, OrderSerializ
 from market.serializers.order_stoploss_serializer import OrderStopLossSerializer
 from market.serializers.stop_loss_serializer import StopLossSerializer
 
+logger = logging.getLogger(__name__)
 
 class OrderFilter(django_filters.FilterSet):
     symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
@@ -194,7 +196,10 @@ class BulkCancelOrderAPIView(APIView):
             if q:
                 to_cancel_orders = Order.objects.filter(q, status=Order.NEW, account=request.user.get_account())
                 Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
-        except Exception:
+        except Exception as e:
+            logger.exception(f'failed bulk cancel order due to {e}', extra={
+                'e': e
+            })
             return Response({"Error": 'failed'}, 400)
 
         return Response(status=200)
