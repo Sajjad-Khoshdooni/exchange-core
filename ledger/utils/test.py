@@ -38,7 +38,7 @@ if settings.DEBUG_OR_TESTING:
         else:
             key = 'price:' + asset.symbol.lower() + 'usdt'
 
-        get_price_redis().hset(name=key, mapping=mapping)
+        get_price_redis(allow_stale=True).hset(name=key, mapping=mapping)
 
         time.sleep(1)
 

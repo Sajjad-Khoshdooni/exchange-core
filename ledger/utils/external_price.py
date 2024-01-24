@@ -12,15 +12,33 @@ from ledger.utils.cache import cache_for
 logger = logging.getLogger(__name__)
 
 _price_redis = None
+_master_price_redis = None
 
 
-def get_price_redis():
+def get_price_redis(allow_stale: bool):
     global _price_redis
+    global _master_price_redis
 
     if _price_redis is None:
         _price_redis = Redis.from_url(settings.PRICE_CACHE_LOCATION, decode_responses=True)
 
+    if settings.MASTER_PRICE_CACHE_LOCATION and _master_price_redis is None:
+        _master_price_redis = Redis.from_url(settings.MASTER_PRICE_CACHE_LOCATION, decode_responses=True)
+
+    if not allow_stale:
+        if not _price_redis.hgetall('price:btcusdt'):
+            return _master_price_redis
+
     return _price_redis
+
+
+def get_master_price_redis():
+    global _master_price_redis
+
+    if _master_price_redis is None:
+        _master_price_redis = Redis.from_url(settings.MASTER_PRICE_CACHE_LOCATION, decode_responses=True)
+
+    return _master_price_redis
 
 
 BINANCE = 'binance'
@@ -82,11 +100,11 @@ def _check_price_dict_time_frame(data: dict, allow_stale: bool = False):
 def fetch_external_price(symbol, side: str, allow_stale: bool = False) -> Decimal:
     side = _get_redis_side(side)
     name = f'price:{symbol.lower()}'
-    price = get_price_redis().hget(name=name, key=side)
+    price = get_price_redis(allow_stale).hget(name=name, key=side)
 
     if not price and allow_stale:
         name += ':stale'
-        price = get_price_redis().hget(name=name, key=side)
+        price = get_price_redis(allow_stale).hget(name=name, key=side)
 
     if price:
         return Decimal(price)
@@ -106,7 +124,7 @@ def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow
     else:
         sides = SIDES
 
-    pipe = get_price_redis().pipeline(transaction=False)
+    pipe = get_price_redis(allow_stale).pipeline(transaction=False)
     for c in coins:
         key = _get_redis_price_key(c)
         pipe.hgetall(key)
@@ -124,7 +142,7 @@ def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow
 
         if allow_stale and not spot_price_dict:
             name = _get_redis_price_key(c) + ':stale'
-            spot_price_dict = get_price_redis().hgetall(name)
+            spot_price_dict = get_price_redis(allow_stale).hgetall(name)
 
             # logger.error('{} price fallback to stale'.format(c))
 
@@ -157,7 +175,7 @@ def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow
 
 def fetch_external_depth(symbol: str, side: str) -> str:
     key = _get_redis_side(side)
-    data = get_price_redis().hgetall(name=f'depth:{symbol.lower()}')
+    data = get_price_redis(False).hgetall(name=f'depth:{symbol.lower()}')
 
     if data and _check_price_dict_time_frame(data):
         return data[key]
