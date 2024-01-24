@@ -190,17 +190,14 @@ class BulkCancelOrderAPIView(APIView):
         if client_order_id_list:
             q = q | Q(client_order_id__in=client_order_id_list)
 
-        if q:
-            to_cancel_orders = Order.objects.filter(q, status=Order.NEW, account=request.user.get_account())
-            Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
+        try:
+            if q:
+                to_cancel_orders = Order.objects.filter(q, status=Order.NEW, account=request.user.get_account())
+                Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
+        except Exception:
+            return Response({"Error": 'failed'}, 400)
 
-        canceled_orders = (Order.objects.filter(q, account=request.user.get_account(), status=Order.CANCELED).
-                              values('id', 'client_order_id'))
-
-        return Response({
-            "ids":  [order['id'] for order in canceled_orders],
-            "client_order_ids":  [order['client_order_id'] for order in canceled_orders]
-        }, 200)
+        return Response(status=200)
 
 
 class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):
