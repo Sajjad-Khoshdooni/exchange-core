@@ -202,7 +202,7 @@ class BulkCancelOrderAPIView(APIView):
             })
             return Response({"Error": 'failed'}, 400)
 
-        return Response(status=200)
+        return Response({'status': 'done'}, status=200)
 
 
 class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):
