@@ -282,7 +282,7 @@ class ZibalChannel(FiatWithdraw):
                 'wageFeeMode': 2,
                 'checkoutDelay': checkout_delay,
                 'showTime': True,
-                'bank': self.gateway.withdraw_bank or 'smart',
+                'bank': 'smart',
             })
         except ServerError as e:
             resp = e.args[0]
