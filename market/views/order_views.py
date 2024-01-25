@@ -194,7 +194,7 @@ class BulkCancelOrderAPIView(APIView):
 
         try:
             if q:
-                to_cancel_orders = Order.objects.filter(q, status=Order.NEW, account=request.user.get_account())
+                to_cancel_orders = Order.open_objects.filter(q, account=request.user.get_account())
                 Order.bulk_cancel_simple_orders(to_cancel_orders=to_cancel_orders)
         except Exception as e:
             logger.exception(f'failed bulk cancel order due to {e}', extra={
