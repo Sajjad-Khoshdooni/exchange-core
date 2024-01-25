@@ -3,7 +3,7 @@ from typing import Union
 
 from django.conf import settings
 from django.db import models
-from django.db.models import UniqueConstraint, Q
+from django.db.models import UniqueConstraint, Q, Sum
 from django.utils import timezone
 
 from ledger.utils.external_price import BUY
@@ -96,20 +96,27 @@ class Account(models.Model):
         else:
             return str(self.user)
 
-    def get_total_balance_usdt(self, market: str, side: str):
+    def get_total_balance_usdt(self):
         from ledger.models import Wallet, Asset
         from ledger.utils.price import get_last_price
 
-        wallets = Wallet.objects.filter(account=self, market=market).exclude(asset__symbol=Asset.IRT).prefetch_related('asset')
+        wallets = dict(Wallet.objects.filter(
+            account=self
+        ).exclude(
+            balance=0
+        ).exclude(
+            market=Wallet.VOUCHER
+        ).values('asset__symbol').annotate(
+            amount=Sum('balance')
+        ).values_list('asset__symbol', 'amount'))
 
         total = Decimal('0')
 
-        for wallet in wallets:
-            price = get_last_price(wallet.asset.symbol + Asset.USDT) or 0
-            balance = wallet.balance * price
+        for coin, balance in wallets.items():
+            price = get_last_price(coin + Asset.USDT) or 0
+            balance = balance * price
 
-            if balance:
-                total += balance
+            total += balance
 
         return total
 

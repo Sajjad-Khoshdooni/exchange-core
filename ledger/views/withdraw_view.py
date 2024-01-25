@@ -39,9 +39,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
         request = self.context['request']
         user = request.user
 
-        if not can_withdraw(user.get_account(), request) or not user.can_withdraw_crypto:
-            raise ValidationError('امکان برداشت وجود ندارد.')
-
         if user.is_suspended:
             td = persian_timedelta(user.suspended_until - timezone.now())
 
@@ -78,6 +75,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if from_panel and 'code' not in attrs:
                 raise ValidationError('کد وارد نشده است.')
 
+        amount = attrs['amount']
+        usdt_price = get_last_price(asset.symbol + Asset.IRT)
+        value_usdt = usdt_price and amount * usdt_price
+
+        if not can_withdraw(user.get_account(), request, value_usdt=value_usdt) or not user.can_withdraw_crypto:
+            raise ValidationError('امکان برداشت وجود ندارد.')
+
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
@@ -101,7 +105,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
                 raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
-        amount = attrs['amount']
 
         if not network_asset.can_withdraw_enabled():
             raise ValidationError(
@@ -142,10 +145,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 'در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
 
-        price = get_last_price(asset.symbol + Asset.IRT)
+        irt_price = get_last_price(asset.symbol + Asset.IRT)
 
-        if price:
-            irt_value = price * amount
+        if irt_price:
+            irt_value = irt_price * amount
 
             if user_reached_crypto_withdraw_limit(user, irt_value):
                 raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خود رسیده اید.'})

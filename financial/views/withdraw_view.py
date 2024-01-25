@@ -20,6 +20,7 @@ from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
 from financial.utils.withdraw_verify import auto_verify_fiat_withdraw
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
+from ledger.utils.price import get_last_price, USDT_IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.utils.withdraw_verify import can_withdraw
 
@@ -38,14 +39,15 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         request = self.context['request']
         user = request.user
         account = user.get_account()
+        amount = validated_data['amount']
+        usdt_price = get_last_price(USDT_IRT)
 
-        if not can_withdraw(account, request):
+        if not can_withdraw(account, request, value_usdt=usdt_price and amount / usdt_price):
             raise ValidationError('امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
 
-        amount = validated_data['amount']
         iban = validated_data['iban']
         code = validated_data['code']
         totp = validated_data.get('totp', None)
@@ -68,13 +70,13 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
             raise ValidationError({'iban': 'مقدار وارد شده کمتر از حد مجاز است.'})
 
-        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        today_withdraws = FiatWithdrawRequest.objects.filter(
-            bank_account=bank_account,
-            created__gte=today,
-        ).exclude(
-            status=FiatWithdrawRequest.CANCELED
-        ).aggregate(amount=Sum('amount'))['amount'] or 0
+        # today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        # today_withdraws = FiatWithdrawRequest.objects.filter(
+        #     bank_account=bank_account,
+        #     created__gte=today,
+        # ).exclude(
+        #     status=FiatWithdrawRequest.CANCELED
+        # ).aggregate(amount=Sum('amount'))['amount'] or 0
 
         # todo: move to gateway model
         if amount > MAX_WITHDRAW:

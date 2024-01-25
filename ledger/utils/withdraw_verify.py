@@ -1,5 +1,6 @@
 import dataclasses
 from datetime import timedelta
+from decimal import Decimal
 from typing import List
 
 from django.conf import settings
@@ -234,8 +235,8 @@ def get_withdraw_system_risks(transfer: Transfer) -> list:
     return risks
 
 
-def can_withdraw(account: Account, request) -> bool:  # todo :: check margin positive equity
-    withdraw_conditions = check_withdraw_conditions(account)
+def can_withdraw(account: Account, request, value_usdt: Decimal) -> bool:  # todo :: check margin positive equity
+    withdraw_conditions = check_withdraw_conditions(account, value_usdt)
 
     if not withdraw_conditions:
         hijacker_id = get_hijacker_id(request)
@@ -251,11 +252,15 @@ def can_withdraw(account: Account, request) -> bool:  # todo :: check margin pos
     return withdraw_conditions
 
 
-def check_withdraw_conditions(account: Account) -> bool:
+def check_withdraw_conditions(account: Account, value_usdt: Decimal) -> bool:
     if not settings.WITHDRAW_ENABLE or not account.user.can_withdraw:
         return False
 
-    if Wallet.objects.filter(account=account, market__in=[Wallet.DEBT, Wallet.SPOT], balance__lt=0):
+    if Wallet.objects.filter(account=account, market=Wallet.DEBT, balance__lt=0):
         return False
+
+    if Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__lt=0):
+        if account.get_total_balance_usdt() < value_usdt:
+            return False
 
     return True

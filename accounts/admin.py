@@ -747,7 +747,7 @@ class AccountAdmin(admin.ModelAdmin):
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
 
     def get_total_balance_usdt_admin(self, account: Account):
-        total_blance_usdt = account.get_total_balance_usdt(market=Wallet.SPOT, side=BUY)
+        total_blance_usdt = account.get_total_balance_usdt()
         return humanize_number(int(total_blance_usdt))
 
     get_total_balance_usdt_admin.short_description = 'دارایی به تتر'
