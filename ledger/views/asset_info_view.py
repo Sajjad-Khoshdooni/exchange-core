@@ -185,7 +185,7 @@ class AssetsViewSet(ModelViewSet):
 
     def get_options(self, key: str):
         options = {
-            'coin': self.request.query_params.get('coin') == '1',
+            'coin': self.request.query_params.get('coin'),
             'prices': self.request.query_params.get('prices') == '1',
             'trend': self.request.query_params.get('trend') == '1',
             'extra_info': self.request.query_params.get('extra_info') == '1',
@@ -228,7 +228,12 @@ class AssetsViewSet(ModelViewSet):
             queryset = queryset.filter(trend=True)
 
         if self.get_options('coin'):
-            queryset = queryset.exclude(symbol=Asset.IRT)
+            coin = self.get_options('coin')
+
+            if coin == '1':
+                queryset = queryset.exclude(symbol=Asset.IRT)
+            else:
+                queryset = queryset.filter(symbol=coin)
 
         if self.get_options('name'):
             queryset = queryset.filter(name=self.get_options('name'))
