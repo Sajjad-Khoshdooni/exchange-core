@@ -76,7 +76,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
                 raise ValidationError('کد وارد نشده است.')
 
         amount = attrs['amount']
-        usdt_price = get_last_price(asset.symbol + Asset.IRT)
+        usdt_price = get_last_price(asset.symbol + Asset.USDT)
         value_usdt = usdt_price and amount * usdt_price
 
         if not can_withdraw(user.get_account(), request, value_usdt=value_usdt) or not user.can_withdraw_crypto:
