@@ -726,6 +726,7 @@ class PaystarChannel(FiatWithdraw):
         mapping_status = {
             'pending': self.PENDING,
             'success': self.DONE,
+            'failed': self.CANCELED
         }
 
         status = mapping_status.get(data['status'], self.PENDING)
