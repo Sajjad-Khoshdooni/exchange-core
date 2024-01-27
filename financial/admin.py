@@ -218,7 +218,7 @@ class PaymentAdmin(admin.ModelAdmin):
                     'get_card_pan', 'get_user',)
     list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount', 'paymentrequest__authority',
-                     'user__phone')
+                     'user__phone', 'user__first_name', 'user__last_name')
     readonly_fields = ('user', 'group_id')
     actions = ('refund', )
 
