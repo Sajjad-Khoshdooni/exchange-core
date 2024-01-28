@@ -77,7 +77,7 @@ class JibitRequester:
             if request:
 
                 if request.status_code >= 500:
-                    raise ServerError
+                    raise ServerError('Jibit verifier request error')
 
                 return Response(data=request.response, success=request.status_code in (200, 201))
 
@@ -150,7 +150,7 @@ class JibitRequester:
             })
             print(resp_data)
 
-            raise ServerError
+            raise ServerError('Jibit verifier request error')
 
         return Response(data=resp_data, success=resp.ok)
 

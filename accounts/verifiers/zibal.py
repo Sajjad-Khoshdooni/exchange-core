@@ -86,7 +86,9 @@ class ZibalRequester:
                 'resp': resp_data,
                 'status': resp.status_code
             })
-            raise ServerError
+
+            raise ServerError('Zibal verifier request error')
+
         resp = Response(data=resp_data, status_code=resp.ok)
         return resp
 

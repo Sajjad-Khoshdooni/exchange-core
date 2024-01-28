@@ -120,7 +120,7 @@ class PayirChannel(FiatWithdraw):
             print('data', resp_data)
 
         if not resp.ok or not resp_data['success']:
-            raise ServerError
+            raise ServerError('Payir withdraw error')
 
         return resp_data['data']
 
@@ -479,7 +479,10 @@ class JibitChannel(FiatWithdraw):
                 )
 
             else:
-                raise ServerError
+                raise ServerError('Jibit withdraw error')
+
+        if resp.data.get('submittedCount', 0) == 0:
+            raise ServerError('Jibit submission failed')
 
         return Withdraw(
             tracking_id='',
@@ -729,7 +732,7 @@ class PaystarChannel(FiatWithdraw):
         })
 
         if not resp.success:
-            raise ServerError
+            raise ServerError('Paystar withdraw error')
 
         return Withdraw(
             tracking_id='',

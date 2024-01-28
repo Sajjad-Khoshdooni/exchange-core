@@ -72,7 +72,7 @@ class FinotechRequester:
             if request:
 
                 if request.status_code >= 500:
-                    raise ServerError
+                    raise ServerError('Finotech requester error')
 
                 if request.status_code not in (200, 201):
                     return
@@ -139,7 +139,7 @@ class FinotechRequester:
         req_object.save()
 
         if resp.status_code >= 500:
-            raise ServerError
+            raise ServerError('Finotech requester error')
 
         if not resp.ok:
             logger.error('failed to call finnotech', extra={
@@ -165,7 +165,7 @@ class FinotechRequester:
         )
 
         if not resp:
-            raise ServerError
+            raise ServerError('Finotech requester error')
 
         return resp['isValid']
 
@@ -192,7 +192,7 @@ class FinotechRequester:
         )
 
         if not resp:
-            raise ServerError
+            raise ServerError('Finotech requester error')
 
         return resp['isValid']
 
