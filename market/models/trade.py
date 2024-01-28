@@ -152,6 +152,8 @@ class Trade(BaseTrade):
         return top_prices
 
     def revert(self):
+        raise NotImplementedError('This code has bug in which to users trade with each other, revert affects both!')
+
         from ledger.utils.wallet_pipeline import WalletPipeline
         from ledger.models import Trx, Wallet
 
