@@ -12,7 +12,7 @@ class CoinCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CoinCategory
-        fields = ('name', 'title', 'description', 'header')
+        fields = ('name', 'title', 'description', 'header', 'meta_description')
 
 
 class CoinCategoryListView(ListAPIView):
