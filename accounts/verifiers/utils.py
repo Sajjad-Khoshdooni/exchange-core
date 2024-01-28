@@ -142,8 +142,8 @@ class Response:
     success: bool = True
     status_code: int = 200
 
-    def get_success_data(self):
+    def get_success_data(self, err: str = None):
         if not self.success:
-            raise ServerError
+            raise ServerError(err)
 
         return self.data

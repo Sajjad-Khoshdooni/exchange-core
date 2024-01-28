@@ -69,6 +69,7 @@ def update_provider_vaults(now: datetime, prices: dict):
                     VaultData(
                         coin=coin,
                         balance=balance,
+                        free=balance,
                         value_usdt=balance * prices.get(coin + Asset.USDT, 0),
                         value_irt=balance * prices.get(coin + Asset.IRT, 0)
                     )
@@ -101,6 +102,7 @@ def update_hot_wallet_vault(now: datetime, prices: dict):
             VaultData(
                 coin=coin,
                 balance=amount,
+                free=amount,
                 value_usdt=amount * prices.get(coin + Asset.USDT, 0),
                 value_irt=amount * prices.get(coin + Asset.IRT, 0),
             )
@@ -125,14 +127,16 @@ def update_gateway_vaults(now: datetime, prices: dict):
 
         try:
             handler = FiatWithdraw.get_withdraw_channel(gateway)
-            amount = handler.get_total_wallet_irt_value()
+            wallet = handler.get_wallet_data()
+            balance = Decimal(wallet.balance)
 
             vault.update_vault_all_items(now, [
                 VaultData(
                     coin=Asset.IRT,
-                    balance=amount,
-                    value_usdt=amount / prices[USDT_IRT],
-                    value_irt=amount
+                    balance=balance,
+                    free=Decimal(wallet.free),
+                    value_usdt=balance / prices[USDT_IRT],
+                    value_irt=balance
                 )
             ])
         except:
@@ -170,6 +174,7 @@ def update_bank_vaults(now: datetime, prices: dict):
             VaultData(
                 coin=Asset.IRT,
                 balance=amount,
+                free=amount,
                 value_usdt=amount / prices[USDT_IRT],
                 value_irt=amount
             )

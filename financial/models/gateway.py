@@ -49,6 +49,7 @@ class Gateway(models.Model):
     withdraw_api_key_encrypted = models.CharField(max_length=1024, blank=True)
     withdraw_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
     withdraw_api_password_encrypted = models.CharField(max_length=4096, blank=True)
+    withdraw_refresh_token_encrypted = models.CharField(max_length=4096, blank=True)
 
     deposit_api_key = models.CharField(max_length=1024, blank=True)
     deposit_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
@@ -79,6 +80,10 @@ class Gateway(models.Model):
     @property
     def withdraw_api_password(self):
         return decrypt(self.withdraw_api_password_encrypted)
+
+    @property
+    def withdraw_refresh_token(self):
+        return decrypt(self.withdraw_refresh_token_encrypted)
 
     @property
     def deposit_api_secret(self):

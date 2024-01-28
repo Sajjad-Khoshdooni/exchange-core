@@ -58,7 +58,7 @@ class GatewayAdmin(admin.ModelAdmin):
     def save_model(self, request, gateway: Gateway, form, change):
         encryption_fields = [
             'withdraw_api_key_encrypted', 'withdraw_api_secret_encrypted', 'withdraw_api_password_encrypted',
-            'deposit_api_secret_encrypted', 'payment_id_secret_encrypted'
+            'withdraw_refresh_token_encrypted', 'deposit_api_secret_encrypted', 'payment_id_secret_encrypted'
         ]
 
         old_gateway = gateway.id and Gateway.objects.get(id=gateway.id)
