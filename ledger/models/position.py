@@ -254,8 +254,9 @@ class MarginPosition(models.Model):
         if self.status != self.OPEN:
             return
 
-        self.status = self.TERMINATING
-        self.save(update_fields=['status'])
+        if charge_insurance:
+            self.status = self.TERMINATING
+            self.save(update_fields=['status'])
 
         from market.utils.order_utils import Order, new_order
         from ledger.models import Trx, Wallet

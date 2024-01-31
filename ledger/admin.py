@@ -425,6 +425,19 @@ class BalanceLockInline(admin.TabularInline):
         return qs.filter(Q(amount__gt=0))
 
 
+class WalletBalanceFilter(SimpleListFilter):
+    title = 'Balance'
+    parameter_name = 'balance'
+
+    def lookups(self, request, model_admin):
+        return [('non_zero', 'non_zero')]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'non_zero':
+            queryset = queryset.filter(balance__gt=0)
+        return queryset
+
+
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_username', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
@@ -432,7 +445,8 @@ class WalletAdmin(admin.ModelAdmin):
     inlines = [BalanceLockInline]
     list_filter = [
         ('asset', RelatedDropdownFilter),
-        WalletUserFilter
+        WalletUserFilter,
+        WalletBalanceFilter
     ]
     readonly_fields = ('account', 'asset', 'market', 'balance', 'locked', 'variant')
     search_fields = ('account__user__phone', 'asset__symbol')
