@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from ledger.models import Transfer
+from ledger.utils.fraud import verify_crypto_withdraw
 from ledger.utils.provider import get_provider_requester
 from ledger.withdraw.exchange import handle_provider_withdraw, change_to_manual
 
@@ -19,6 +20,8 @@ def create_provider_withdraw(transfer_id: int):
 
 @shared_task(queue='transfer')
 def update_provider_withdraw():
+    return
+
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
         source=Transfer.PROVIDER,
@@ -54,6 +57,10 @@ def create_withdraw(transfer_id: int):
 
     with transaction.atomic():
         transfer = Transfer.objects.select_for_update().get(id=transfer_id)
+
+        if not verify_crypto_withdraw(transfer):
+            logger.info('Ignoring cyrpto withdraw due to not verified')
+            return
 
         if transfer.in_freeze_time():
             return
@@ -127,6 +134,10 @@ def create_withdraw(transfer_id: int):
 
 @shared_task(queue='transfer')
 def update_withdraws():
+    if not verify_crypto_withdraw():
+        logger.info('Ignoring cyrpto withdraw due to not verified')
+        return
+
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
         source=Transfer.SELF,

@@ -13,7 +13,6 @@ from simple_history.models import HistoricalRecords
 from accounts.models import Account, EmailNotification, SmsNotification
 from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
-from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_system_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
@@ -22,6 +21,7 @@ from analytics.utils.dto import TransferEvent
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_group_id_field
+from ledger.utils.fraud import verify_fiat_withdraw
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_last_price, USDT_IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -97,6 +97,10 @@ class FiatWithdrawRequest(BaseTransfer):
             )
 
     def create_withdraw_request(self):
+        if not verify_fiat_withdraw(self):
+            logger.info('Ignoring fiat withdraw due to not verified')
+            return
+
         assert self.status == self.PROCESSING
 
         if self.ref_id:

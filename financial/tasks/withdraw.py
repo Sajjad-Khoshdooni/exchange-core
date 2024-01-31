@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from celery import shared_task
@@ -5,6 +6,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from financial.models import FiatWithdrawRequest, Gateway
+from ledger.utils.fraud import verify_fiat_withdraw
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='finance')
@@ -32,6 +36,10 @@ def update_withdraw_status():
 
 @shared_task(queue='finance')
 def update_withdraws():
+    if not verify_fiat_withdraw():
+        logger.info('Ignoring fiat withdraw due to not verified')
+        return
+
     withdraws = FiatWithdrawRequest.objects.filter(
         status=FiatWithdrawRequest.PROCESSING,
         created__lt=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)

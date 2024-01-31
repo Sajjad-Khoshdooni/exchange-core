@@ -578,7 +578,10 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):
-        queryset.filter(status=models.Transfer.INIT).update(
+        queryset.filter(
+            status=models.Transfer.INIT,
+            deposit=False,
+        ).update(
             status=models.Transfer.PROCESSING,
             accepted_datetime=timezone.now(),
             accepted_by=request.user
@@ -586,7 +589,7 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw(self, request, queryset):
-        for transfer in queryset.filter(status=models.Transfer.INIT):
+        for transfer in queryset.filter(deposit=False, status=models.Transfer.INIT):
             transfer.reject()
 
 
