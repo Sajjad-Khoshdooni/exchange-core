@@ -12,6 +12,7 @@ from accounts.utils.telegram import send_system_message
 from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import get_network_architecture
+from ledger.utils.fields import PENDING, DONE, CANCELED, INIT
 from ledger.utils.fraud import verify_crypto_deposit
 from ledger.utils.price import get_last_price
 
@@ -91,7 +92,7 @@ class DepositSerializer(serializers.ModelSerializer):
 
         status = validated_data.get('status')
 
-        if status not in (Transfer.PENDING, Transfer.DONE, Transfer.CANCELED):
+        if status not in (PENDING, DONE, CANCELED):
             raise ValidationError({'status': 'invalid status %s' % status})
 
         transfer = Transfer.objects.filter(
@@ -101,8 +102,8 @@ class DepositSerializer(serializers.ModelSerializer):
         ).order_by('-created').first()
 
         valid_transitions = [
-            (Transfer.PENDING, Transfer.DONE),
-            (Transfer.PENDING, Transfer.CANCELED),
+            (PENDING, DONE),
+            (PENDING, CANCELED),
         ]
 
         if transfer:
@@ -143,7 +144,7 @@ class DepositSerializer(serializers.ModelSerializer):
             )
 
         if not verify_crypto_deposit(transfer):
-            status = Transfer.INIT
+            status = INIT
             send_system_message("Verify deposit: %s" % transfer, link=url_to_edit_object(transfer))
 
         transfer.change_status(status)

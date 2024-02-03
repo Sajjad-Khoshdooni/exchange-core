@@ -1,5 +1,3 @@
-from http.client import PROCESSING
-
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
@@ -9,7 +7,7 @@ from accounts.models import Forget2FA, ChangePhone, Company
 from accounts.models.user import User
 from financial.models.withdraw_request import FiatWithdrawRequest
 from ledger.models import Transfer
-from ledger.utils.fields import PENDING, INIT
+from ledger.utils.fields import PENDING, INIT, PROCESS
 
 
 @staff_member_required
@@ -35,10 +33,10 @@ def dashboard(request):
         ).count()
 
         process_withdraw_requests = FiatWithdrawRequest.objects.filter(
-            status=PROCESSING,
+            status=PROCESS,
         ).count()
 
-        crypto_withdraw_count = Transfer.objects.filter(deposit=False, status=Transfer.INIT).count()
+        crypto_withdraw_count = Transfer.objects.filter(deposit=False, status=INIT).count()
 
         context = {
             'brand': settings.BRAND,

@@ -1,5 +1,4 @@
 from decimal import Decimal
-from http.client import PROCESSING
 
 from django import forms
 from django.conf import settings
@@ -28,7 +27,7 @@ from financial.utils.encryption import encrypt
 from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
 from gamify.utils import clone_model
-from ledger.utils.fields import PENDING, INIT, CANCELED, DONE
+from ledger.utils.fields import PENDING, INIT, CANCELED, DONE, PROCESS
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
@@ -147,7 +146,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw_request(self, request, queryset):
-        queryset.filter(status=INIT).update(status=PROCESSING)
+        queryset.filter(status=INIT).update(status=PROCESS)
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw_request(self, request, queryset):
@@ -165,7 +164,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     @admin.action(description='ارسال دوباره', permissions=['change'])
     def resend_withdraw_request(self, request, queryset):
-        queryset.filter(status=PENDING).update(status=PROCESSING)
+        queryset.filter(status=PENDING).update(status=PROCESS)
 
     def save_model(self, request, obj: FiatWithdrawRequest, form, change):
         if obj.id:

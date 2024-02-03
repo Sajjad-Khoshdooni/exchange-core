@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from ledger.models import Transfer
+from ledger.utils.fields import PROCESS, PENDING
 from ledger.utils.fraud import verify_crypto_withdraw
 from ledger.utils.provider import get_provider_requester
 from ledger.withdraw.exchange import handle_provider_withdraw, change_to_manual
@@ -25,7 +26,7 @@ def update_provider_withdraw():
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
         source=Transfer.PROVIDER,
-        status=Transfer.PROCESSING,
+        status=PROCESS,
     )
 
     for transfer in re_handle_transfers:
@@ -34,7 +35,7 @@ def update_provider_withdraw():
     transfers = Transfer.objects.filter(
         deposit=False,
         source=Transfer.PROVIDER,
-        status=Transfer.PENDING
+        status=PENDING
     )
 
     for transfer in transfers:
@@ -45,10 +46,10 @@ def update_provider_withdraw():
 
         status = data.status
 
-        if status == transfer.CANCELED:
+        if status == CANCELED:
             change_to_manual(transfer)
 
-        elif status == transfer.DONE:
+        elif status == DONE:
             transfer.accept(data.tx_id)
 
 
@@ -69,7 +70,7 @@ def create_withdraw(transfer_id: int):
             logger.info('ignored because non self source')
             return
 
-        if transfer.status != Transfer.PROCESSING:
+        if transfer.status != PROCESS:
             logger.info('ignored due to invalid status')
             return
 
@@ -92,7 +93,7 @@ def create_withdraw(transfer_id: int):
         resp_data = response.json()
 
         if response.ok:
-            transfer.status = Transfer.PENDING
+            transfer.status = PENDING
             transfer.save(update_fields=['status'])
 
         elif response.status_code == 400 and resp_data.get('type') == 'Invalid':
@@ -123,7 +124,7 @@ def create_withdraw(transfer_id: int):
         else:
             logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
 
-            transfer.status = Transfer.PENDING
+            transfer.status = PENDING
             transfer.save(update_fields=['status'])
 
             logger.warning('Error sending withdraw to blocklink', extra={
@@ -141,7 +142,7 @@ def update_withdraws():
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
         source=Transfer.SELF,
-        status=Transfer.PROCESSING,
+        status=PROCESS,
         created__lte=timezone.now() - timedelta(seconds=Transfer.FREEZE_SECONDS),
     )
 

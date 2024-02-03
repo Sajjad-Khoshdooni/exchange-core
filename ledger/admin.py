@@ -37,7 +37,7 @@ from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTran
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
-from ledger.utils.fields import DONE, PROCESS, PENDING, CANCELED
+from ledger.utils.fields import DONE, PROCESS, PENDING, CANCELED, INIT
 from ledger.utils.precision import get_presentation_amount, humanize_number, get_margin_coin_presentation_balance, \
     floor_precision
 from ledger.utils.provider import get_provider_requester
@@ -531,10 +531,10 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     actions = ('accept_withdraw', 'reject_withdraw', 'accept_deposit', 'reject_deposit')
 
     def save_model(self, request, obj: models.Transfer, form, change):
-        if obj.id and obj.status == models.Transfer.DONE:
+        if obj.id and obj.status == DONE:
             old = models.Transfer.objects.get(id=obj.id)
 
-            if old.status != models.Transfer.DONE:
+            if old.status != DONE:
                 old.accept(obj.trx_hash)
 
         obj.save()
@@ -593,23 +593,23 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):
         queryset.filter(
-            status=models.Transfer.INIT,
+            status=INIT,
             deposit=False,
         ).update(
-            status=models.Transfer.PROCESSING,
+            status=PROCESS,
             accepted_datetime=timezone.now(),
             accepted_by=request.user
         )
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw(self, request, queryset):
-        for transfer in queryset.filter(deposit=False, status=models.Transfer.INIT):
+        for transfer in queryset.filter(deposit=False, status=INIT):
             transfer.reject()
 
     @admin.action(description='تایید واریز', permissions=['change'])
     def accept_deposit(self, request, queryset):
         queryset = queryset.filter(
-            status=models.Transfer.INIT,
+            status=INIT,
             deposit=True,
         )
 
@@ -618,7 +618,7 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
     @admin.action(description='رد واریز', permissions=['change'])
     def reject_deposit(self, request, queryset):
-        for transfer in queryset.filter(deposit=False, status=models.Transfer.INIT):
+        for transfer in queryset.filter(deposit=False, status=INIT):
             transfer.reject()
 
 

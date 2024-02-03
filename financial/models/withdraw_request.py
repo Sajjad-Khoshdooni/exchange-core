@@ -1,6 +1,5 @@
 import logging
 import uuid
-from http.client import PROCESSING
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -21,7 +20,7 @@ from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
-from ledger.utils.fields import get_group_id_field, get_status_field, PENDING, CANCELED, DONE, REFUND
+from ledger.utils.fields import get_group_id_field, get_status_field, PENDING, CANCELED, DONE, REFUND, PROCESS
 from ledger.utils.fraud import verify_fiat_withdraw
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_last_price, USDT_IRT
@@ -93,7 +92,7 @@ class FiatWithdrawRequest(BaseTransfer):
             logger.info('Ignoring fiat withdraw due to not verified')
             return
 
-        assert self.status == PROCESSING
+        assert self.status == PROCESS
 
         if self.ref_id:
             self.status = PENDING
@@ -221,7 +220,7 @@ class FiatWithdrawRequest(BaseTransfer):
                 if new_status in (CANCELED, DONE):
                     pipeline.release_lock(withdraw.group_id)
 
-                if (old_status, new_status) in (PROCESSING, PENDING):
+                if (old_status, new_status) in (PROCESS, PENDING):
                     withdraw.withdraw_datetime = timezone.now()
                 elif new_status == DONE:
                     withdraw.build_trx(pipeline)

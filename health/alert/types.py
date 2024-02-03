@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
-from http.client import PROCESSING
 
 from django.db.models import F
 from django.utils import timezone
@@ -10,7 +9,7 @@ from accounting.models import Vault, VaultItem
 from financial.models import FiatWithdrawRequest
 from ledger.models import Transfer, OTCTrade, Asset, SystemSnapshot, NetworkAsset
 from ledger.requester.internal_assets_requester import get_hot_wallet_balances
-from ledger.utils.fields import PENDING
+from ledger.utils.fields import PENDING, PROCESS
 from ledger.utils.precision import get_presentation_amount
 
 
@@ -80,7 +79,7 @@ class UnhandledCryptoWithdrawAlert(BaseAlertHandler):
         return Transfer.objects.filter(
             deposit=False,
             accepted_datetime__isnull=False,
-            status__in=[Transfer.PROCESSING, Transfer.PENDING],
+            status__in=[PROCESS, PENDING],
             trx_hash__isnull=True,
             accepted_datetime__lt=timezone.now() - timedelta(minutes=int(threshold)),
         )
@@ -92,7 +91,7 @@ class CryptoLongConfirmationAlert(BaseAlertHandler):
 
     def get_alerting(self, threshold: Decimal):
         transfers = Transfer.objects.filter(
-            status=Transfer.PENDING,
+            status=PENDING,
             trx_hash__isnull=False,
             accepted_datetime__isnull=False,
         ).prefetch_related('network')
@@ -111,7 +110,7 @@ class UnhandledFiatWithdrawAlert(BaseAlertHandler):
 
     def get_alerting(self, threshold: Decimal):
         return FiatWithdrawRequest.objects.filter(
-            status__in=[PROCESSING],
+            status__in=[PROCESS],
             created__lt=timezone.now() - timedelta(minutes=int(threshold)),
         )
 

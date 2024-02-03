@@ -110,7 +110,7 @@ def trigger_users_event(threshold=1000):
 def trigger_transfer_event(threshold=1000):
     tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRANSFER)
     transfer_list = Transfer.objects.filter(
-        id__gt=tracker.last_id, status=Transfer.DONE
+        id__gt=tracker.last_id, status=DONE
     ).order_by('id')[:threshold]
 
     for transfer in transfer_list:
@@ -301,7 +301,7 @@ def trigger_prize_event(threshold=1000):
 def trigger_stake_event(threshold=1000):
     tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.STAKING)
     stake_request_list = StakeRequest.objects.filter(
-        id__gt=tracker.last_id, status=Transfer.DONE
+        id__gt=tracker.last_id, status=DONE
     ).order_by('id')[:threshold]
 
     for stake_request in stake_request_list:
