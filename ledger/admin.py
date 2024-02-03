@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import F, Sum, Q, OuterRef, Subquery, Value
 from django.db.models.functions import Coalesce
 from django.urls import reverse
@@ -613,8 +614,11 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
             deposit=True,
         )
 
-        for transfer in queryset:
-            transfer.accept()
+        with transaction.atomic():
+            queryset.update(accepted_datetime=timezone.now())
+
+            for transfer in queryset:
+                transfer.accept()
 
     @admin.action(description='رد واریز', permissions=['change'])
     def reject_deposit(self, request, queryset):
