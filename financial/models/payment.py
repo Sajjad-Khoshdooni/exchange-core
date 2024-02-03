@@ -12,6 +12,8 @@ from django.utils import timezone
 
 from accounts.models import Account, EmailNotification
 from accounts.models import Notification
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_system_message
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
@@ -99,7 +101,7 @@ class Payment(models.Model):
     description = models.CharField(max_length=DESCRIPTION_SIZE, blank=True)
 
     def __str__(self):
-        return f'{self.amount} IRT to {self.user}'
+        return f'{humanize_number(self.amount)} IRT to {self.user}'
 
     def alert_payment(self):
         user = self.user
@@ -127,6 +129,8 @@ class Payment(models.Model):
 
     def accept(self, pipeline: WalletPipeline, ref_id: int = None, system_verify: bool = True):
         if system_verify and not verify_fiat_deposit(self):
+            send_system_message("Verify deposit: %s" % self, link=url_to_edit_object(self))
+
             self.status = INIT
             self.ref_id = ref_id
             self.save(update_fields=['status', 'ref_id'])
