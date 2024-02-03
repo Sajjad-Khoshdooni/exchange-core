@@ -105,7 +105,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
         'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity',
         'get_withdraw_request_receive_time', 'get_withdraw_request_withdraw_time'
     )
-    search_fields = ('bank_account__iban', 'bank_account__user__phone')
+    search_fields = ('bank_account__iban', 'bank_account__user__phone', 'group_id', 'ref_id')
 
     list_display = ('created', 'bank_account', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
