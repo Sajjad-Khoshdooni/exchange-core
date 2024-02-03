@@ -528,7 +528,7 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     )
     exclude = ('risks',)
 
-    actions = ('accept_withdraw', 'reject_withdraw')
+    actions = ('accept_withdraw', 'reject_withdraw', 'accept_deposit', 'reject_deposit')
 
     def save_model(self, request, obj: models.Transfer, form, change):
         if obj.id and obj.status == models.Transfer.DONE:
@@ -603,6 +603,21 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw(self, request, queryset):
+        for transfer in queryset.filter(deposit=False, status=models.Transfer.INIT):
+            transfer.reject()
+
+    @admin.action(description='تایید واریز', permissions=['change'])
+    def accept_deposit(self, request, queryset):
+        queryset = queryset.filter(
+            status=models.Transfer.INIT,
+            deposit=True,
+        )
+
+        for transfer in queryset:
+            transfer.accept()
+
+    @admin.action(description='رد واریز', permissions=['change'])
+    def reject_deposit(self, request, queryset):
         for transfer in queryset.filter(deposit=False, status=models.Transfer.INIT):
             transfer.reject()
 
