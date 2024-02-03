@@ -20,7 +20,7 @@ from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
-from ledger.utils.fields import get_amount_field, get_address_field, CANCELED, DONE, PROCESS, STATUS_CHOICES, INIT
+from ledger.utils.fields import get_amount_field, get_address_field, CANCELED, DONE, PROCESS, INIT, get_status_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -54,12 +54,7 @@ class Transfer(models.Model):
 
     deposit = models.BooleanField()
 
-    status = models.CharField(
-        default=PROCESS,
-        max_length=8,
-        choices=STATUS_CHOICES,
-        db_index=True
-    )
+    status = get_status_field()
 
     trx_hash = models.CharField(max_length=128, db_index=True, null=True, blank=True)
 

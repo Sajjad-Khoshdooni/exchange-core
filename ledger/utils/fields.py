@@ -49,6 +49,7 @@ def get_status_field(default=PENDING):
     return models.CharField(
         default=default,
         max_length=8,
+        db_index=True,
         choices=[
             (INIT, 'در حال بررسی'), (PROCESS, 'در حال پردازش'), (PENDING, 'در انتظار تایید'), (CANCELED, 'لغو شده'), (DONE, 'انجام شده'),
             (REFUND, 'برگشت')
