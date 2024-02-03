@@ -96,7 +96,8 @@ class DepositSerializer(serializers.ModelSerializer):
         prev_transfer = Transfer.objects.filter(
             network=network,
             trx_hash=validated_data.get('trx_hash'),
-            deposit=True
+            deposit=True,
+            deposit_address=deposit_address
         ).order_by('-created').first()
 
         valid_transitions = [
