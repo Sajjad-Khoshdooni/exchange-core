@@ -35,11 +35,11 @@ from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'active', 'deposit_priority', 'active_for_staff',
+    list_display = ('name', 'type', 'active', 'deposit_priority', 'withdraw_priority', 'active_for_staff',
                     'ipg_deposit_enable', 'pay_id_deposit_enable', 'withdraw_enable',
                     'suspended', 'get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
     list_editable = ('active', 'active_for_staff', 'ipg_deposit_enable', 'pay_id_deposit_enable', 'withdraw_enable',
-                     'deposit_priority', 'suspended')
+                     'deposit_priority', 'withdraw_priority', 'suspended')
     readonly_fields = ('get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
     list_filter = ('active', 'type')
 
