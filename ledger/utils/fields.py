@@ -48,7 +48,7 @@ def get_status_field(default=PENDING):
         default=default,
         max_length=8,
         choices=[
-            (PROCESS, 'در حال پردازش'), (PENDING, 'در انتظار تایید'), (CANCELED, 'لغو شده'), (DONE, 'انجام شده'),
+            (INIT, 'در حال بررسی'), (PROCESS, 'در حال پردازش'), (PENDING, 'در انتظار تایید'), (CANCELED, 'لغو شده'), (DONE, 'انجام شده'),
             (REFUND, 'برگشت')
         ]
     )

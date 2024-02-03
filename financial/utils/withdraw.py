@@ -17,6 +17,7 @@ from financial.models.withdraw_request import BaseTransfer
 from financial.utils.ach import next_ach_clear_time
 from financial.utils.encryption import encrypt
 from financial.utils.withdraw_limit import is_holiday, time_in_range
+from ledger.utils.fields import PENDING, DONE, CANCELED
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +144,7 @@ class PayirChannel(FiatWithdraw):
 
         return Withdraw(
             tracking_id=str(data['cashout']['id']),
-            status=FiatWithdrawRequest.PENDING,
+            status=PENDING,
             receive_datetime=self.get_estimated_receive_time(timezone.now())
         )
 
@@ -276,10 +277,10 @@ class ZibalChannel(FiatWithdraw):
 
         if transfer.bank_account.bank not in paya_banks:
             checkout_delay = -1
-            status = FiatWithdrawRequest.DONE
+            status = DONE
         else:
             checkout_delay = 0
-            status = FiatWithdrawRequest.PENDING
+            status = PENDING
 
         try:
             data = self.collect_api('/v1/wallet/checkout/plus', method='POST', data={
@@ -299,21 +300,21 @@ class ZibalChannel(FiatWithdraw):
             if 'این درخواست تسویه قبلا ثبت شده است' in message:
                 return Withdraw(
                     tracking_id='',
-                    status=FiatWithdrawRequest.PENDING,
+                    status=PENDING,
                     receive_datetime=timezone.now() + timedelta(hours=3),
                     message=message,
                 )
             elif 'این حساب مسدود شده و یا قابلیت واریز ندارد' in message:
                 return Withdraw(
                     tracking_id='',
-                    status=FiatWithdrawRequest.CANCELED,
+                    status=CANCELED,
                     receive_datetime=None,
                     message=message,
                 )
             elif 'باقی مانده سقف روزانه تسویه به این شبا' in message:
                 return Withdraw(
                     tracking_id='',
-                    status=FiatWithdrawRequest.CANCELED,
+                    status=CANCELED,
                     receive_datetime=None,
                     message=message,
                 )
@@ -475,7 +476,7 @@ class JibitChannel(FiatWithdraw):
             if resp.data['errors'][0]['code'] == 'transfer.already_exists':
                 return Withdraw(
                     tracking_id='',
-                    status=FiatWithdrawRequest.PENDING,
+                    status=PENDING,
                 )
 
             else:
@@ -486,7 +487,7 @@ class JibitChannel(FiatWithdraw):
 
         return Withdraw(
             tracking_id='',
-            status=FiatWithdrawRequest.PENDING,
+            status=PENDING,
             receive_datetime=next_ach_clear_time()
         )
 
@@ -736,7 +737,7 @@ class PaystarChannel(FiatWithdraw):
 
         return Withdraw(
             tracking_id='',
-            status=FiatWithdrawRequest.PENDING,
+            status=PENDING,
             receive_datetime=next_ach_clear_time()
         )
 

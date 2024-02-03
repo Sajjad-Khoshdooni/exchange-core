@@ -14,28 +14,28 @@ def _ban_transfer(crypto: bool, deposit: bool) -> bool:
                (not crypto and config.withdraw_status == config.BAN_FIAT)
 
 
-def verify_crypto_withdraw(transfer = None) -> bool:
+def verify_crypto_withdraw(transfer=None) -> bool:
     if _ban_transfer(crypto=True, deposit=False):
         return False
 
     return True
 
 
-def verify_crypto_deposit(transfer = None) -> bool:
+def verify_crypto_deposit(transfer=None) -> bool:
     if _ban_transfer(crypto=True, deposit=True):
         return False
 
     return True
 
 
-def verify_fiat_withdraw(transfer = None) -> bool:
+def verify_fiat_withdraw(transfer=None) -> bool:
     if _ban_transfer(crypto=False, deposit=False):
         return False
 
     return True
 
 
-def verify_fiat_deposit(transfer = None) -> bool:
+def verify_fiat_deposit(payment=None) -> bool:
     if _ban_transfer(crypto=False, deposit=True):
         return False
 

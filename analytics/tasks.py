@@ -136,7 +136,7 @@ def trigger_fiat_transfer_event(threshold=1000):
     tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.FIAT_WITHDRAW)
     fiat_transfer_list = FiatWithdrawRequest.objects.filter(
         id__gt=tracker.last_id,
-        status=FiatWithdrawRequest.DONE
+        status=DONE
     ).order_by('id')[:threshold]
 
     for fiat_transfer in fiat_transfer_list:

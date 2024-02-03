@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
+from http.client import PROCESSING
 
 from django.db.models import F
 from django.utils import timezone
@@ -9,6 +10,7 @@ from accounting.models import Vault, VaultItem
 from financial.models import FiatWithdrawRequest
 from ledger.models import Transfer, OTCTrade, Asset, SystemSnapshot, NetworkAsset
 from ledger.requester.internal_assets_requester import get_hot_wallet_balances
+from ledger.utils.fields import PENDING
 from ledger.utils.precision import get_presentation_amount
 
 
@@ -109,7 +111,7 @@ class UnhandledFiatWithdrawAlert(BaseAlertHandler):
 
     def get_alerting(self, threshold: Decimal):
         return FiatWithdrawRequest.objects.filter(
-            status__in=[FiatWithdrawRequest.PROCESSING],
+            status__in=[PROCESSING],
             created__lt=timezone.now() - timedelta(minutes=int(threshold)),
         )
 
@@ -120,7 +122,7 @@ class LongPendingFiatWithdrawAlert(BaseAlertHandler):
 
     def get_alerting(self, threshold: Decimal):
         return FiatWithdrawRequest.objects.filter(
-            status__in=[FiatWithdrawRequest.PENDING],
+            status__in=[PENDING],
             created__lt=timezone.now() - timedelta(minutes=int(threshold)),
         )
 

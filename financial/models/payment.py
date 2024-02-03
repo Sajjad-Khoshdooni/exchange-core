@@ -15,8 +15,9 @@ from accounts.models import Notification
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
-from ledger.utils.fields import DONE, REFUND
+from ledger.utils.fields import DONE, REFUND, INIT
 from ledger.utils.fields import get_group_id_field, get_status_field
+from ledger.utils.fraud import verify_fiat_deposit
 from ledger.utils.precision import humanize_number, get_presentation_amount
 from ledger.utils.price import get_last_price, USDT_IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -104,7 +105,7 @@ class Payment(models.Model):
         user = self.user
         title = 'واریز وجه با موفقیت انجام شد'
         payment_amount = humanize_number(get_presentation_amount(Decimal(self.amount)))
-        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amount)
+        description = 'مبلغ {} تومان به حساب شما واریز شد.'.format(payment_amount)
 
         Notification.send(
             recipient=user,
@@ -124,7 +125,13 @@ class Payment(models.Model):
             }
         )
 
-    def accept(self, pipeline: WalletPipeline, ref_id: int = None):
+    def accept(self, pipeline: WalletPipeline, ref_id: int = None, system_verify: bool = True):
+        if system_verify and not verify_fiat_deposit(self):
+            self.status = INIT
+            self.ref_id = ref_id
+            self.save(update_fields=['status', 'ref_id'])
+            return
+
         asset = Asset.get(Asset.IRT)
         user = self.user
         account = user.get_account()
