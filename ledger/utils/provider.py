@@ -216,11 +216,9 @@ class ProviderRequester:
             'coin': asset.symbol,
             'scope': scope,
             'amount': str(amount),
-            'side': side
+            'side': side,
+            'price': price and str(price)
         }
-
-        if price:
-            data['price'] = str(price)
 
         resp = self.collect_api('/api/v1/orders/', method='POST', data=data, timeout=15)
 
