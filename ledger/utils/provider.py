@@ -224,6 +224,9 @@ class ProviderRequester:
 
         resp = self.collect_api('/api/v1/orders/', method='POST', data=data, timeout=15)
 
+        if not resp.success:
+            logger.info('provider new order failed with status=%s and %s' % (resp.status_code, resp.data))
+
         return resp.success
 
     def new_withdraw(self, transfer: Transfer) -> Response:
