@@ -149,7 +149,7 @@ class ProviderRequester:
             buy_amount = -buy_amount
             side = SELL
 
-        round_digits = -int(log10(step_size))
+        round_digits = min(-int(log10(step_size)), 8)
 
         order_amount = round(buy_amount, round_digits)
 
@@ -194,7 +194,7 @@ class ProviderRequester:
                 )
 
         if hedge_price:
-            hedge_price = floor_precision(hedge_price, -int(log10(market_info.tick_size)))
+            hedge_price = floor_precision(hedge_price, min(-int(log10(market_info.tick_size)), 8))
 
         order = self.new_order(
             request_id=request_id,
