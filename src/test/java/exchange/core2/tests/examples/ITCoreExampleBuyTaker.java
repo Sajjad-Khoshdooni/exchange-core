@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.Future;
 
 @Slf4j
-public class ITCoreExample2 {
+public class ITCoreExampleBuyTaker {
 
     @Test
     public void sampleTest() throws Exception {
@@ -114,24 +114,24 @@ public class ITCoreExample2 {
 
         // first user deposits 20 LTC
         future = api.submitCommandAsync(ApiAdjustUserBalance.builder()
-                .uid(301L)
+                .uid(302L)
                 .currency(currencyCodeLtc)
                 .amount(2_000_000_000L)
                 .transactionId(1L)
                 .build());
 
-        System.out.println("ApiAdjustUserBalance 1 result: " + future.get());
+        System.out.println("ApiAdjustUserBalance 2 result: " + future.get());
 
 
         // second user deposits 0.10 BTC
         future = api.submitCommandAsync(ApiAdjustUserBalance.builder()
-                .uid(302L)
+                .uid(301L)
                 .currency(currencyCodeXbt)
                 .amount(10_000_000L)
                 .transactionId(2L)
                 .build());
 
-        System.out.println("ApiAdjustUserBalance 2 result: " + future.get());
+        System.out.println("ApiAdjustUserBalance 1 result: " + future.get());
 
 
         Future<SingleUserReportResult> report1 = api.processReport(new SingleUserReportQuery(301), 0);
@@ -151,7 +151,7 @@ public class ITCoreExample2 {
                 .price(15_400L)
                 .reservePrice(15_400L) // can move bid order up to the 1.56 LTC, without replacing it
                 .size(10L) // order size is 12 lots
-                .action(OrderAction.BID)
+                .action(OrderAction.ASK)
                 .orderType(OrderType.GTC) // Good-till-Cancel
                 .symbol(symbolXbtLtc)
                 .build());
@@ -165,38 +165,14 @@ public class ITCoreExample2 {
                 .uid(302L)
                 .orderId(5002L)
                 .price(15_400L)
+                .reservePrice(15_400L) // can move bid order up to the 1.56 LTC, without replacing it
                 .size(10L) // order size is 10 lots
-                .action(OrderAction.ASK)
-                .orderType(OrderType.IOC) // Immediate-or-Cancel
+                .action(OrderAction.BID)
+                .orderType(OrderType.GTC) // Immediate-or-Cancel
                 .symbol(symbolXbtLtc)
                 .build());
 
         System.out.println("ApiPlaceOrder 2 result: " + future.get());
-
-
-        // request order book
-//        CompletableFuture<L2MarketData> orderBookFuture = api.requestOrderBookAsync(symbolXbtLtc, 10);
-//        System.out.println("ApiOrderBookRequest result: " + orderBookFuture.get());
-
-
-        // first user moves remaining order to price 1.53 LTC
-//        future = api.submitCommandAsync(ApiMoveOrder.builder()
-//                .uid(301L)
-//                .orderId(5001L)
-//                .newPrice(15_300L)
-//                .symbol(symbolXbtLtc)
-//                .build());
-//
-//        System.out.println("ApiMoveOrder 2 result: " + future.get());
-
-//        // first user cancel remaining order
-//        future = api.submitCommandAsync(ApiCancelOrder.builder()
-//                .uid(301L)
-//                .orderId(5001L)
-//                .symbol(symbolXbtLtc)
-//                .build());
-//
-//        System.out.println("ApiCancelOrder 2 result: " + future.get());
 
         // check balances
         report1 = api.processReport(new SingleUserReportQuery(301), 0);
@@ -204,18 +180,6 @@ public class ITCoreExample2 {
 
         report2 = api.processReport(new SingleUserReportQuery(302), 0);
         System.out.println("SingleUserReportQuery 2 accounts: " + report2.get().getAccounts());
-
-
-
-//        // first user withdraws 0.10 BTC
-//        future = api.submitCommandAsync(ApiAdjustUserBalance.builder()
-//                .uid(301L)
-//                .currency(currencyCodeXbt)
-//                .amount(-10_000_000L)
-//                .transactionId(3L)
-//                .build());
-//
-//        System.out.println("ApiAdjustUserBalance 1 result: " + future.get());
 
         // check fees collected
         Future<TotalCurrencyBalanceReportResult> totalsReport = api.processReport(new TotalCurrencyBalanceReportQuery(), 0);
