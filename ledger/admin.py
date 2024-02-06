@@ -536,7 +536,7 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
             old = models.Transfer.objects.get(id=obj.id)
 
             if old.status != DONE:
-                old.accept(obj.trx_hash)
+                old.accept()
 
         obj.save()
 
