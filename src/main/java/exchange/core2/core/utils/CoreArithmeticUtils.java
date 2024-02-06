@@ -30,7 +30,7 @@ public final class CoreArithmeticUtils {
     }
 
     public static long calculateAmountBidTakerFee(long size, long price, CoreSymbolSpecification spec) {
-        return size * (price * spec.quoteScaleK + spec.takerFee);
+        return size * (price * spec.quoteScaleK);
     }
 
     public static long calculateAmountBidReleaseCorrMaker(long size, long priceDiff, CoreSymbolSpecification spec) {

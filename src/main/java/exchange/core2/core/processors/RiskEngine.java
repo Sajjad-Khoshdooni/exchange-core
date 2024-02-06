@@ -691,11 +691,13 @@ public final class RiskEngine implements WriteBytesMarshallable {
         //log.debug("TRADE EXCH SELL {}", ev);
 
         long takerSizeForThisHandler = 0L;
-        long makerSizeForThisHandler = 0L;
 
         long takerSizePriceForThisHandler = 0L;
 
-        final int quoteCurrency = spec.quoteCurrency;
+        long totalMakerFee = 0L;
+
+        final int quoteCurrency = spec.quoteCurrency; // LTC
+        final int baseCurrency = spec.baseCurrency; // BTC
 
         while (ev != null) {
             assert ev.eventType == MatcherEventType.TRADE;
@@ -713,25 +715,29 @@ public final class RiskEngine implements WriteBytesMarshallable {
 
                 // buying, use bidderHoldPrice to calculate released amount based on price difference
                 final long priceDiff = ev.bidderHoldPrice - ev.price;
-                final long amountDiffToReleaseInQuoteCurrency = CoreArithmeticUtils.calculateAmountBidReleaseCorrMaker(size, priceDiff, spec);
-                maker.accounts.addToValue(quoteCurrency, amountDiffToReleaseInQuoteCurrency);
+//                final long amountDiffToReleaseInQuoteCurrency = CoreArithmeticUtils.calculateAmountBidReleaseCorrMaker(size, priceDiff, spec) * spec.quoteScaleK;
+                // + size * spec.makerFee * spec.quoteScaleK
+//                maker.accounts.addToValue(quoteCurrency, amountDiffToReleaseInQuoteCurrency);
 
                 final long gainedAmountInBaseCurrency = CoreArithmeticUtils.calculateAmountAsk(size, spec);
-                maker.accounts.addToValue(spec.baseCurrency, gainedAmountInBaseCurrency);
-
-                makerSizeForThisHandler += size;
+                long fee = gainedAmountInBaseCurrency * spec.makerFee / spec.baseScaleK ;
+                totalMakerFee += fee;
+                maker.accounts.addToValue(baseCurrency, gainedAmountInBaseCurrency - fee);
             }
 
             ev = ev.nextEvent;
         }
 
         if (taker != null) {
-            taker.accounts.addToValue(quoteCurrency, takerSizePriceForThisHandler * spec.quoteScaleK - spec.takerFee * takerSizeForThisHandler);
+            taker.accounts.addToValue(quoteCurrency, takerSizePriceForThisHandler * spec.quoteScaleK - spec.takerFee * takerSizePriceForThisHandler);
         }
 
-        if (takerSizeForThisHandler != 0 || makerSizeForThisHandler != 0) {
+        if (takerSizePriceForThisHandler != 0) {
+            fees.addToValue(quoteCurrency, spec.takerFee * takerSizePriceForThisHandler);
+        }
 
-            fees.addToValue(quoteCurrency, spec.takerFee * takerSizeForThisHandler + spec.makerFee * makerSizeForThisHandler);
+        if (totalMakerFee != 0) {
+            fees.addToValue(baseCurrency, totalMakerFee);
         }
     }
 
