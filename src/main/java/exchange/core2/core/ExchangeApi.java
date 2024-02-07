@@ -479,6 +479,8 @@ public final class ExchangeApi {
     private static final EventTranslatorOneArg<OrderCommand, ApiAddUser> ADD_USER_TRANSLATOR = (cmd, seq, api) -> {
         cmd.command = OrderCommandType.ADD_USER;
         cmd.uid = api.uid;
+        cmd.makerFee = api.makerFee;
+        cmd.takerFee = api.takerFee;
         cmd.timestamp = api.timestamp;
         cmd.resultCode = CommandResultCode.NEW;
     };

@@ -30,6 +30,8 @@ import java.util.Objects;
 public final class UserProfile implements WriteBytesMarshallable, StateHash {
 
     public final long uid;
+    public final long makerFee;
+    public final long takerFee;
 
     // symbol -> margin position records
     // TODO initialize lazily (only needed if margin trading allowed)
@@ -44,18 +46,26 @@ public final class UserProfile implements WriteBytesMarshallable, StateHash {
 
     public UserStatus userStatus;
 
-    public UserProfile(long uid, UserStatus userStatus) {
+    public UserProfile(long uid, long makerFee, long takerFee, UserStatus userStatus) {
         //log.debug("New {}", uid);
         this.uid = uid;
         this.positions = new IntObjectHashMap<>();
         this.adjustmentsCounter = 0L;
         this.accounts = new IntLongHashMap();
         this.userStatus = userStatus;
+        this.makerFee = makerFee;
+        this.takerFee = takerFee;
+    }
+
+    public UserProfile(long uid, UserStatus userStatus) {
+        this(uid, 0L, 0L, userStatus);
     }
 
     public UserProfile(BytesIn bytesIn) {
 
         this.uid = bytesIn.readLong();
+        this.makerFee = bytesIn.readLong();
+        this.takerFee = bytesIn.readLong();
 
         // positions
         this.positions = SerializationUtils.readIntHashMap(bytesIn, b -> new SymbolPositionRecord(uid, b));
@@ -82,6 +92,8 @@ public final class UserProfile implements WriteBytesMarshallable, StateHash {
     public void writeMarshallable(BytesOut bytes) {
 
         bytes.writeLong(uid);
+        bytes.writeLong(makerFee);
+        bytes.writeLong(takerFee);
 
         // positions
         SerializationUtils.marshallIntHashMap(positions, bytes);

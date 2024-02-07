@@ -112,14 +112,17 @@ public final class UserProfileService implements WriteBytesMarshallable, StateHa
      * @param uid uid
      * @return true if user was added
      */
-    public boolean addEmptyUserProfile(long uid) {
+    public boolean addEmptyUserProfile(long uid, long makerFee, long takerFee) {
         if (userProfiles.get(uid) == null) {
-            userProfiles.put(uid, new UserProfile(uid, UserStatus.ACTIVE));
+            userProfiles.put(uid, new UserProfile(uid,makerFee, takerFee, UserStatus.ACTIVE));
             return true;
         } else {
             log.debug("Can not add user, already exists: {}", uid);
             return false;
         }
+    }
+    public boolean addEmptyUserProfile(long uid) {
+        return this.addEmptyUserProfile(uid, 0L, 0L);
     }
 
     /**
@@ -160,7 +163,7 @@ public final class UserProfileService implements WriteBytesMarshallable, StateHa
         if (userProfile == null) {
             // create new empty user profile
             // account balance adjustments should be applied later
-            userProfiles.put(uid, new UserProfile(uid, UserStatus.ACTIVE));
+            userProfiles.put(uid, new UserProfile(uid,0L, 0L, UserStatus.ACTIVE));
             return CommandResultCode.SUCCESS;
         } else if (userProfile.userStatus != UserStatus.SUSPENDED) {
             // attempt to resume non-suspended account (or resume twice)

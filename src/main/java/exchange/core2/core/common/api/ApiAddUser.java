@@ -26,9 +26,14 @@ import lombok.EqualsAndHashCode;
 public final class ApiAddUser extends ApiCommand {
 
     public final long uid;
+    @Builder.Default
+    public final long makerFee = 0L;
+    @Builder.Default
+    public final long takerFee = 0L;
+
 
     @Override
     public String toString() {
-        return "[ADDUSER " + uid + "]";
+        return "[ADDUSER " + uid + ", makerFee:" + makerFee + ", takerFee:"+ takerFee + "]";
     }
 }

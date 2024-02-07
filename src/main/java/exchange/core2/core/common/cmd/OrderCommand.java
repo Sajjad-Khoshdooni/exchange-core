@@ -56,6 +56,12 @@ public final class OrderCommand implements IOrder {
     public long uid;
 
     @Getter
+    public long makerFee;
+
+    @Getter
+    public long takerFee;
+
+    @Getter
     public long timestamp;
 
     public int userCookie;
