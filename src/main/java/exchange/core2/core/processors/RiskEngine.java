@@ -753,7 +753,10 @@ public final class RiskEngine implements WriteBytesMarshallable {
         long takerSizePriceSum = 0L;
         long takerSizePriceHeldSum = 0L;
 
+        long totalMakerFee = 0L;
+
         final int quoteCurrency = spec.quoteCurrency;
+        final int baseCurrency = spec.baseCurrency;
 
         while (ev != null) {
             assert ev.eventType == MatcherEventType.TRADE;
@@ -772,7 +775,9 @@ public final class RiskEngine implements WriteBytesMarshallable {
                 final long size = ev.size;
                 final UserProfile maker = userProfileService.getUserProfileOrAddSuspended(ev.matchedOrderUid);
                 final long gainedAmountInQuoteCurrency = CoreArithmeticUtils.calculateAmountBid(size, ev.price, spec);
-                maker.accounts.addToValue(quoteCurrency, gainedAmountInQuoteCurrency - spec.makerFee * size);
+                long fee = spec.makerFee * size * ev.price;
+                totalMakerFee += fee;
+                maker.accounts.addToValue(quoteCurrency, gainedAmountInQuoteCurrency - fee);
                 makerSizeForThisHandler += size;
             }
 
@@ -786,13 +791,15 @@ public final class RiskEngine implements WriteBytesMarshallable {
                 takerSizePriceHeldSum = cmd.price;
             }
             // TODO IOC_BUDGET - order can be partially rejected - need held taker fee correction
-
             taker.accounts.addToValue(quoteCurrency, (takerSizePriceHeldSum - takerSizePriceSum) * spec.quoteScaleK);
-            taker.accounts.addToValue(spec.baseCurrency, takerSizeForThisHandler * spec.baseScaleK);
+            taker.accounts.addToValue(baseCurrency, takerSizeForThisHandler * spec.baseScaleK - spec.takerFee * takerSizeForThisHandler);
         }
 
-        if (takerSizeForThisHandler != 0 || makerSizeForThisHandler != 0) {
-            fees.addToValue(quoteCurrency, spec.takerFee * takerSizeForThisHandler + spec.makerFee * makerSizeForThisHandler);
+        if (takerSizeForThisHandler != 0) {
+            fees.addToValue(baseCurrency, spec.takerFee * takerSizeForThisHandler);
+        }
+        if (totalMakerFee != 0) {
+            fees.addToValue(quoteCurrency, totalMakerFee);
         }
     }
 
