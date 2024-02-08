@@ -19,7 +19,6 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from financial.models import BankAccount
-from financial.utils.withdraw import NoChannelError
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_group_id_field, get_status_field, PENDING, CANCELED, DONE, REFUND, PROCESS
 from ledger.utils.fraud import verify_fiat_withdraw
@@ -89,6 +88,8 @@ class FiatWithdrawRequest(BaseTransfer):
             )
 
     def create_withdraw_request(self):
+        from financial.utils.withdraw import NoChannelError
+
         if not verify_fiat_withdraw(self):
             logger.info('Ignoring fiat withdraw due to not verified')
             return
