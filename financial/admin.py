@@ -289,7 +289,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     list_display = ('created', 'card_pan', 'get_username', 'verified', 'deleted')
     list_filter = (BankCardUserFilter,)
     search_fields = ('card_pan', )
-    readonly_fields = ('user', )
+    raw_id_fields = ('user',)
 
     actions = ['verify_bank_cards', 'verify_bank_cards_manual', 'reject_bank_cards_manual']
 
@@ -349,7 +349,7 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     list_display = ('created', 'iban', 'get_username', 'verified', 'deleted')
     list_filter = (BankUserFilter, )
     search_fields = ('iban', )
-    readonly_fields = ('user', )
+    raw_id_fields = ('user',)
 
     actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto', 'reject_bank_accounts_manual']
 
@@ -462,9 +462,9 @@ class PaymentIdAdmin(admin.ModelAdmin):
     list_display = ('created', 'updated', 'user', 'pay_id', 'verified', 'deleted')
     search_fields = ('user__phone', 'pay_id')
     list_filter = ('verified',)
-    readonly_fields = ('user', )
+    readonly_fields = ('group_id', )
     actions = ('check_status', )
-    list_editable = ('deleted', )
+    raw_id_fields = ('user',)
 
     @admin.action(description='Check Status', permissions=['view'])
     def check_status(self, request, queryset):
