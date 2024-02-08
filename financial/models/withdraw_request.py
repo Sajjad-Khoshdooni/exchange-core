@@ -19,6 +19,7 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from financial.models import BankAccount
+from financial.utils.withdraw import NoChannelError
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_group_id_field, get_status_field, PENDING, CANCELED, DONE, REFUND, PROCESS
 from ledger.utils.fraud import verify_fiat_withdraw
@@ -102,7 +103,10 @@ class FiatWithdrawRequest(BaseTransfer):
         from financial.utils.withdraw import ProviderError
         from financial.utils.withdraw import FiatWithdraw
 
-        api_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
+        try:
+            api_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
+        except NoChannelError:
+            return
 
         self.withdraw_datetime = timezone.now()
 
