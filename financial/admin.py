@@ -458,7 +458,7 @@ class PaymentIdRequestAdmin(admin.ModelAdmin):
 
 
 @admin.register(PaymentId)
-class PaymentIdAdmin(admin.ModelAdmin):
+class PaymentIdAdmin(AdvancedAdmin):
     list_display = ('created', 'updated', 'user', 'pay_id', 'verified', 'deleted')
     search_fields = ('user__phone', 'pay_id')
     list_filter = ('verified',)
@@ -466,11 +466,24 @@ class PaymentIdAdmin(admin.ModelAdmin):
     actions = ('check_status', )
     raw_id_fields = ('user',)
 
+    default_edit_condition = M('id')
+    fields_edit_conditions = {
+        'gateway': True,
+        'user': True
+    }
+
     @admin.action(description='Check Status', permissions=['view'])
     def check_status(self, request, queryset):
         for payment_id in queryset.filter(verified=False):
             client = get_payment_id_client(payment_id.gateway)
             client.check_payment_id_status(payment_id)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.id:
+            client = get_payment_id_client(obj.gateway)
+            client.create_payment_id(obj.user)
+        else:
+            obj.save()
 
 
 @admin.register(GeneralBankAccount)
