@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
 
+from accounting.models import VaultItem, Vault
 from accounts.models import User, SystemConfig
 from financial.models import BankCard, Payment, PaymentRequest
 from financial.utils.admin import MultiSelectArrayField
@@ -98,6 +99,14 @@ class Gateway(models.Model):
     @property
     def payment_id_secret(self):
         return decrypt(self.payment_id_secret_encrypted)
+
+    def get_balance(self) -> Decimal:
+        v = VaultItem.objects.filter(vault__type=Vault.GATEWAY, vault__key=self.id).first()
+        return v.balance
+
+    def get_free(self) -> Decimal:
+        v = VaultItem.objects.filter(vault__type=Vault.GATEWAY, vault__key=self.id).first()
+        return v.free
 
     @classmethod
     def get_withdraw_fee(cls, amount):

@@ -35,9 +35,11 @@ from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'active', 'deposit_priority', 'withdraw_priority', 'active_for_staff',
-                    'ipg_deposit_enable', 'pay_id_deposit_enable', 'withdraw_enable',
-                    'suspended', 'get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
+    list_display = (
+        'name', 'type', 'active', 'deposit_priority', 'withdraw_priority',
+        'ipg_deposit_enable', 'pay_id_deposit_enable', 'withdraw_enable', 'get_free', 'get_balance',
+        'get_min_deposit_amount', 'get_max_deposit_amount', 'suspended', 'active_for_staff',
+    )
     list_editable = ('active', 'active_for_staff', 'ipg_deposit_enable', 'pay_id_deposit_enable', 'withdraw_enable',
                      'deposit_priority', 'withdraw_priority', 'suspended')
     readonly_fields = ('get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
@@ -45,8 +47,11 @@ class GatewayAdmin(admin.ModelAdmin):
 
     @admin.display(description='balance')
     def get_balance(self, gateway: Gateway):
-        v = VaultItem.objects.filter(vault__type=Vault.GATEWAY, vault__key=gateway.id).first()
-        return v and v.value_irt
+        return int(gateway.get_balance())
+
+    @admin.display(description='free')
+    def get_free(self, gateway: Gateway):
+        return int(gateway.get_free())
 
     @admin.display(description='min deposit')
     def get_min_deposit_amount(self, gateway: Gateway):
