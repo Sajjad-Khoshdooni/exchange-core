@@ -47,11 +47,15 @@ class GatewayAdmin(admin.ModelAdmin):
 
     @admin.display(description='balance')
     def get_balance(self, gateway: Gateway):
-        return int(gateway.get_balance())
+        balance = gateway.get_balance()
+        if balance is not None:
+            return int(balance)
 
     @admin.display(description='free')
     def get_free(self, gateway: Gateway):
-        return int(gateway.get_free())
+        free = gateway.get_free()
+        if free is not None:
+            return int(free)
 
     @admin.display(description='min deposit')
     def get_min_deposit_amount(self, gateway: Gateway):

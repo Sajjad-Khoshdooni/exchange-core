@@ -100,13 +100,13 @@ class Gateway(models.Model):
     def payment_id_secret(self):
         return decrypt(self.payment_id_secret_encrypted)
 
-    def get_balance(self) -> Decimal:
+    def get_balance(self) -> Union[Decimal, None]:
         v = VaultItem.objects.filter(vault__type=Vault.GATEWAY, vault__key=self.id).first()
-        return v.balance
+        return v and v.balance
 
-    def get_free(self) -> Decimal:
+    def get_free(self) -> Union[Decimal, None]:
         v = VaultItem.objects.filter(vault__type=Vault.GATEWAY, vault__key=self.id).first()
-        return v.free
+        return v and v.free
 
     @classmethod
     def get_withdraw_fee(cls, amount):
@@ -163,7 +163,7 @@ class Gateway(models.Model):
         elif len(gateways) == 1:
             return gateways[0]
 
-        with_balance_gateways = [g for g in gateways if g.get_free() >= amount]
+        with_balance_gateways = [g for g in gateways if (g.get_free() or 0) >= amount]
 
         if not with_balance_gateways:
             return gateways[0]
