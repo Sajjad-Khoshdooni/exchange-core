@@ -154,21 +154,30 @@ class Gateway(models.Model):
             return gateway.get_concrete_gateway()
 
     @classmethod
-    def get_active_withdraw(cls, iban: str) -> Union['Gateway', None]:
+    def get_active_withdraw(cls, iban: str, amount: int) -> Union['Gateway', None]:
         gateways = list(Gateway.objects.filter(active=True, withdraw_enable=True).order_by('-withdraw_priority', 'id'))
 
-        if len(gateways) == 0:
+        if not gateways:
             return None
+
         elif len(gateways) == 1:
             return gateways[0]
-        else:
-            bank = get_bank_from_iban(iban).slug
 
-            for g in gateways:
-                if bank in g.instant_withdraw_banks:
-                    return g
-            else:
-                return gateways[0]
+        with_balance_gateways = [g for g in gateways if g.get_free() >= amount]
+
+        if not with_balance_gateways:
+            return gateways[0]
+
+        elif len(with_balance_gateways) == 1:
+            return with_balance_gateways[0]
+
+        bank = get_bank_from_iban(iban).slug
+
+        for g in with_balance_gateways:
+            if bank in g.instant_withdraw_banks:
+                return g
+        else:
+            return with_balance_gateways[0]
 
     @classmethod
     def get_active_pay_id_deposit(cls) -> 'Gateway':
