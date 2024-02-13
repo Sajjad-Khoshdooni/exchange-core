@@ -25,8 +25,8 @@ class GatewayFailed(Exception):
 class Gateway(models.Model):
     BASE_URL = None
 
-    TYPES = MANUAL, ZARINPAL, PAYIR, ZIBAL, JIBIT, JIBIMO, PAYSTAR = \
-        'manual', 'zarinpal', 'payir', 'zibal', 'jibit', 'jibimo', 'paystar'
+    TYPES = MANUAL, ZARINPAL, PAYIR, ZIBAL, JIBIT, JIBIMO, PAYSTAR, NOVINPAL = \
+        'manual', 'zarinpal', 'payir', 'zibal', 'jibit', 'jibimo', 'paystar', 'novinpal'
 
     name = models.CharField(max_length=128)
     type = models.CharField(
@@ -185,7 +185,9 @@ class Gateway(models.Model):
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
-        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway, PaystarGateway
+        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway, PaystarGateway, \
+            NovinpalGateway
+
         mapping = {
             cls.ZARINPAL: ZarinpalGateway,
             cls.PAYIR: PaydotirGateway,
@@ -193,6 +195,7 @@ class Gateway(models.Model):
             cls.JIBIT: JibitGateway,
             # cls.JIBIMO: JibimoGateway,
             cls.PAYSTAR: PaystarGateway,
+            cls.NOVINPAL: NovinpalGateway,
         }
 
         return mapping.get(type)
