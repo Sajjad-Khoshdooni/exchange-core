@@ -9,7 +9,7 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 class NovinpalGateway(Gateway):
     BASE_URL = 'https://gw.novinpal.ir'
-    REDIRECT_BASE_URL = 'https://raastin.website'
+    REDIRECT_BASE_URL = 'https://api.raastin.website'
 
     def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         fee = self.get_ipg_fee(amount)
