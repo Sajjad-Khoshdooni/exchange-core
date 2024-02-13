@@ -70,7 +70,7 @@ class NovinpalGateway(Gateway):
 
         data = resp.json()
 
-        if data['status'] == 1:
+        if int(data['status']) == 1:
             with WalletPipeline() as pipeline:
                 payment.accept(pipeline, payment.ref_id)
 

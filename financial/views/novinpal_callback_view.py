@@ -23,6 +23,8 @@ class NovinpalCallbackView(TemplateView):
         if status not in ['1', '0']:
             return HttpResponseBadRequest('Invalid data')
 
+        status = int(status)
+
         payment_request = get_object_or_404(PaymentRequest, authority=authority, gateway__type=Gateway.NOVINPAL)
         payment = payment_request.payment
 
@@ -30,7 +32,7 @@ class NovinpalCallbackView(TemplateView):
             payment = payment_request.get_or_create_payment()
 
         if payment.status == PENDING:
-            if status == '0':
+            if status == 0:
                 payment.status = CANCELED
                 payment.save(update_fields=['status'])
             else:
