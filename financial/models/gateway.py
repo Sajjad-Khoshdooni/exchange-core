@@ -73,7 +73,9 @@ class Gateway(models.Model):
     suspended = models.BooleanField(default=False)
 
     instant_withdraw_banks = MultiSelectArrayField(
-        base_field=models.CharField(choices=[(bank.slug, bank.slug) for bank in BANK_INFO], max_length=16), default=list()
+        base_field=models.CharField(choices=[(bank.slug, bank.slug) for bank in BANK_INFO], max_length=16),
+        default=list(),
+        blank=True,
     )
 
     @property
