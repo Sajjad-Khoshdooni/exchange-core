@@ -47,9 +47,7 @@ class NovinpalGateway(Gateway):
 
             raise GatewayFailed
 
-        data = resp_data['data']
-
-        payment_request.authority = data['447515262']
+        payment_request.authority = resp_data['refId']
         payment_request.save(update_fields=['authority'])
 
         return payment_request
