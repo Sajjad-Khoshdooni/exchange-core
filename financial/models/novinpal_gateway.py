@@ -54,7 +54,7 @@ class NovinpalGateway(Gateway):
 
     @classmethod
     def get_payment_url(cls, payment_request: PaymentRequest):
-        return f'https://api.novinpal.ir/invoice/start/{payment_request.authority}'
+        return f'{cls.BASE_URL}/invoice/start/{payment_request.authority}'
 
     def _verify(self, payment: Payment, **kwargs):
         payment_request = payment.paymentrequest
