@@ -98,6 +98,9 @@ class StakeOptionGroupedSerializer(serializers.Serializer):
             StakeOptionSerializerMini(instance=option, context=self.context).data
             for option in asset.stakeoption_set.filter(enable=True).order_by('-apr')
         ]
+
+        serialized_options.sort(key=lambda option: option['filled_cap_percent'])
+
         return serialized_options
 
     def get_min_apr(self, asset: Asset):
