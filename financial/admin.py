@@ -214,6 +214,17 @@ class PaymentRequestAdmin(admin.ModelAdmin):
     search_fields = ('bank_card__card_pan', 'amount', 'authority', 'group_id')
     readonly_fields = ('bank_card', 'group_id', 'payment', 'login_activity')
     list_filter = (PaymentRequestUserFilter,)
+    actions = ('verify', )
+
+    @admin.action(description='Verify', permissions=['change'])
+    def verify(self, request, queryset):
+        for payment_request in queryset:
+            payment = payment_request.payment
+
+            if not payment:
+                payment = payment_request.get_or_create_payment()
+
+            payment_request.get_gateway().verify(payment)
 
 
 class PaymentUserFilter(SimpleListFilter):
