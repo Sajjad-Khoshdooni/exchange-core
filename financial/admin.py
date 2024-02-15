@@ -234,12 +234,13 @@ class PaymentUserFilter(SimpleListFilter):
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status',
-                    'get_card_pan', 'get_user',)
-    list_filter = (PaymentUserFilter, 'status', )
+                    'source', 'get_card_pan', 'get_user',)
+    list_filter = (PaymentUserFilter, 'status', 'source')
     search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount', 'paymentrequest__authority',
                      'user__phone', 'user__first_name', 'user__last_name')
-    readonly_fields = ('user', 'group_id')
+    readonly_fields = ('group_id', )
     actions = ('refund', 'accept_deposit', 'reject_deposit')
+    raw_id_fields = ('user', )
 
     @admin.display(description='مقدار')
     def get_amount(self, payment: Payment):
@@ -477,8 +478,8 @@ class PaymentIdRequestAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentId)
 class PaymentIdAdmin(AdvancedAdmin):
-    list_display = ('created', 'updated', 'user', 'pay_id', 'verified', 'deleted')
-    search_fields = ('user__phone', 'pay_id')
+    list_display = ('created', 'updated', 'user', 'master', 'pay_id', 'verified', 'deleted')
+    search_fields = ('user__phone', 'pay_id', 'master__phone', )
     list_filter = ('verified',)
     readonly_fields = ('group_id', )
     actions = ('check_status', )
@@ -489,6 +490,12 @@ class PaymentIdAdmin(AdvancedAdmin):
         'gateway': True,
         'user': True
     }
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "master":
+            kwargs["queryset"] = User.objects.filter(userfeatureperm__feature=UserFeaturePerm.PAY_ID_MASTER)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     @admin.action(description='Check Status', permissions=['view'])
     def check_status(self, request, queryset):
