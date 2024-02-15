@@ -106,7 +106,7 @@ class Payment(models.Model):
     source = models.CharField(max_length=16, choices=[(s, s) for s in SOURCES], db_index=True)
 
     def __str__(self):
-        return f'{humanize_number(self.amount)} IRT to {self.user}'
+        return f'{humanize_number(self.amount)} IRT to {self.user} ({self.status})'
 
     def alert_payment(self):
         user = self.user
