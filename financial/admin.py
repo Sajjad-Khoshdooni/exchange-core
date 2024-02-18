@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from import_export import resources
@@ -157,7 +158,11 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw_request(self, request, queryset):
-        queryset.filter(status=INIT).update(status=PROCESS)
+        queryset.filter(status=INIT).update(
+            status=PROCESS,
+            accepted_datetime=timezone.now(),
+            accepted_by=request.user
+        )
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw_request(self, request, queryset):
